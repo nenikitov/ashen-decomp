@@ -1,43 +1,99 @@
 use std::fmt::Debug;
+use std::str;
 
-type Char = u8;
-
+#[derive(Debug)]
 pub enum BinaryError {
-    MissingSection { section: &'static str },
-    InvalidFormat { section: &'static str, expected: &'static str, actual: Box<dyn Debug> }
+    InvalidSection {
+        section: &'static str,
+        offset: usize,
+    },
+    InvalidFormat {
+        section: &'static str,
+        offset: usize,
+        expected: Box<dyn Debug>,
+        actual: Box<dyn Debug>,
+    },
+}
+
+fn read_part<'a>(buffer: &'a [u8], offset: &mut usize, size: usize) -> &'a [u8] {
+    let start = *offset;
+    let end = start + size;
+
+    *offset += size;
+    &buffer[start..end]
 }
 
 pub trait BinaryChunk {
-    fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError> where Self: Sized;
+    fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
+    where
+        Self: Sized;
 }
-
-
-
 
 #[derive(Debug)]
 pub struct PmanHeader {
-    pub pman: [Char; 4],
+    pub pman: String,
     pub num_files: u32,
-    pub copyright: [Char; 56]
+    pub copyright: String,
 }
 impl BinaryChunk for PmanHeader {
-    fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError> where Self: Sized {
-        todo!()
+    fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
+    where
+        Self: Sized,
+    {
+        let mut read_part = |size| (offset.clone(), read_part(buffer, offset, size));
+        // PMAN
+        let (pman_offset, pman) = read_part(4);
+        let pman = match str::from_utf8(pman) {
+            Ok(s) => s,
+            Err(_) => {
+                return Err(BinaryError::InvalidSection {
+                    section: "HEADER - PMAN",
+                    offset: pman_offset,
+                })
+            }
+        };
+        if pman != "PMAN" {
+            return Err(BinaryError::InvalidFormat {
+                section: "HEADER - PMAN",
+                offset: pman_offset,
+                expected: Box::new("PMAN"),
+                actual: Box::new(pman.to_owned()),
+            });
+        }
+
+        // Number of files
+        let num_files = u32::from_le_bytes((*read_part(4).1).try_into().unwrap());
+
+        // Copyright
+        let (copyright_offset, copyright) = read_part(56);
+        let copyright = match str::from_utf8(copyright) {
+            Ok(s) => s,
+            Err(_) => {
+                return Err(BinaryError::InvalidSection {
+                    section: "HEADER - Copyright",
+                    offset: copyright_offset,
+                })
+            }
+        };
+
+        Ok(Self {
+            pman: pman.to_owned(),
+            num_files,
+            copyright: copyright.to_owned(),
+        })
     }
 }
-
 
 #[derive(Debug)]
 pub struct PmanFileDeclaration {
     pub start: u32,
     pub offset: u32,
     pub size: u32,
-    pub end: u32
+    pub end: u32,
 }
 
 #[derive(Debug)]
 pub struct PmanFile {
     pub header: PmanHeader,
-    pub file_declarations: Vec<PmanFileDeclaration>
+    pub file_declarations: Vec<PmanFileDeclaration>,
 }
-
