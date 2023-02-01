@@ -25,22 +25,19 @@ fn read_part<'a>(buffer: &'a [u8], offset: &mut usize, size: usize) -> &'a [u8] 
 
 pub trait BinaryChunk {
     fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
-    where
-        Self: Sized;
+    where Self: Sized;
 }
 
 #[derive(Debug)]
 pub struct PmanHeader {
-    pub pman: String,
     pub num_files: u32,
     pub copyright: String,
 }
 impl BinaryChunk for PmanHeader {
     fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
-    where
-        Self: Sized,
-    {
+    where Self: Sized {
         let mut read_part = |size| (offset.clone(), read_part(buffer, offset, size));
+
         // PMAN
         let (pman_offset, pman) = read_part(4);
         let pman = match str::from_utf8(pman) {
@@ -77,7 +74,6 @@ impl BinaryChunk for PmanHeader {
         };
 
         Ok(Self {
-            pman: pman.to_owned(),
             num_files,
             copyright: copyright.to_owned(),
         })
@@ -86,10 +82,51 @@ impl BinaryChunk for PmanHeader {
 
 #[derive(Debug)]
 pub struct PmanFileDeclaration {
-    pub start: u32,
+    // pub start: u32
     pub offset: u32,
     pub size: u32,
-    pub end: u32,
+    // pub end: u32
+}
+impl BinaryChunk for PmanFileDeclaration {
+    fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
+    where Self: Sized {
+        let mut read_part = |size| (offset.clone(), read_part(buffer, offset, size));
+
+        // Start
+        let (start_offset, start) = read_part(4);
+        let start = u32::from_le_bytes(start.try_into().unwrap());
+        if start != 0 {
+            return Err(BinaryError::InvalidFormat {
+                section: "FILE DECLARATION - Start",
+                offset: start_offset,
+                expected: Box::new(0),
+                actual: Box::new(start)
+            })
+        }
+
+        // Offset
+        let offset = u32::from_le_bytes((*read_part(4).1).try_into().unwrap());
+
+        // Size
+        let size = u32::from_le_bytes((*read_part(4).1).try_into().unwrap());
+
+        // End
+        let (end_offset, end) = read_part(4);
+        let end = u32::from_le_bytes(end.try_into().unwrap());
+        if end != 0 {
+            return Err(BinaryError::InvalidFormat {
+                section: "FILE DECLARATION - Start",
+                offset: end_offset,
+                expected: Box::new(0),
+                actual: Box::new(start)
+            })
+        }
+
+        Ok(Self {
+            offset,
+            size
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -97,3 +134,20 @@ pub struct PmanFile {
     pub header: PmanHeader,
     pub file_declarations: Vec<PmanFileDeclaration>,
 }
+
+impl BinaryChunk for PmanFile {
+    fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
+    where Self: Sized {
+        let header = PmanHeader::new_read(buffer, offset)?;
+        let file_declarations =
+            (0..header.num_files)
+            .map(|_| PmanFileDeclaration::new_read(buffer, offset))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self {
+            header,
+            file_declarations
+        })
+    }
+}
+

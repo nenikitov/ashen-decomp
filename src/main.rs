@@ -3,7 +3,9 @@ use std::{
     io::Read,
 };
 
-use format::{PmanHeader, BinaryChunk};
+use format::BinaryChunk;
+
+use crate::format::PmanFile;
 
 mod format;
 
@@ -15,8 +17,7 @@ fn main() {
     let mut buffer = vec![0; metadata.len() as usize];
     f.read(&mut buffer).expect("Buffer overflow");
 
-    let header = PmanHeader::new_read(&buffer, &mut 0);
+    let header = PmanFile::new_read(&buffer, &mut 0);
 
     println!("{:#?}", header);
 }
-
