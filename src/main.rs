@@ -19,6 +19,9 @@ fn main() {
             fs::create_dir_all(path).expect("Cannot create an output directory");
             for (declaration, file) in file.file_declarations.iter().zip(file.files) {
                 let path = path.join(format!("{:X}.dat", declaration.offset));
+                if file.is_zlib() {
+                    println!("Found ZLIB file at {:X}", declaration.offset);
+                }
                 fs::write(path, file.data).expect("Could not write a data file");
             }
         }

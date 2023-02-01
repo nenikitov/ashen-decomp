@@ -134,6 +134,16 @@ pub struct PmanFileData {
     pub data: Vec<u8>
 }
 
+impl PmanFileData {
+    pub fn is_zlib(&self) -> bool {
+        return
+            self.data[0] == b'Z'
+            && self.data[1] == b'L'
+            && self.data[5] == 0x78
+            && self.data[6] == 0xDA;
+    }
+}
+
 #[derive(Debug)]
 pub struct PmanFile {
     pub header: PmanHeader,
