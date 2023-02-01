@@ -1,6 +1,9 @@
 # Rust
-target
+target/
 
 # Ashen data file
 packfile.dat
+
+# Outputs
+output/
 

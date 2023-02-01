@@ -1,23 +1,27 @@
 use std::{
-    fs::{self, File},
-    io::Read,
+    fs,
+    path::Path,
 };
-
 use format::BinaryChunk;
-
 use crate::format::PmanFile;
+
 
 mod format;
 
+
 fn main() {
-    let file = "packfile.dat";
+    let path = "packfile.dat";
+    let buffer = fs::read(path).expect("Could not read the data file");
 
-    let mut f = File::open(&file).expect("File not found");
-    let metadata = fs::metadata(&file).expect("Unable to read file metadata");
-    let mut buffer = vec![0; metadata.len() as usize];
-    f.read(&mut buffer).expect("Buffer overflow");
-
-    let header = PmanFile::new_read(&buffer, &mut 0);
-
-    println!("{:#?}", header);
+    match PmanFile::new_read(&buffer, &mut 0) {
+        Ok(file) => {
+            let path = Path::new("output");
+            fs::create_dir_all(path).expect("Cannot create an output directory");
+            for (declaration, file) in file.file_declarations.iter().zip(file.files) {
+                let path = path.join(format!("{:X}.dat", declaration.offset));
+                fs::write(path, file.data).expect("Could not write a data file");
+            }
+        }
+        Err(e) => println!("{:?}", e),
+    }
 }

@@ -20,7 +20,7 @@ fn read_part<'a>(buffer: &'a [u8], offset: &mut usize, size: usize) -> &'a [u8] 
     let end = start + size;
 
     *offset += size;
-    &buffer[start..end]
+    &buffer[start .. end]
 }
 
 pub trait BinaryChunk {
@@ -130,23 +130,40 @@ impl BinaryChunk for PmanFileDeclaration {
 }
 
 #[derive(Debug)]
+pub struct PmanFileData {
+    pub data: Vec<u8>
+}
+
+#[derive(Debug)]
 pub struct PmanFile {
     pub header: PmanHeader,
     pub file_declarations: Vec<PmanFileDeclaration>,
+    pub files: Vec<PmanFileData>
 }
 
 impl BinaryChunk for PmanFile {
     fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
     where Self: Sized {
+        // Header
         let header = PmanHeader::new_read(buffer, offset)?;
+
+        // File declarations
         let file_declarations =
-            (0..header.num_files)
-            .map(|_| PmanFileDeclaration::new_read(buffer, offset))
-            .collect::<Result<Vec<_>, _>>()?;
+            (0 .. header.num_files)
+                .map(|_| PmanFileDeclaration::new_read(buffer, offset))
+                .collect::<Result<Vec<_>, _>>()?;
+
+        // Files
+        let files: Vec<PmanFileData> =
+            file_declarations.iter()
+                .map(|d| PmanFileData { data: buffer[d.offset as usize .. (d.offset + d.size) as usize].to_vec() })
+                .collect();
+
 
         Ok(Self {
             header,
-            file_declarations
+            file_declarations,
+            files
         })
     }
 }
