@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 use std::str;
+use std::io::Read;
+use flate2::read::ZlibDecoder;
 
 #[derive(Debug)]
 pub enum BinaryError {
@@ -177,7 +179,16 @@ impl PmanFileData {
                 self.data[4],
                 0
             ]);
-            Ok(vec![])
+
+            let mut d = ZlibDecoder::new(&self.data[5..]);
+            let mut s = Vec::<u8>::with_capacity(size as usize);
+            let size_calc = d.read_to_end(&mut s).unwrap();
+            if size_calc as u32 != size {
+                Err(ZlibDataError::InvalidSize { expected_size: size as usize, actual_size: size_calc })
+            }
+            else {
+                Ok(s)
+            }
         }
     }
 }
