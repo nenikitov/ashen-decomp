@@ -15,6 +15,15 @@ pub enum BinaryError {
     },
 }
 
+#[derive(Debug)]
+pub enum ZlibDataError {
+    NotZlibData,
+    InvalidSize {
+        expected_size: usize,
+        actual_size: usize,
+    },
+}
+
 fn read_part<'a>(buffer: &'a [u8], offset: &mut usize, size: usize) -> &'a [u8] {
     let start = *offset;
     let end = start + size;
@@ -25,6 +34,10 @@ fn read_part<'a>(buffer: &'a [u8], offset: &mut usize, size: usize) -> &'a [u8] 
 
 pub trait BinaryChunk {
     fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, BinaryError>
+    where Self: Sized;
+}
+pub trait SizedBinaryChunk {
+    fn new_read(buffer: &[u8], offset: &mut usize, size: usize) -> Result<Self, BinaryError>
     where Self: Sized;
 }
 
@@ -134,6 +147,16 @@ pub struct PmanFileData {
     pub data: Vec<u8>
 }
 
+impl SizedBinaryChunk for PmanFileData {
+    fn new_read(buffer: &[u8], offset: &mut usize, size: usize) -> Result<Self, BinaryError>
+    where Self: Sized {
+        let offset = *offset;
+        Ok(Self {
+            data: buffer[offset .. offset + size].to_vec()
+        })
+    }
+}
+
 impl PmanFileData {
     pub fn is_zlib(&self) -> bool {
         return
@@ -141,6 +164,21 @@ impl PmanFileData {
             && self.data[1] == b'L'
             && self.data[5] == 0x78
             && self.data[6] == 0xDA;
+    }
+
+    pub fn zlib_data(&self) -> Result<Vec<u8>, ZlibDataError> {
+        if !self.is_zlib() {
+            Err(ZlibDataError::NotZlibData)
+        }
+        else {
+            let size = u32::from_le_bytes([
+                self.data[2],
+                self.data[3],
+                self.data[4],
+                0
+            ]);
+            Ok(vec![])
+        }
     }
 }
 
@@ -164,11 +202,10 @@ impl BinaryChunk for PmanFile {
                 .collect::<Result<Vec<_>, _>>()?;
 
         // Files
-        let files: Vec<PmanFileData> =
+        let files =
             file_declarations.iter()
-                .map(|d| PmanFileData { data: buffer[d.offset as usize .. (d.offset + d.size) as usize].to_vec() })
-                .collect();
-
+                .map(|d| PmanFileData::new_read(buffer, &mut (d.offset.clone() as usize), d.size.clone() as usize))
+                .collect::<Result<Vec<_>,_>>()?;
 
         Ok(Self {
             header,

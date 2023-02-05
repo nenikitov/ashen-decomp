@@ -16,6 +16,7 @@ fn main() {
     match PmanFile::new_read(&buffer, &mut 0) {
         Ok(file) => {
             let path = Path::new("output");
+            let _ = fs::remove_dir_all(path);
             fs::create_dir_all(path).expect("Cannot create an output directory");
             for (declaration, file) in file.file_declarations.iter().zip(file.files) {
                 let path = path.join(format!("{:X}.dat", declaration.offset));
@@ -28,3 +29,4 @@ fn main() {
         Err(e) => println!("{:?}", e),
     }
 }
+
