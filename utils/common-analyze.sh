@@ -22,9 +22,18 @@ for f in $PATHS_ALL_FILES; do
         paths+=("$f.dat")
     fi
 done
-# Get strings
+
+# Run analysis tools
 for f in "${paths[@]}"; do
-    PATH_STRINGS=$(basename $(basename $f ".zlib") ".dat")
-    strings $f > "$PATH_STRINGS.txt"
+    NO_EXTENSION=$(basename $(basename $f ".zlib") ".dat")
+    # Strings
+    strings $f > "${NO_EXTENSION}_strings.txt"
+    # Binwalk
+    binwalk -B $f > "${NO_EXTENSION}_binwalk.txt"
+    sed -i '1,3d' "${NO_EXTENSION}_binwalk.txt"
+    sed -i '/^$/d' "${NO_EXTENSION}_binwalk.txt"
 done
+
+# Remove empty files
+find . -type f -empty -delete
 
