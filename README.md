@@ -13,7 +13,22 @@ An unarchiver of an obscure NGage game Ashen
 - `DA34B8.zlib` - German
 - `DA5B9C.zlib` - Spanish
 
-## Level data?
+## Level data
+
+- For level 1
+    - `500` - Map data
+    - `510` - Collisions
+    - `520` - Waypoints? Objectives
+    - `530` - Color palette
+    - `540` - ?
+    - `550` - ?
+- For DM 1
+    - Map data
+    - Collisions
+    - Color palette
+    - ...
+
+### Collision files
 
 - `294D84.zlib` - e1m1
 - `2E9D88.zlib` - e1m2
@@ -28,9 +43,9 @@ An unarchiver of an obscure NGage game Ashen
 - `6F23F4.zlib` - e6m1
 - `775A2C.zlib` - e7m1
 - `7E3990.zlib` - e8m1
-- `823F54.zlib`
-- `84F7D0.zlib`
-- `870414.zlib`
-- `8A8F2C.zlib`
-- `8CFF88.zlib`
+- `823F54.zlib` - dm1**?**
+- `84F7D0.zlib` - dm2**?**
+- `870414.zlib` - dm3**?**
+- `8A8F2C.zlib` - dm4**?**
+- `8CFF88.zlib` - ???? (no color palette, only collision data)
 
