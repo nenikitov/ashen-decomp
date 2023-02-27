@@ -15,19 +15,19 @@ An unarchiver of an obscure NGage game Ashen
 
 ## Level data?
 
-- `294D84.zlib`
-- `2E9D88.zlib`
-- `357648.zlib`
-- `3DF9DC.zlib`
-- `458220.zlib`
-- `4BFCAC.zlib`
-- `52EAB4.zlib`
-- `58EFC8.zlib`
-- `5F60B8.zlib`
-- `683FD4.zlib`
-- `6F23F4.zlib`
-- `775A2C.zlib`
-- `7E3990.zlib`
+- `294D84.zlib` - e1m1
+- `2E9D88.zlib` - e1m2
+- `357648.zlib` - e2m1
+- `3DF9DC.zlib` - e2m2
+- `458220.zlib` - e3m1
+- `4BFCAC.zlib` - e3m2
+- `52EAB4.zlib` - e4m1
+- `58EFC8.zlib` - e4m2
+- `5F60B8.zlib` - e5m1
+- `683FD4.zlib` - e5m2
+- `6F23F4.zlib` - e6m1
+- `775A2C.zlib` - e7m1
+- `7E3990.zlib` - e8m1
 - `823F54.zlib`
 - `84F7D0.zlib`
 - `870414.zlib`
