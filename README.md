@@ -1,11 +1,3 @@
-<style>
-.warning {
-    color: orange;
-    font-weight: bold;
-}
-</style>
-
-
 # Ashen PackFile unpacker
 
 An unarchiver of an obscure NGage game Ashen
@@ -54,171 +46,171 @@ An unarchiver of an obscure NGage game Ashen
 
 ### Known file declarations
 
-<div class="warning">!!! WARNING !!!</div>
+**⚠️ WARNING ⚠️**
 
 I use the packfile that comes with Ashen 1.06. Your packfile may have different offsets to files, I didn't test with different versions.
 
-| Address (HEX) | Output file | Purpose                                                 |
-| ------------- | ----------- | ------------------------------------------------------- |
-| `030`         |             | <span class="warning">???</span>                        |
-| `040`         |             | <span class="warning">???</span>                        |
-| `050`         |             | <span class="warning">???</span>                        |
-| `060`         |             | <span class="warning">???</span>                        |
-| `070`         |             | <span class="warning">???</span>                        |
-| `080`         |             | <span class="warning">???</span>                        |
-| `090`         |             | <span class="warning">???</span>                        |
-| `0A0`         |             | <span class="warning">???</span>                        |
-| `0B0`         |             | <span class="warning">???</span>                        |
-| `0C0`         |             | <span class="warning">???</span>                        |
-| `0D0`         |             | <span class="warning">???</span>                        |
-| `0E0`         |             | <span class="warning">???</span>                        |
-| `0F0`         |             | <span class="warning">???</span>                        |
-| `100`         |             | <span class="warning">???</span>                        |
-| `110`         |             | <span class="warning">???</span>                        |
-| `120`         |             | <span class="warning">???</span>                        |
-| `130`         |             | <span class="warning">???</span>                        |
-| `140`         |             | <span class="warning">???</span>                        |
-| `150`         |             | <span class="warning">???</span>                        |
-| `160`         |             | <span class="warning">???</span>                        |
-| `170`         |             | <span class="warning">???</span>                        |
-| `180`         |             | <span class="warning">???</span>                        |
-| `190`         |             | <span class="warning">???</span>                        |
-| `1A0`         |             | <span class="warning">???</span>                        |
-| `1B0`         |             | <span class="warning">???</span>                        |
-| `1C0`         |             | <span class="warning">???</span>                        |
-| `1D0`         |             | <span class="warning">???</span>                        |
-| `1E0`         |             | <span class="warning">???</span>                        |
-| `1F0`         |             | <span class="warning">???</span>                        |
-| `200`         |             | <span class="warning">???</span>                        |
-| `210`         |             | <span class="warning">???</span>                        |
-| `220`         |             | <span class="warning">???</span>                        |
-| `230`         |             | <span class="warning">???</span>                        |
-| `240`         |             | <span class="warning">???</span>                        |
-| `250`         |             | <span class="warning">???</span>                        |
-| `260`         |             | <span class="warning">???</span>                        |
-| `270`         |             | <span class="warning">???</span>                        |
-| `280`         |             | <span class="warning">???</span>                        |
-| `290`         |             | <span class="warning">???</span>                        |
-| `2A0`         |             | <span class="warning">???</span>                        |
-| `2B0`         |             | <span class="warning">???</span>                        |
-| `2C0`         |             | <span class="warning">???</span>                        |
-| `2D0`         |             | <span class="warning">???</span>                        |
-| `2E0`         |             | <span class="warning">???</span>                        |
-| `2F0`         |             | <span class="warning">???</span>                        |
-| `300`         |             | <span class="warning">???</span>                        |
-| `310`         |             | <span class="warning">???</span>                        |
-| `320`         |             | <span class="warning">???</span>                        |
-| `330`         |             | <span class="warning">???</span>                        |
-| `340`         |             | <span class="warning">???</span>                        |
-| `350`         |             | <span class="warning">???</span>                        |
-| `360`         |             | <span class="warning">???</span>                        |
-| `370`         |             | <span class="warning">???</span>                        |
-| `380`         |             | <span class="warning">???</span>                        |
-| `390`         |             | <span class="warning">???</span>                        |
-| `3A0`         |             | <span class="warning">???</span>                        |
-| `3B0`         |             | <span class="warning">???</span>                        |
-| `3C0`         |             | <span class="warning">???</span>                        |
-| `3D0`         |             | <span class="warning">???</span>                        |
-| `3E0`         |             | <span class="warning">???</span>                        |
-| `3F0`         |             | <span class="warning">???</span>                        |
-| `400`         |             | <span class="warning">???</span>                        |
-| `410`         |             | <span class="warning">???</span>                        |
-| `420`         |             | <span class="warning">???</span>                        |
-| `430`         |             | <span class="warning">???</span>                        |
-| `440`         |             | <span class="warning">???</span>                        |
-| `450`         |             | <span class="warning">???</span>                        |
-| `460`         |             | <span class="warning">???</span>                        |
-| `470`         |             | <span class="warning">???</span>                        |
-| `480`         |             | <span class="warning">???</span>                        |
-| `490`         |             | <span class="warning">???</span>                        |
-| `4A0`         |             | <span class="warning">???</span>                        |
-| `4B0`         |             | <span class="warning">???</span>                        |
-| `4C0`         |             | <span class="warning">???</span>                        |
-| `4D0`         |             | <span class="warning">???</span>                        |
-| `4E0`         |             | <span class="warning">???</span>                        |
-| `4F0`         |             | <span class="warning">???</span>                        |
-| `500`         |             | Chapter 1.1 geometry                                    |
-| `510`         |             | Chapter 1.1 collision                                   |
-| `520`         |             | Chapter 1.1 waypoint                                    |
-| `530`         |             | Chapter 1.1 color palette                               |
-| `540`         |             | Chapter 1.2 geometry                                    |
-| `550`         |             | Chapter 1.2 collision                                   |
-| `560`         |             | Chapter 1.2 waypoint                                    |
-| `570`         |             | Chapter 1.2 color palette                               |
-| `580`         |             | Chapter 2.1 geometry                                    |
-| `590`         |             | Chapter 2.1 collision                                   |
-| `5A0`         |             | Chapter 2.1 waypoint                                    |
-| `5B0`         |             | Chapter 2.1 color palette                               |
-| `5C0`         |             | Chapter 2.2 geometry                                    |
-| `5D0`         |             | Chapter 2.2 collision                                   |
-| `5E0`         |             | Chapter 2.2 waypoint                                    |
-| `5F0`         |             | Chapter 2.2 color palette                               |
-| `600`         |             | Chapter 3.1 geometry                                    |
-| `610`         |             | Chapter 3.1 collision                                   |
-| `620`         |             | Chapter 3.1 waypoint                                    |
-| `630`         |             | Chapter 3.1 color palette                               |
-| `640`         |             | Chapter 3.2 geometry                                    |
-| `650`         |             | Chapter 3.2 collision                                   |
-| `660`         |             | Chapter 3.2 waypoint                                    |
-| `670`         |             | Chapter 3.2 color palette                               |
-| `680`         |             | Chapter 4.1 geometry                                    |
-| `690`         |             | Chapter 4.1 collision                                   |
-| `6A0`         |             | Chapter 4.1 waypoint                                    |
-| `6B0`         |             | Chapter 4.1 color palette                               |
-| `6C0`         |             | Chapter 4.2 geometry                                    |
-| `6D0`         |             | Chapter 4.2 collision                                   |
-| `6E0`         |             | Chapter 4.2 waypoint                                    |
-| `6F0`         |             | Chapter 4.2 color palette                               |
-| `700`         |             | Chapter 5.1 geometry                                    |
-| `710`         |             | Chapter 5.1 collision                                   |
-| `720`         |             | Chapter 5.1 waypoint                                    |
-| `730`         |             | Chapter 5.1 color palette                               |
-| `740`         |             | Chapter 5.2 geometry                                    |
-| `750`         |             | Chapter 5.2 collision                                   |
-| `760`         |             | Chapter 5.2 waypoint                                    |
-| `770`         |             | Chapter 5.2 color palette                               |
-| `780`         |             | DM 1 geometry                                           |
-| `790`         |             | DM 1 collision                                          |
-| `7A0`         |             | DM 1 waypoint                                           |
-| `7B0`         |             | DM 1 color palette                                      |
-| `7C0`         |             | DM 2 geometry                                           |
-| `7D0`         |             | DM 2 collision                                          |
-| `7E0`         |             | DM 2 waypoint                                           |
-| `7F0`         |             | DM 2 color palette                                      |
-| `800`         |             | DM 3 geometry                                           |
-| `810`         |             | DM 3 collision                                          |
-| `820`         |             | DM 3 waypoint                                           |
-| `830`         |             | DM 3 color palette                                      |
-| `840`         |             | DM 4 geometry                                           |
-| `850`         |             | DM 4 collision                                          |
-| `860`         |             | DM 4 color palette                                      |
-| `870`         |             | <span class="warning">Unknown map geometry?</span>      |
-| `880`         |             | <span class="warning">Unknown map collision?</span>     |
-| `890`         |             | <span class="warning">Unknown map color palette?</span> |
-| `8A0`         |             | <span class="warning">???</span>                        |
-| `8B0`         |             | <span class="warning">???</span>                        |
-| `8C0`         |             | <span class="warning">???</span>                        |
-| `8D0`         |             | <span class="warning">???</span>                        |
-| `8E0`         |             | <span class="warning">???</span>                        |
-| `8F0`         |             | <span class="warning">???</span>                        |
-| `900`         |             | <span class="warning">???</span>                        |
-| `910`         |             | <span class="warning">???</span>                        |
-| `920`         |             | <span class="warning">???</span>                        |
-| `930`         |             | <span class="warning">???</span>                        |
-| `940`         |             | <span class="warning">???</span>                        |
-| `950`         |             | <span class="warning">???</span>                        |
-| `960`         |             | <span class="warning">???</span>                        |
-| `970`         |             | <span class="warning">???</span>                        |
-| `980`         |             | <span class="warning">???</span>                        |
-| `990`         |             | <span class="warning">???</span>                        |
-| `9A0`         |             | <span class="warning">???</span>                        |
-| `9B0`         |             | <span class="warning">???</span>                        |
-| `9C0`         |             | Text - English UK                                       |
-| `9D0`         |             | Text - English US                                       |
-| `9E0`         |             | Text - French                                           |
-| `9F0`         |             | Text - Italian                                          |
-| `A00`         |             | Text - German                                           |
-| `A10`         |             | Text - Spanish                                          |
+| Address (HEX) | Output file | Purpose                            |
+| ------------- | ----------- | ---------------------------------- |
+| `030`         |             | **⚠️ ??? ⚠️**                        |
+| `040`         |             | **⚠️ ??? ⚠️**                        |
+| `050`         |             | **⚠️ ??? ⚠️**                        |
+| `060`         |             | **⚠️ ??? ⚠️**                        |
+| `070`         |             | **⚠️ ??? ⚠️**                        |
+| `080`         |             | **⚠️ ??? ⚠️**                        |
+| `090`         |             | **⚠️ ??? ⚠️**                        |
+| `0A0`         |             | **⚠️ ??? ⚠️**                        |
+| `0B0`         |             | **⚠️ ??? ⚠️**                        |
+| `0C0`         |             | **⚠️ ??? ⚠️**                        |
+| `0D0`         |             | **⚠️ ??? ⚠️**                        |
+| `0E0`         |             | **⚠️ ??? ⚠️**                        |
+| `0F0`         |             | **⚠️ ??? ⚠️**                        |
+| `100`         |             | **⚠️ ??? ⚠️**                        |
+| `110`         |             | **⚠️ ??? ⚠️**                        |
+| `120`         |             | **⚠️ ??? ⚠️**                        |
+| `130`         |             | **⚠️ ??? ⚠️**                        |
+| `140`         |             | **⚠️ ??? ⚠️**                        |
+| `150`         |             | **⚠️ ??? ⚠️**                        |
+| `160`         |             | **⚠️ ??? ⚠️**                        |
+| `170`         |             | **⚠️ ??? ⚠️**                        |
+| `180`         |             | **⚠️ ??? ⚠️**                        |
+| `190`         |             | **⚠️ ??? ⚠️**                        |
+| `1A0`         |             | **⚠️ ??? ⚠️**                        |
+| `1B0`         |             | **⚠️ ??? ⚠️**                        |
+| `1C0`         |             | **⚠️ ??? ⚠️**                        |
+| `1D0`         |             | **⚠️ ??? ⚠️**                        |
+| `1E0`         |             | **⚠️ ??? ⚠️**                        |
+| `1F0`         |             | **⚠️ ??? ⚠️**                        |
+| `200`         |             | **⚠️ ??? ⚠️**                        |
+| `210`         |             | **⚠️ ??? ⚠️**                        |
+| `220`         |             | **⚠️ ??? ⚠️**                        |
+| `230`         |             | **⚠️ ??? ⚠️**                        |
+| `240`         |             | **⚠️ ??? ⚠️**                        |
+| `250`         |             | **⚠️ ??? ⚠️**                        |
+| `260`         |             | **⚠️ ??? ⚠️**                        |
+| `270`         |             | **⚠️ ??? ⚠️**                        |
+| `280`         |             | **⚠️ ??? ⚠️**                        |
+| `290`         |             | **⚠️ ??? ⚠️**                        |
+| `2A0`         |             | **⚠️ ??? ⚠️**                        |
+| `2B0`         |             | **⚠️ ??? ⚠️**                        |
+| `2C0`         |             | **⚠️ ??? ⚠️**                        |
+| `2D0`         |             | **⚠️ ??? ⚠️**                        |
+| `2E0`         |             | **⚠️ ??? ⚠️**                        |
+| `2F0`         |             | **⚠️ ??? ⚠️**                        |
+| `300`         |             | **⚠️ ??? ⚠️**                        |
+| `310`         |             | **⚠️ ??? ⚠️**                        |
+| `320`         |             | **⚠️ ??? ⚠️**                        |
+| `330`         |             | **⚠️ ??? ⚠️**                        |
+| `340`         |             | **⚠️ ??? ⚠️**                        |
+| `350`         |             | **⚠️ ??? ⚠️**                        |
+| `360`         |             | **⚠️ ??? ⚠️**                        |
+| `370`         |             | **⚠️ ??? ⚠️**                        |
+| `380`         |             | **⚠️ ??? ⚠️**                        |
+| `390`         |             | **⚠️ ??? ⚠️**                        |
+| `3A0`         |             | **⚠️ ??? ⚠️**                        |
+| `3B0`         |             | **⚠️ ??? ⚠️**                        |
+| `3C0`         |             | **⚠️ ??? ⚠️**                        |
+| `3D0`         |             | **⚠️ ??? ⚠️**                        |
+| `3E0`         |             | **⚠️ ??? ⚠️**                        |
+| `3F0`         |             | **⚠️ ??? ⚠️**                        |
+| `400`         |             | **⚠️ ??? ⚠️**                        |
+| `410`         |             | **⚠️ ??? ⚠️**                        |
+| `420`         |             | **⚠️ ??? ⚠️**                        |
+| `430`         |             | **⚠️ ??? ⚠️**                        |
+| `440`         |             | **⚠️ ??? ⚠️**                        |
+| `450`         |             | **⚠️ ??? ⚠️**                        |
+| `460`         |             | **⚠️ ??? ⚠️**                        |
+| `470`         |             | **⚠️ ??? ⚠️**                        |
+| `480`         |             | **⚠️ ??? ⚠️**                        |
+| `490`         |             | **⚠️ ??? ⚠️**                        |
+| `4A0`         |             | **⚠️ ??? ⚠️**                        |
+| `4B0`         |             | **⚠️ ??? ⚠️**                        |
+| `4C0`         |             | **⚠️ ??? ⚠️**                        |
+| `4D0`         |             | **⚠️ ??? ⚠️**                        |
+| `4E0`         |             | **⚠️ ??? ⚠️**                        |
+| `4F0`         |             | **⚠️ ??? ⚠️**                        |
+| `500`         |             | Chapter 1.1 geometry               |
+| `510`         |             | Chapter 1.1 collision              |
+| `520`         |             | Chapter 1.1 waypoint               |
+| `530`         |             | Chapter 1.1 color palette          |
+| `540`         |             | Chapter 1.2 geometry               |
+| `550`         |             | Chapter 1.2 collision              |
+| `560`         |             | Chapter 1.2 waypoint               |
+| `570`         |             | Chapter 1.2 color palette          |
+| `580`         |             | Chapter 2.1 geometry               |
+| `590`         |             | Chapter 2.1 collision              |
+| `5A0`         |             | Chapter 2.1 waypoint               |
+| `5B0`         |             | Chapter 2.1 color palette          |
+| `5C0`         |             | Chapter 2.2 geometry               |
+| `5D0`         |             | Chapter 2.2 collision              |
+| `5E0`         |             | Chapter 2.2 waypoint               |
+| `5F0`         |             | Chapter 2.2 color palette          |
+| `600`         |             | Chapter 3.1 geometry               |
+| `610`         |             | Chapter 3.1 collision              |
+| `620`         |             | Chapter 3.1 waypoint               |
+| `630`         |             | Chapter 3.1 color palette          |
+| `640`         |             | Chapter 3.2 geometry               |
+| `650`         |             | Chapter 3.2 collision              |
+| `660`         |             | Chapter 3.2 waypoint               |
+| `670`         |             | Chapter 3.2 color palette          |
+| `680`         |             | Chapter 4.1 geometry               |
+| `690`         |             | Chapter 4.1 collision              |
+| `6A0`         |             | Chapter 4.1 waypoint               |
+| `6B0`         |             | Chapter 4.1 color palette          |
+| `6C0`         |             | Chapter 4.2 geometry               |
+| `6D0`         |             | Chapter 4.2 collision              |
+| `6E0`         |             | Chapter 4.2 waypoint               |
+| `6F0`         |             | Chapter 4.2 color palette          |
+| `700`         |             | Chapter 5.1 geometry               |
+| `710`         |             | Chapter 5.1 collision              |
+| `720`         |             | Chapter 5.1 waypoint               |
+| `730`         |             | Chapter 5.1 color palette          |
+| `740`         |             | Chapter 5.2 geometry               |
+| `750`         |             | Chapter 5.2 collision              |
+| `760`         |             | Chapter 5.2 waypoint               |
+| `770`         |             | Chapter 5.2 color palette          |
+| `780`         |             | DM 1 geometry                      |
+| `790`         |             | DM 1 collision                     |
+| `7A0`         |             | DM 1 waypoint                      |
+| `7B0`         |             | DM 1 color palette                 |
+| `7C0`         |             | DM 2 geometry                      |
+| `7D0`         |             | DM 2 collision                     |
+| `7E0`         |             | DM 2 waypoint                      |
+| `7F0`         |             | DM 2 color palette                 |
+| `800`         |             | DM 3 geometry                      |
+| `810`         |             | DM 3 collision                     |
+| `820`         |             | DM 3 waypoint                      |
+| `830`         |             | DM 3 color palette                 |
+| `840`         |             | DM 4 geometry                      |
+| `850`         |             | DM 4 collision                     |
+| `860`         |             | DM 4 color palette                 |
+| `870`         |             | **⚠️ Unknown map geometry? ⚠️**      |
+| `880`         |             | **⚠️ Unknown map collision? ⚠️**     |
+| `890`         |             | **⚠️ Unknown map color palette? ⚠️** |
+| `8A0`         |             | **⚠️ ??? ⚠️**                        |
+| `8B0`         |             | **⚠️ ??? ⚠️**                        |
+| `8C0`         |             | **⚠️ ??? ⚠️**                        |
+| `8D0`         |             | **⚠️ ??? ⚠️**                        |
+| `8E0`         |             | **⚠️ ??? ⚠️**                        |
+| `8F0`         |             | **⚠️ ??? ⚠️**                        |
+| `900`         |             | **⚠️ ??? ⚠️**                        |
+| `910`         |             | **⚠️ ??? ⚠️**                        |
+| `920`         |             | **⚠️ ??? ⚠️**                        |
+| `930`         |             | **⚠️ ??? ⚠️**                        |
+| `940`         |             | **⚠️ ??? ⚠️**                        |
+| `950`         |             | **⚠️ ??? ⚠️**                        |
+| `960`         |             | **⚠️ ??? ⚠️**                        |
+| `970`         |             | **⚠️ ??? ⚠️**                        |
+| `980`         |             | **⚠️ ??? ⚠️**                        |
+| `990`         |             | **⚠️ ??? ⚠️**                        |
+| `9A0`         |             | **⚠️ ??? ⚠️**                        |
+| `9B0`         |             | **⚠️ ??? ⚠️**                        |
+| `9C0`         |             | Text - English UK                  |
+| `9D0`         |             | Text - English US                  |
+| `9E0`         |             | Text - French                      |
+| `9F0`         |             | Text - Italian                     |
+| `A00`         |             | Text - German                      |
+| `A10`         |             | Text - Spanish                     |
 
 ## List of files that I made sense of
 
