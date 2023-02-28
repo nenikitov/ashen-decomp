@@ -28,7 +28,7 @@ for f in ${PATH_OUTPUT_DEFLATED}/*; do
     # Strings
     strings "${f}" > "${PATH_OUTPUT_ANALYZED}/${FILE_NAME_NO_EXTENSION}_strings.txt"
 
-    # Bindwalk
+    # Binwalk
     binwalk -B "${f}" > "${PATH_OUTPUT_ANALYZED}/${FILE_NAME_NO_EXTENSION}_binwalk.txt"
     sed -i '1,3d' "${PATH_OUTPUT_ANALYZED}/${FILE_NAME_NO_EXTENSION}_binwalk.txt"
     sed -i '/^$/d' "${PATH_OUTPUT_ANALYZED}/${FILE_NAME_NO_EXTENSION}_binwalk.txt"

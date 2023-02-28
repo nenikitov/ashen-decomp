@@ -29,7 +29,12 @@ fn main() {
             // Raw and deflated
             for (declaration, file) in file.file_declarations.iter().zip(file.files) {
                 // Raw
-                let path_output_raw = path_output_raw.join(format!("{:X}.dat", declaration.offset));
+                let path_output_raw = path_output_raw.join(
+                    format!("{:X}.{}",
+                        declaration.offset,
+                        if file.is_zlib() { "zlib" } else { "dat" }
+                    )
+                );
                 fs::write(
                     &path_output_raw,
                     &file.data
