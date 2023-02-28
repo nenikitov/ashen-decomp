@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::Path,
+    path::PathBuf,
 };
 use format::BinaryChunk;
 use crate::format::PmanFile;
@@ -10,21 +10,44 @@ mod format;
 
 
 fn main() {
-    let path = "packfile.dat";
+    let path = "rom/packfile.dat";
     let buffer = fs::read(path).expect("Could not read the data file");
 
     match PmanFile::new_read(&buffer, &mut 0) {
         Ok(file) => {
-            let path_dir = Path::new("output");
-            let _ = fs::remove_dir_all(path_dir);
-            fs::create_dir_all(path_dir).expect("Cannot create an output directory");
+            // Set up file structure
+            let path_output = PathBuf::from("output");
+            let path_output_raw = path_output.join("raw");
+            let path_output_deflated = path_output.join("deflated");
+            let path_output_parsed = path_output.join("parsed");
+            let _ = fs::remove_dir_all(&path_output);
+            fs::create_dir_all(&path_output).expect("Cannot create the output directory");
+            fs::create_dir_all(&path_output_raw).unwrap();
+            fs::create_dir_all(&path_output_deflated).unwrap();
+            fs::create_dir_all(&path_output_parsed).unwrap();
+
+            // Raw and deflated
             for (declaration, file) in file.file_declarations.iter().zip(file.files) {
-                let path = path_dir.join(format!("{:X}.dat", declaration.offset));
-                fs::write(&path, &file.data).expect("Could not write a data file");
+                // Raw
+                let path_output_raw = path_output_raw.join(format!("{:X}.dat", declaration.offset));
+                fs::write(
+                    &path_output_raw,
+                    &file.data
+                ).expect("Could not write a raw data file");
+
+                // Deflated
+                let path_output_deflated = path_output_deflated.join(format!("{:X}.dat", declaration.offset));
                 if file.is_zlib() {
-                    let path = path_dir.join(format!("{:X}.zlib", declaration.offset));
-                    let data = file.zlib_data().expect("Invalid ZLIB archive");
-                    fs::write(&path, &data).expect("Could not write a data file");
+                    fs::write(
+                        &path_output_deflated,
+                        file.zlib_data().expect("Invalid ZLIB archive")
+                    ).expect("Could not write a deflated data file");
+                }
+                else {
+                    fs::copy(
+                        &path_output_raw,
+                        &path_output_deflated
+                    ).expect("Could not copy a deflated data file");
                 }
             }
         }
