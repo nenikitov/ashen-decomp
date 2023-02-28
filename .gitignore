@@ -3,6 +3,7 @@ target/
 
 # Ashen data file
 packfile.dat
+rom
 
 # Outputs
 output/
