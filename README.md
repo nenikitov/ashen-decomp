@@ -215,11 +215,9 @@ I use the packfile that comes with Ashen 1.06. Your packfile may have different 
 ## Descoveries
 
 - Test level for enemies
-    - Works with palette from chapter 7.1
+    - There is a pool with fish enemies, which I don't remember seeing in the game
 - Test level ???
-    - Works with palette from chapter 7.1
     - Collision by itself works with other level geometry, geometry by itself also works, but not together
-- On the test level for enemies, there is a pool with fish enemies, which I don't remember seeing in the game
 
 
 ## List of files that I made sense of
