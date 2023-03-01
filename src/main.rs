@@ -56,7 +56,7 @@ fn main() {
                 }
             }
         }
-        Err(e) => println!("{e:?}"),
+        Err(e) => eprintln!("{e:?}"),
     }
 }
 
