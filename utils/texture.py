@@ -30,7 +30,7 @@ def generate_texture(palette: t.List[t.Tuple[int, int, int]], width: int, path_i
 def get_palette(path_color_palette: pathlib.Path) -> t.List[t.Tuple[int, int, int]]:
     COLOR_PALETTE = Image.open(path_color_palette)
     return [
-        COLOR_PALETTE.getpixel((i, 0))
+        COLOR_PALETTE.getpixel((i, 15))
         for i in range(0, COLOR_PALETTE.size[0])
     ]
 
