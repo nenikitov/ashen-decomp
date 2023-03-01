@@ -6,9 +6,10 @@ import pathlib
 from PIL import Image
 
 HEIGHT = 256
-NAME_COLOR_PALETTE = '7F5464.dat'
 PATH_REPO = pathlib.Path(__file__).parent.parent.resolve()
-PATH_OUTPUT = PATH_REPO.joinpath('output', 'deflated')
+PATH_OUTPUT = PATH_REPO.joinpath('output')
+PATH_OUTPUT_DEFLATED = PATH_OUTPUT.joinpath('deflated')
+PATH_OUTPUT_COLOR_PALETTE = PATH_OUTPUT.joinpath('parsed').joinpath('color-palettes')
 
 def transform_color(color: int) -> t.Tuple[int, int, int]:
     R = (color & 0xF00) >> 8
@@ -20,9 +21,9 @@ def transform_color(color: int) -> t.Tuple[int, int, int]:
         B << 4 | B
     )
 
-if __name__ == "__main__":
-    with open(PATH_OUTPUT.joinpath(NAME_COLOR_PALETTE), 'rb') as f:
-        SIZE = os.path.getsize(PATH_OUTPUT.joinpath(NAME_COLOR_PALETTE)) // 4
+def generate_color_palette(path_palette_file: pathlib.Path, path_output_image: pathlib.Path) -> None:
+    with open(path_palette_file, 'rb') as f:
+        SIZE = os.path.getsize(path_palette_file) // 4
         image = Image.new(
             'RGB',
             (HEIGHT, SIZE // HEIGHT)
@@ -39,5 +40,16 @@ if __name__ == "__main__":
             )
 
         # Save
-        image.save(PATH_OUTPUT.parent.joinpath('test').joinpath('color_palette.png'))
+        image.save(path_output_image)
 
+if __name__ == "__main__":
+    os.makedirs(PATH_OUTPUT_COLOR_PALETTE, exist_ok=True)
+
+    for f in os.listdir(PATH_OUTPUT_DEFLATED):
+        PATH_FILE = PATH_OUTPUT_DEFLATED.joinpath(f)
+        if os.path.getsize(PATH_FILE) == 32 * 1024:
+            # May be a color palette file
+            generate_color_palette(
+                PATH_FILE,
+                PATH_OUTPUT_COLOR_PALETTE.joinpath(os.path.splitext(f)[0] + '.png')
+            )
