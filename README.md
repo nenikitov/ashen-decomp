@@ -223,6 +223,15 @@ I use the packfile that comes with Ashen 1.06. Your packfile may have different 
 | `A00`         | `DA34B8.dat` | Text - German                             |
 | `A10`         | `DA5B9C.dat` | Text - Spanish                            |
 
+### Known file formats
+
+### Text bank
+
+- Starts with `9B 01 00 00`
+- The rest is encoded in UTF16
+- All text chunks are separated with `\r\r`
+- There are weird characters like `20 20` which are probably to control in-game scripts
+
 ## Discoveries
 
 - Test level for enemies
