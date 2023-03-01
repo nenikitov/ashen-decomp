@@ -62,6 +62,10 @@ An unarchiver of an obscure NGage game Ashen
 
 I use the packfile that comes with Ashen 1.06. Your packfile may have different offsets to files, I didn't test with different versions.
 
+Notes:
+- **⚠️** - Unknown file
+- **🔎** - Unseen content
+
 | Address (HEX) | Output file  | Type            | Purpose                     | Notes   |
 | ------------- | ------------ | --------------- | --------------------------- | ------- |
 | `040`         | `A20.dat`    |                 | **???**                     | **⚠️**   |
@@ -204,12 +208,12 @@ I use the packfile that comes with Ashen 1.06. Your packfile may have different 
 | `8D0`         | `87B52C.dat` | Level geometry  | Deathmatch 4                |         |
 | `8E0`         | `8A8F2C.dat` | Level collision | Deathmatch 4                |         |
 | `8F0`         | `8B2508.dat` | Color palette   | Deathmatch 4                |         |
-| `900`         | `8BA508.dat` | Level geometry  | Test level for enemies      | 💡      |
-| `910`         | `8C4188.dat` | Level collision | Test level for enemies      | 💡      |
-| `920`         | `8C4F64.dat` | Level waypoint  | Test level for enemies      | **💡⚠️** |
-| `930`         | `8C4F84.dat` | Level geometry  | Test level **???** geometry | 💡      |
-| `940`         | `8CFF88.dat` | Level collision | Test level **???**          | **💡⚠️** |
-| `950`         | `8D1000.dat` | Level waypoint  | Test level **???**          | **💡⚠️** |
+| `900`         | `8BA508.dat` | Level geometry  | Test level for enemies      | 🔎      |
+| `910`         | `8C4188.dat` | Level collision | Test level for enemies      | 🔎      |
+| `920`         | `8C4F64.dat` | Level waypoint  | Test level for enemies      | **⚠️🔎** |
+| `930`         | `8C4F84.dat` | Level geometry  | Test level **???** geometry | 🔎      |
+| `940`         | `8CFF88.dat` | Level collision | Test level **???**          | **⚠️🔎** |
+| `950`         | `8D1000.dat` | Level waypoint  | Test level **???**          | **⚠️🔎** |
 | `960`         | `8D102C.dat` |                 | **???**                     | **⚠️**   |
 | `970`         | `8DB36C.dat` |                 | **???**                     | **⚠️**   |
 | `980`         | `8DCC74.dat` |                 | **???**                     | **⚠️**   |
