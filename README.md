@@ -232,6 +232,12 @@ I use the packfile that comes with Ashen 1.06. Your packfile may have different 
 - All text chunks are separated with `\r\r`
 - There are weird characters like `20 20` which are probably to control in-game scripts
 
+### Color palette
+
+- Is a collection of 4 byte integers
+- Every integer is the 12-bit color
+- If transformed into 256x32 image, shows colored arcs similar to the Quake color palette
+
 ## Discoveries
 
 - Test level for enemies
