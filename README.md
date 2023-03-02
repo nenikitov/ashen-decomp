@@ -219,7 +219,7 @@ Notes:
 | `980`         | `8DCC74.dat` | UI???           | **???**                          | **⚠️**   |
 | `990`         | `8E160C.dat` |                 | **???**                          | **⚠️**   |
 | `9A0`         | `A25878.dat` | UI???           | **???**                          | **⚠️**   |
-| `9B0`         | `BBC974.dat` |                 | **???**                          | **⚠️**   |
+| `9B0`         | `BBC974.dat` | Music           | **???**                          | **⚠️**   |
 | `9C0`         | `D9924C.dat` | Text bank       | English UK                       |         |
 | `9D0`         | `D9B808.dat` | Text bank       | English US                       |         |
 | `9E0`         | `D9DDC4.dat` | Text bank       | French                           |         |
@@ -241,6 +241,16 @@ Notes:
 - Is a collection of 4 byte integers
 - Every integer is the 12-bit color
 - If transformed into 256x32 image, shows colored arcs similar to the Quake color palette
+
+### Entity
+
+- Groups texture, model, and possibly animation data together
+- Textures are stored as 8 bit integers that are indeces of the color on the color palette
+
+### Music
+
+- Another collection of Zlib files concatinated together
+- Music is probably stored as OGG, instruments separate from composition
 
 ## Discoveries
 
