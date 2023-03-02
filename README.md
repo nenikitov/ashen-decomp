@@ -68,7 +68,7 @@ Notes:
 
 | Address (HEX) | Output file  | Type            | Purpose                          | Notes   |
 | ------------- | ------------ | --------------- | -------------------------------- | ------- |
-| `040`         | `A20.dat`    |                 | **???**                          | **⚠️**   |
+| `040`         | `A20.dat`    | Look up table   | Probably used for gamma setting  | **⚠️**   |
 | `050`         | `6F20.dat`   | Color palette   | Monsters                         | **⚠️**   |
 | `060`         | `EF20.dat`   | Color palette   | Monsters ghost vision            | **⚠️**   |
 | `070`         | `16F20.dat`  | Color palette   | Wraith ghost vision              | **⚠️**   |
@@ -78,25 +78,25 @@ Notes:
 | `0B0`         | `36F20.dat`  | Color palette   | Level ghost vision               | **⚠️**   |
 | `0C0`         | `3EF20.dat`  | Color palette   | Weapon sprite                    | **⚠️**   |
 | `0D0`         | `46F20.dat`  | Color palette   | Weapon sprite ghost vision       | **⚠️**   |
-| `0E0`         | `4EF20.dat`  |                 | **???**                          | **⚠️**   |
-| `0F0`         | `7DE80.dat`  |                 | **???**                          | **⚠️**   |
-| `100`         | `93CF4.dat`  |                 | **???**                          | **⚠️**   |
-| `110`         | `AE3D0.dat`  |                 | **???**                          | **⚠️**   |
-| `120`         | `D0A90.dat`  |                 | **???**                          | **⚠️**   |
-| `130`         | `EC6BC.dat`  |                 | **???**                          | **⚠️**   |
-| `140`         | `10E58C.dat` | Entity          | Aquagore (256 - 6F20)            | **⚠️**   |
-| `150`         | `127C58.dat` | Entity          | Boss (64 - 1EF20)                | **⚠️**   |
-| `160`         | `12B2F8.dat` | Entity          | **??? (256 - ???)**              | **⚠️**   |
+| `0E0`         | `4EF20.dat`  | Entity          | Aquagore (256 - 6F20)            | **⚠️**   |
+| `0F0`         | `7DE80.dat`  | Entity          | Brood Maw (256 - 6F20)           | **⚠️**   |
+| `100`         | `93CF4.dat`  | Entity          | Crypt Crawler (256 - 6F20)       | **⚠️**   |
+| `110`         | `AE3D0.dat`  | Entity          | Fire Deacon (256 - 6F20)         | **⚠️**   |
+| `120`         | `D0A90.dat`  | Entity          | Hunter (256 - 6F20)              | **⚠️**   |
+| `130`         | `EC6BC.dat`  | Entity          | Psi Stalker (256 - 6F20)         | **⚠️**   |
+| `140`         | `10E58C.dat` | Entity          | Storm Fluke (256 - 6F20)         | **⚠️**   |
+| `150`         | `127C58.dat` | Entity          | Tentacle (64 - 1EF20)            | **⚠️**   |
+| `160`         | `12B2F8.dat` | Entity          | Wraith (256 - ???)               | **⚠️**   |
 | `170`         | `142920.dat` | Entity          | Boss (256 - 1EF20)               | **⚠️**   |
-| `180`         | `1574A4.dat` | Entity          | **??? (256 - ???)**              | **⚠️**   |
+| `180`         | `1574A4.dat` | Entity          | Jacob (256 - ???)**              | **⚠️**   |
 | `190`         | `166DDC.dat` | Entity          | Vanessa (256 - 1EF20)            | **⚠️**   |
-| `1A0`         | `17A464.dat` |                 | **???**                          | **⚠️**   |
-| `1B0`         | `17A688.dat` |                 | **???**                          | **⚠️**   |
-| `1C0`         | `17A7AC.dat` |                 | **???**                          | **⚠️**   |
-| `1D0`         | `17A948.dat` |                 | **???**                          | **⚠️**   |
-| `1E0`         | `17AB00.dat` |                 | **???**                          | **⚠️**   |
-| `1F0`         | `17ACD4.dat` |                 | **???**                          | **⚠️**   |
-| `200`         | `17ADBC.dat` |                 | **???**                          | **⚠️**   |
+| `1A0`         | `17A464.dat` | Entity          | **Projectile rocket**            | **⚠️**   |
+| `1B0`         | `17A688.dat` | Entity          | **Projectile grenade**           | **⚠️**   |
+| `1C0`         | `17A7AC.dat` | Entity          | **Projectile plasma**            | **⚠️**   |
+| `1D0`         | `17A948.dat` | Entity          | **Projectile spider 1 ???**      | **⚠️**   |
+| `1E0`         | `17AB00.dat` | Entity          | **Projectile spider 3 ???**      | **⚠️**   |
+| `1F0`         | `17ACD4.dat` | Entity          | **Projectile bigger???**         | **⚠️**   |
+| `200`         | `17ADBC.dat` | Entity          | Projectile Fire Deacon           | **⚠️**   |
 | `210`         | `17AEFC.dat` | Entity          | Boss (64 - 1EF20)                | **⚠️**   |
 | `220`         | `17BA3C.dat` | Entity          | Boss (64 - 1EF20)                | **⚠️**   |
 | `230`         | `17C574.dat` | Entity          | Boss (64 - 1EF20)                | **⚠️**   |
@@ -105,35 +105,35 @@ Notes:
 | `260`         | `17FF8C.dat` | Entity          | Blood (64 - 1EF20)               | **⚠️**   |
 | `270`         | `180664.dat` | Entity          | Blood (64 - 1EF20)               | **⚠️**   |
 | `280`         | `180D38.dat` | Entity          | Blood (64 - 1EF20)               | **⚠️**   |
-| `290`         | `1813C4.dat` | Entity          | Ammo sniper (64 - 1EF20)         | **⚠️**   |
+| `290`         | `1813C4.dat` | Entity          | Ammo pistol (64 - 1EF20)         | **⚠️**   |
 | `2A0`         | `181A24.dat` | Entity          | Ammo double pistol (64 - 1EF20)  | **⚠️**   |
 | `2B0`         | `1820B4.dat` | Entity          | Ammo shotgun (64 - 1EF20)        | **⚠️**   |
 | `2C0`         | `1827C4.dat` | Entity          | Ammo machine gun (64 - 1EF20)    | **⚠️**   |
-| `2D0`         | `182E18.dat` | Entity          | Ammo pistol (64 - 1EF20)         | **⚠️**   |
+| `2D0`         | `182E18.dat` | Entity          | Ammo sniper (64 - 1EF20)         | **⚠️**   |
 | `2E0`         | `1832DC.dat` | Entity          | Ammo grenade (64 - 1EF20)        | **⚠️**   |
 | `2F0`         | `1839F0.dat` | Entity          | Ammo rocket (64 - 1EF20)         | **⚠️**   |
 | `300`         | `184020.dat` | Entity          | Ammo gatling gun (64 - 1EF20)    | **⚠️**   |
 | `310`         | `18475C.dat` | Entity          | Pistol (64 - 1EF20)              | **⚠️**   |
 | `320`         | `184F4C.dat` | Entity          | Dual pistol (64 - 1EF20)         | **⚠️**   |
-| `330`         | `1858F0.dat` |                 | **???**                          | **⚠️**   |
-| `340`         | `18602C.dat` |                 | **???**                          | **⚠️**   |
-| `350`         | `1868D4.dat` |                 | **???**                          | **⚠️**   |
-| `360`         | `1871B4.dat` |                 | **???**                          | **⚠️**   |
-| `370`         | `187A4C.dat` |                 | **???**                          | **⚠️**   |
-| `380`         | `1882D0.dat` |                 | **???**                          | **⚠️**   |
-| `390`         | `188B7C.dat` |                 | **???**                          | **⚠️**   |
-| `3A0`         | `189574.dat` |                 | **???**                          | **⚠️**   |
-| `3B0`         | `189AF0.dat` |                 | **???**                          | **⚠️**   |
-| `3C0`         | `18A08C.dat` |                 | **???**                          | **⚠️**   |
-| `3D0`         | `18AB20.dat` |                 | **???**                          | **⚠️**   |
-| `3E0`         | `18B2BC.dat` |                 | **???**                          | **⚠️**   |
-| `3F0`         | `18BB20.dat` |                 | **???**                          | **⚠️**   |
-| `400`         | `18C374.dat` |                 | **???**                          | **⚠️**   |
-| `410`         | `19C57C.dat` |                 | **???**                          | **⚠️**   |
-| `420`         | `1AC784.dat` |                 | **???**                          | **⚠️**   |
-| `430`         | `1BC98C.dat` |                 | **???**                          | **⚠️**   |
+| `330`         | `1858F0.dat` | Entity          | Shotgun (64 - 1EF20)             | **⚠️**   |
+| `340`         | `18602C.dat` | Entity          | Machine gun (64 - 1EF20)         | **⚠️**   |
+| `350`         | `1868D4.dat` | Entity          | Sniper (64 - 1EF20)              | **⚠️**   |
+| `360`         | `1871B4.dat` | Entity          | Grenade launcher (64 - 1EF20)    | **⚠️**   |
+| `370`         | `187A4C.dat` | Entity          | Gatling gun (64 - 1EF20)         | **⚠️**   |
+| `380`         | `1882D0.dat` | Entity          | Alien Pulse Gun (64 - 1EF20)     | **⚠️**   |
+| `390`         | `188B7C.dat` | Entity          | Goggles (64 - 1EF20)             | **⚠️**   |
+| `3A0`         | `189574.dat` | Entity          | **Crystal ???**                  | **⚠️**   |
+| `3B0`         | `189AF0.dat` | Entity          | Vanessa's letter (64 - 1EF20)    | **⚠️**   |
+| `3C0`         | `18A08C.dat` | Entity          | Alien key (64 - 1EF20)           | **⚠️**   |
+| `3D0`         | `18AB20.dat` | Entity          | Light jacket (64 - 1EF20)        | **⚠️**   |
+| `3E0`         | `18B2BC.dat` | Entity          | Medium jacket (64 - 1EF20)       | **⚠️**   |
+| `3F0`         | `18BB20.dat` | Entity          | Heavy jacket (64 - 1EF20)        | **⚠️**   |
+| `400`         | `18C374.dat` | Skybox          | **???**                          | **⚠️**   |
+| `410`         | `19C57C.dat` | Skybox          | **???**                          | **⚠️**   |
+| `420`         | `1AC784.dat` | Skybox          | **???**                          | **⚠️**   |
+| `430`         | `1BC98C.dat` | Skybox          | **???**                          | **⚠️**   |
 | `440`         | `1CCB94.dat` | Skybox          | **???**                          | **⚠️**   |
-| `450`         | `1DCD9C.dat` |                 | **???**                          | **⚠️**   |
+| `450`         | `1DCD9C.dat` | Skybox          | **???**                          | **⚠️**   |
 | `460`         | `1ECFA4.dat` |                 | **???**                          | **⚠️**   |
 | `470`         | `1ED1A4.dat` |                 | **???**                          | **⚠️**   |
 | `480`         | `1ED3A4.dat` |                 | **???**                          | **⚠️**   |
@@ -216,9 +216,9 @@ Notes:
 | `950`         | `8D1000.dat` | Level waypoint  | Test level **???**               | **⚠️🔎** |
 | `960`         | `8D102C.dat` |                 | **???**                          | **⚠️**   |
 | `970`         | `8DB36C.dat` |                 | **???**                          | **⚠️**   |
-| `980`         | `8DCC74.dat` |                 | **???**                          | **⚠️**   |
+| `980`         | `8DCC74.dat` | UI???           | **???**                          | **⚠️**   |
 | `990`         | `8E160C.dat` |                 | **???**                          | **⚠️**   |
-| `9A0`         | `A25878.dat` |                 | **???**                          | **⚠️**   |
+| `9A0`         | `A25878.dat` | UI???           | **???**                          | **⚠️**   |
 | `9B0`         | `BBC974.dat` |                 | **???**                          | **⚠️**   |
 | `9C0`         | `D9924C.dat` | Text bank       | English UK                       |         |
 | `9D0`         | `D9B808.dat` | Text bank       | English US                       |         |
