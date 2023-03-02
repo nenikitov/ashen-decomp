@@ -69,15 +69,15 @@ Notes:
 | Address (HEX) | Output file  | Type            | Purpose                          | Notes   |
 | ------------- | ------------ | --------------- | -------------------------------- | ------- |
 | `040`         | `A20.dat`    |                 | **???**                          | **⚠️**   |
-| `050`         | `6F20.dat`   | Color palette   | **???**                          | **⚠️**   |
-| `060`         | `EF20.dat`   | Color palette   | Ghost vision **???**             | **⚠️**   |
-| `070`         | `16F20.dat`  | Color palette   | Ghost vision **???**             | **⚠️**   |
-| `080`         | `1EF20.dat`  | Color palette   | **???**                          | **⚠️**   |
-| `090`         | `26F20.dat`  | Color palette   | Ghost vision **???**             | **⚠️**   |
+| `050`         | `6F20.dat`   | Color palette   | Monsters                         | **⚠️**   |
+| `060`         | `EF20.dat`   | Color palette   | Monsters ghost vision            | **⚠️**   |
+| `070`         | `16F20.dat`  | Color palette   | Wraith ghost vision              | **⚠️**   |
+| `080`         | `1EF20.dat`  | Color palette   | Pick ups                         | **⚠️**   |
+| `090`         | `26F20.dat`  | Color palette   | Pick ups ghost vision            | **⚠️**   |
 | `0A0`         | `2EF20.dat`  | Color palette   | **???**                          | **⚠️**   |
-| `0B0`         | `36F20.dat`  | Color palette   | Ghost vision **???**             | **⚠️**   |
-| `0C0`         | `3EF20.dat`  | Color palette   | **???**                          | **⚠️**   |
-| `0D0`         | `46F20.dat`  | Color palette   | Ghost vision **???**             | **⚠️**   |
+| `0B0`         | `36F20.dat`  | Color palette   | Level ghost vision               | **⚠️**   |
+| `0C0`         | `3EF20.dat`  | Color palette   | Weapon sprite                    | **⚠️**   |
+| `0D0`         | `46F20.dat`  | Color palette   | Weapon sprite ghost vision       | **⚠️**   |
 | `0E0`         | `4EF20.dat`  |                 | **???**                          | **⚠️**   |
 | `0F0`         | `7DE80.dat`  |                 | **???**                          | **⚠️**   |
 | `100`         | `93CF4.dat`  |                 | **???**                          | **⚠️**   |
@@ -89,7 +89,7 @@ Notes:
 | `160`         | `12B2F8.dat` | Entity          | **??? (256 - ???)**              | **⚠️**   |
 | `170`         | `142920.dat` | Entity          | Boss (256 - 1EF20)               | **⚠️**   |
 | `180`         | `1574A4.dat` | Entity          | **??? (256 - ???)**              | **⚠️**   |
-| `190`         | `166DDC.dat` | Entity          | Charles (256 - 1EF20)            | **⚠️**   |
+| `190`         | `166DDC.dat` | Entity          | Vanessa (256 - 1EF20)            | **⚠️**   |
 | `1A0`         | `17A464.dat` |                 | **???**                          | **⚠️**   |
 | `1B0`         | `17A688.dat` |                 | **???**                          | **⚠️**   |
 | `1C0`         | `17A7AC.dat` |                 | **???**                          | **⚠️**   |
