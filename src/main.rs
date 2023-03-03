@@ -1,19 +1,18 @@
+mod format;
+
 use std::{
     fs,
     path::PathBuf,
 };
-use format::BinaryChunk;
-use crate::format::PmanFile;
 
-
-mod format;
+use format::*;
 
 
 fn main() {
     let path = "rom/packfile.dat";
     let buffer = fs::read(path).expect("Could not read the data file");
 
-    match PmanFile::new_read(&buffer, &mut 0) {
+    match PMan::new_read(&buffer, &mut 0) {
         Ok(file) => {
             // Set up file structure
             let path_output = PathBuf::from("output");
@@ -27,25 +26,25 @@ fn main() {
             fs::create_dir_all(&path_output_parsed).unwrap();
 
             // Raw and deflated
-            for (declaration, file) in file.file_declarations.iter().zip(file.files) {
+            for chunk in file.chunks {
                 // Raw
                 let path_output_raw = path_output_raw.join(
                     format!("{:X}.{}",
-                        declaration.offset,
-                        if file.is_zlib() { "zlib" } else { "dat" }
+                        chunk.offset,
+                        if chunk.is_zlib() { "zlib" } else { "dat" }
                     )
                 );
                 fs::write(
                     &path_output_raw,
-                    &file.data
+                    &chunk.data
                 ).expect("Could not write a raw data file");
 
                 // Deflated
-                let path_output_deflated = path_output_deflated.join(format!("{:X}.dat", declaration.offset));
-                if file.is_zlib() {
+                let path_output_deflated = path_output_deflated.join(format!("{:X}.dat", chunk.offset));
+                if chunk.is_zlib() {
                     fs::write(
                         &path_output_deflated,
-                        file.zlib_data().expect("Invalid ZLIB archive")
+                        chunk.zlib_data().expect("Invalid ZLIB archive")
                     ).expect("Could not write a deflated data file");
                 }
                 else {
