@@ -251,6 +251,22 @@ Notes:
 
 - Another collection of Zlib files concatinated together
 - Music is probably stored as OGG, instruments separate from composition
+- **TODO** Document this better
+- Segments -> files
+- 1st segment - OST
+    - 7
+    - 1
+    - 8
+    - 3
+    - 5
+    - 4
+    - 2
+    - 7
+    - victory
+    - concept
+    - death
+    - load
+    - main menu
 
 ## Discoveries
 
