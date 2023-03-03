@@ -7,7 +7,8 @@ pub enum ExpectedData {
     },
     Bound {
         min: Option<Box<dyn Debug>>,
-        max: Option<Box<dyn Debug>>, },
+        max: Option<Box<dyn Debug>>,
+    },
     Other {
         description: String
     }
