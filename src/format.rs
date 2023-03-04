@@ -1,8 +1,9 @@
 mod data;
-pub mod pman;
-mod chunk;
-mod chunk_type;
 
-pub use pman::PMan;
+pub mod packfile;
+mod packfile_entry;
+mod packfile_entry_type;
+
+pub use packfile::PackFile;
 pub use data::DataFile;
 

@@ -12,7 +12,7 @@ fn main() {
     let path = "rom/packfile.dat";
     let buffer = fs::read(path).expect("Could not read the data file");
 
-    match PMan::new_read(&buffer, &mut 0) {
+    match PackFile::new_read(&buffer, &mut 0) {
         Ok(file) => {
             // Set up file structure
             let path_output = PathBuf::from("output");
@@ -26,7 +26,7 @@ fn main() {
             fs::create_dir_all(&path_output_parsed).unwrap();
 
             // Raw and deflated
-            for chunk in file.chunks {
+            for chunk in file.entries {
                 // Raw
                 let path_output_raw = path_output_raw.join(
                     format!("{:X}.{}",

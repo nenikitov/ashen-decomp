@@ -275,3 +275,8 @@ Notes:
 - Test level ???
     - Collision by itself works with other level geometry, geometry by itself also works, but not together
 
+## Resources
+
+- [Post by HoRRoR](http://www.emu-land.net/forum/index.php?topic=49753.0)
+- [Debug Windows build with symbols](https://archive.org/details/Nokia_N-Gage_Ashen_v1.0.6_Windows_Build)
+

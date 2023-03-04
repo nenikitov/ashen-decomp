@@ -4,31 +4,23 @@ use flate2::read::ZlibDecoder;
 
 use super::data::*;
 
-pub struct PManChunk {
+
+pub struct PackFileEntry {
+    pub asset_type: u32,
     pub offset: u32,
-    pub size: u32,
+    pub length: u32,
     pub data: Vec<u8>
 }
 
-impl DataFile for PManChunk {
+impl DataFile for PackFileEntry {
     fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, DataError>
     where Self: Sized {
         let mut read_part = |size| (offset.clone(), read_part(buffer, offset, size));
 
         // Start
-        let (start_padding_offset, start_padding) = read_part(4);
-        let start = u32::from_le_bytes(start_padding.try_into().unwrap());
-        if start != 0 {
-            return Err(DataError {
-                file_type: String::from("PMan chunk"),
-                offset: start_padding_offset,
-                section: String::from("Start padding"),
-                exepcted: ExpectedData::Equal {
-                    value: Box::new(0)
-                },
-                actual: Box::new(start_padding.to_owned())
-            })
-        }
+        let asset_type = u32::from_le_bytes(
+            (*read_part(4).1).try_into().unwrap()
+        );
 
         // Offset
         let offset = u32::from_le_bytes(
@@ -36,7 +28,7 @@ impl DataFile for PManChunk {
         );
 
         // Size
-        let size = u32::from_le_bytes(
+        let length = u32::from_le_bytes(
             (*read_part(4).1).try_into().unwrap()
         );
 
@@ -56,14 +48,15 @@ impl DataFile for PManChunk {
         }
 
         Ok(Self {
+            asset_type,
             offset,
-            size,
-            data: buffer[(offset as usize) .. (offset + size) as usize].to_vec()
+            length,
+            data: buffer[(offset as usize) .. (offset + length) as usize].to_vec()
         })
     }
 }
 
-impl PManChunk {
+impl PackFileEntry {
     pub fn is_zlib(&self) -> bool {
         return
             self.data[0] == b'Z'

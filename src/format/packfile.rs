@@ -1,11 +1,11 @@
-use super::{chunk::PManChunk, data::*};
+use super::{packfile_entry::*, data::*};
 
-pub struct PMan {
+pub struct PackFile {
     pub copyright: String,
-    pub chunks: Vec<PManChunk>
+    pub entries: Vec<PackFileEntry>
 }
 
-impl DataFile for PMan {
+impl DataFile for PackFile {
     fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, DataError>
     where Self: Sized {
         let mut read_part = |size| (offset.clone(), read_part(buffer, offset, size));
@@ -64,12 +64,12 @@ impl DataFile for PMan {
 
         // Chunks
         let chunks = (0 .. num_files)
-            .map(|_| PManChunk::new_read(buffer, offset))
+            .map(|_| PackFileEntry::new_read(buffer, offset))
             .collect::<Result::<_, _>>()?;
 
         Ok(Self {
             copyright: copyright.to_owned(),
-            chunks
+            entries: chunks
         })
     }
 }
