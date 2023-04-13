@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use super::packfile_entry::*;
 
 #[derive(Debug)]
 pub enum ExpectedData {
@@ -37,6 +38,10 @@ pub struct DataError {
 pub trait DataFile {
     fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, DataError>
     where Self: Sized;
+}
+
+pub trait Asset : Into<Vec<u8>> {
+    fn extension() -> &'static str;
 }
 
 pub(super) fn read_part<'a> (buffer: &'a [u8], offset: &mut usize, size: usize) -> &'a [u8] {
