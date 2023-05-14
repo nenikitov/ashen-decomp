@@ -1,10 +1,99 @@
-use std::io::Read;
+use super::traits::*;
 
-use flate2::read::ZlibDecoder;
+#[derive(Debug)]
+pub struct PackFileEntry {
+    pub asset_type: u32,
+    pub offset: u32,
+    pub length: u32,
+}
 
-use super::data::*;
+impl AssetLoad for PackFileEntry {
+    type Data = ();
 
+    fn load(bytes: &[u8], _: Self::Data) -> Result<(Self, usize), DataError>
+    where
+        Self: Sized,
+    {
+        let mut offset = 0usize;
 
+        // Asset type
+        let asset_type = match read_part::<4>(bytes, &mut offset) {
+            Ok(asset_type) => u32::from_le_bytes(*asset_type.0),
+            Err(error) => {
+                let mut error = DataError::from(error);
+                error.file_type = Some(Self::file_type());
+                error.section = Some("Asset type".to_string());
+                return Err(error);
+            }
+        };
+        if asset_type != 0 {
+            return Err(DataError {
+                file_type: Some(Self::file_type()),
+                section: Some("Asset type".to_string()),
+                offset: Some(offset),
+                actual: Box::new(asset_type),
+                expected: ExpectedData::Equal { value: Box::new(0) },
+            });
+        }
+
+        // Offset
+        let offset_asset = match read_part::<4>(bytes, &mut offset) {
+            Ok(offset_asset) => u32::from_le_bytes(*offset_asset.0),
+            Err(error) => {
+                let mut error = DataError::from(error);
+                error.file_type = Some(Self::file_type());
+                error.section = Some("Offset".to_string());
+                return Err(error);
+            }
+        };
+
+        // Length
+        let length = match read_part::<4>(bytes, &mut offset) {
+            Ok(length) => u32::from_le_bytes(*length.0),
+            Err(error) => {
+                let mut error = DataError::from(error);
+                error.file_type = Some(Self::file_type());
+                error.section = Some("Offset".to_string());
+                return Err(error);
+            }
+        };
+
+        // Reserved
+        let reserved = match read_part::<4>(bytes, &mut offset) {
+            Ok(reserved) => u32::from_le_bytes(*reserved.0),
+            Err(error) => {
+                let mut error = DataError::from(error);
+                error.file_type = Some(Self::file_type());
+                error.section = Some("Asset type".to_string());
+                return Err(error);
+            }
+        };
+        if reserved != 0 {
+            return Err(DataError {
+                file_type: Some(Self::file_type()),
+                section: Some("Reserved".to_string()),
+                offset: Some(offset),
+                actual: Box::new(reserved),
+                expected: ExpectedData::Equal { value: Box::new(0) },
+            });
+        }
+
+        Ok((
+            Self {
+                asset_type,
+                offset: offset_asset,
+                length,
+            },
+            offset,
+        ))
+    }
+
+    fn file_type() -> String {
+        "PackFileEntry".to_string()
+    }
+}
+
+/*
 pub struct PackFileEntry {
     pub asset_type: u32,
     pub offset: u32,
@@ -106,3 +195,4 @@ impl PackFileEntry {
     }
 }
 
+*/

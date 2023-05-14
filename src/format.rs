@@ -2,9 +2,7 @@ mod data;
 
 pub mod packfile;
 mod packfile_entry;
-mod packfile_entry_type;
-mod string_table;
+mod traits;
 
 pub use packfile::PackFile;
-pub use data::DataFile;
-
+pub use traits::{AssetConvert, AssetLoad, ConvertedFile, DataError, ExpectedData};
