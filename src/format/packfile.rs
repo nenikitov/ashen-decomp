@@ -1,12 +1,12 @@
 use std::str;
 
-use super::packfile_entry::PackFileEntry;
+use super::packfile_entry::*;
 use super::traits::*;
 
 #[derive(Debug)]
 pub struct PackFile {
     pub copyright: String,
-    pub entries: Vec<PackFileEntry>,
+    pub entries: Vec<(PackFileEntryHeader, PackFileEntryData)>,
 }
 
 impl AssetLoad for PackFile {
@@ -87,20 +87,26 @@ impl AssetLoad for PackFile {
         };
 
         // Entries information
-        let entries: Vec<_> = (0..entries)
-            .map(|_| match PackFileEntry::load(&bytes[offset..], ()) {
-                Ok(entry) => {
-                    offset += entry.1;
-                    Ok(entry.0)
-                }
-                Err(mut error) => {
-                    if let Some(offset_error) = &mut error.offset {
-                        *offset_error += offset;
-                    }
-                    Err(error)
-                }
+        let entries: Result<Vec<_>, DataError> = (0..entries)
+            .map(|_| {
+                let header = PackFileEntryHeader::load(&bytes[offset..], ())?;
+                let data = PackFileEntryData::load(
+                    &bytes[header.0.offset as usize..(header.0.offset + header.0.length) as usize],
+                    (),
+                )?;
+
+                Ok((header.0, data.0))
             })
-            .collect::<Result<_, DataError>>()?;
+            .collect();
+        let entries = match entries {
+            Ok(entries) => entries,
+            Err(mut error) => {
+                if let Some(offset_error) = &mut error.offset {
+                    *offset_error += offset;
+                }
+                return Err(error);
+            }
+        };
 
         Ok((Self { copyright, entries }, offset))
     }

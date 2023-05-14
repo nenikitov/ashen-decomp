@@ -1,7 +1,7 @@
 use std::{
     fmt::{Debug, Display},
     io::{Error, ErrorKind},
-    path::PathBuf,
+    path::PathBuf
 };
 
 pub trait Printable: Debug + Display {}
@@ -56,7 +56,7 @@ pub struct DataError {
 
 impl Display for DataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error encountered");
+        write!(f, "Error encountered")?;
         if let Some(ref file_type) = self.file_type {
             write!(f, " in {file_type}")?;
         }
@@ -66,7 +66,7 @@ impl Display for DataError {
         if let Some(ref offset) = self.section {
             write!(f, " (offset {offset})")?;
         }
-        writeln!(f, "");
+        writeln!(f, "")?;
         writeln!(f, "- Expected: {}", self.expected)?;
         writeln!(f, "- Actual: {}", self.actual)?;
         Ok(())
