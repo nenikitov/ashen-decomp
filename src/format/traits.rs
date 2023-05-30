@@ -99,12 +99,12 @@ pub struct ConvertedFile {
     /// Data in a modern format.
     data: Vec<u8>,
     /// Path of the output file.
-    path: PathBuf,
+    extension: &'static str,
 }
 
 impl ConvertedFile {
-    pub fn new(data: Vec<u8>, path: PathBuf) -> Self {
-        Self { data, path }
+    pub fn new(data: Vec<u8>, extension: &'static str) -> Self {
+        Self { data, extension }
     }
 }
 
@@ -134,7 +134,7 @@ pub trait AssetLoad {
 }
 
 /// File from the game that can be converted to modern file format.
-pub trait AssetConvert {
+pub trait AssetConvert: Debug {
     /// Convert an asset file to their more-modern format.
     ///
     /// One asset file can be converted to multiple files.

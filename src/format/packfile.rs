@@ -6,7 +6,7 @@ use super::traits::*;
 #[derive(Debug)]
 pub struct PackFile {
     pub copyright: String,
-    pub entries: Vec<(PackFileEntryHeader, PackFileEntryData)>,
+    pub entries: Vec<PackFileEntryHeader>,
 }
 
 impl AssetLoad for PackFile {
@@ -88,14 +88,16 @@ impl AssetLoad for PackFile {
 
         // Entries information
         let entries: Result<Vec<_>, DataError> = (0..entries)
-            .map(|_| {
+            .map(|i| {
                 let header = PackFileEntryHeader::load(&bytes[offset..], ())?;
+                let header = header.0;
                 let data = PackFileEntryData::load(
-                    &bytes[header.0.offset as usize..(header.0.offset + header.0.length) as usize],
+                    &bytes[header.offset as usize..(header.offset + header.length) as usize],
                     (),
                 )?;
+                let data = data.0;
 
-                Ok((header.0, data.0))
+                Ok(header)
             })
             .collect();
         let entries = match entries {

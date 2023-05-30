@@ -1,6 +1,5 @@
-mod data;
-
-pub mod packfile;
+mod assets;
+mod packfile;
 mod packfile_entry;
 mod traits;
 
