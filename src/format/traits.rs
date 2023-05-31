@@ -1,8 +1,10 @@
 use std::{
+    error,
     fmt::{Debug, Display},
-    io::{Error, ErrorKind},
-    path::PathBuf
+    io,
 };
+
+use super::asset_table::AssetType;
 
 pub trait Printable: Debug + Display {}
 impl<T> Printable for T where T: Debug + Display {}
@@ -43,7 +45,7 @@ impl Display for ExpectedData {
 pub struct DataError {
     /// Type of the data file.
     /// TODO change to an enum if possible.
-    pub file_type: Option<String>,
+    pub file_type: Option<AssetType>,
     /// Section of the data file.
     pub section: Option<String>,
     /// Offset in bytes since the start of the file.
@@ -73,14 +75,16 @@ impl Display for DataError {
     }
 }
 
-impl Into<Error> for DataError {
-    fn into(self) -> Error {
-        Error::new(ErrorKind::InvalidData, self.to_string())
+impl error::Error for DataError {}
+
+impl Into<io::Error> for DataError {
+    fn into(self) -> io::Error {
+        io::Error::new(io::ErrorKind::InvalidData, self.to_string())
     }
 }
 
-impl From<Error> for DataError {
-    fn from(error: Error) -> Self {
+impl From<io::Error> for DataError {
+    fn from(error: io::Error) -> Self {
         DataError {
             file_type: None,
             section: None,
@@ -109,37 +113,38 @@ impl ConvertedFile {
 }
 
 /// File from the that can be loaded.
-pub trait AssetLoad {
-    /// Any additional info necessary for loading a game file.
-    ///
-    /// For example, a palette for a texture file.
-    type Data;
-
+pub trait AssetLoad: Debug {
     /// Load bytes for the game asset file.
     ///
     /// # Arguments
     ///
     /// - `bytes` - Bytes directly from the asset file.
-    /// - `additional` - Any additional info for loading.
     ///
     /// # Returns
     ///
     /// - Loaded data.
     /// - Number of bytes read to load the data.
-    fn load(bytes: &[u8], additional: Self::Data) -> Result<(Self, usize), DataError>
+    fn load(bytes: &[u8]) -> Result<(Self, usize), DataError>
     where
         Self: Sized;
 
-    fn file_type() -> String;
+    fn file_type() -> AssetType
+    where
+        Self: Sized;
 }
 
 /// File from the game that can be converted to modern file format.
 pub trait AssetConvert: Debug {
+    /// Any additional info necessary for converting a game file.
+    ///
+    /// For example, a palette for a texture file.
+    type Extra;
+
     /// Convert an asset file to their more-modern format.
     ///
     /// One asset file can be converted to multiple files.
     /// For example, a model can have embedded texture and animation assets.
-    fn convert(&self) -> Vec<ConvertedFile>;
+    fn convert(&self, extra: &Self::Extra) -> Vec<ConvertedFile>;
 }
 
 /// Read a part of a buffer and move the offset.
@@ -152,19 +157,19 @@ pub trait AssetConvert: Debug {
 ///
 /// # Returns
 ///
-/// - Offset before reading.
 /// - Data from the file that was read.
+/// - Offset before reading.
 pub(super) fn read_part<'a, const SIZE: usize>(
     bytes: &'a [u8],
     offset: &mut usize,
-) -> Result<(&'a [u8; SIZE], usize), Error> {
+) -> Result<(&'a [u8; SIZE], usize), io::Error> {
     let offset_clone = offset.clone();
     let start = *offset;
     let end = start + SIZE;
 
     if end > bytes.len() {
-        Err(Error::new(
-            ErrorKind::UnexpectedEof,
+        Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
             format!(
                 "Tried reading bytes from {start} to {end} when length is {}",
                 bytes.len()
@@ -173,9 +178,6 @@ pub(super) fn read_part<'a, const SIZE: usize>(
     } else {
         *offset += SIZE;
         let slice = &bytes[start..end];
-        Ok((
-            slice.try_into().unwrap(),
-            offset_clone,
-        ))
+        Ok((slice.try_into().unwrap(), offset_clone))
     }
 }

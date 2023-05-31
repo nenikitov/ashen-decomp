@@ -1,22 +1,22 @@
 use std::str;
 
+use super::asset_table::AssetType;
+use super::assets::ColorMap;
 use super::packfile_entry::*;
 use super::traits::*;
 
 #[derive(Debug)]
 pub struct PackFile {
     pub copyright: String,
-    pub entries: Vec<PackFileEntryHeader>,
+    pub entries: Vec<(PackFileEntryHeader, PackFileEntryData, Option<Box<dyn AssetLoad>>)>,
 }
 
 impl AssetLoad for PackFile {
-    type Data = ();
-
-    fn load(bytes: &[u8], _: Self::Data) -> Result<(Self, usize), DataError>
+    fn load(bytes: &[u8]) -> Result<(Self, usize), DataError>
     where
         Self: Sized,
     {
-        let mut offset = 0usize;
+        let mut offset = 0;
 
         // PMAN signature
         let pman = match read_part::<4>(bytes, &mut offset) {
@@ -69,7 +69,7 @@ impl AssetLoad for PackFile {
                 Err(error) => {
                     return Err(DataError {
                         file_type: Some(Self::file_type()),
-                        section: Some("PMAN signature".to_string()),
+                        section: Some("Copyright".to_string()),
                         offset: Some(offset + error.valid_up_to()),
                         actual: Box::new(format!("{:?}", copyright.1)),
                         expected: ExpectedData::Other {
@@ -81,7 +81,7 @@ impl AssetLoad for PackFile {
             Err(error) => {
                 let mut error = DataError::from(error);
                 error.file_type = Some(Self::file_type());
-                error.section = Some("PMAN signature".to_string());
+                error.section = Some("Copyright".to_string());
                 return Err(error);
             }
         };
@@ -89,15 +89,16 @@ impl AssetLoad for PackFile {
         // Entries information
         let entries: Result<Vec<_>, DataError> = (0..entries)
             .map(|i| {
-                let header = PackFileEntryHeader::load(&bytes[offset..], ())?;
-                let header = header.0;
-                let data = PackFileEntryData::load(
+                let (header, _) = PackFileEntryHeader::load(&bytes[offset..])?;
+                let (data, _) = PackFileEntryData::load(
                     &bytes[header.offset as usize..(header.offset + header.length) as usize],
-                    (),
                 )?;
-                let data = data.0;
+                let parser: Option<Box<dyn AssetLoad>> = match i {
+                    1..=9 => Some(Box::from(ColorMap::load(&data.data()?)?.0)),
+                    _ => None,
+                };
 
-                Ok(header)
+                Ok((header, data, parser))
             })
             .collect();
         let entries = match entries {
@@ -113,7 +114,7 @@ impl AssetLoad for PackFile {
         Ok((Self { copyright, entries }, offset))
     }
 
-    fn file_type() -> String {
-        "PackFile".to_string()
+    fn file_type() -> AssetType {
+        AssetType::PackFile
     }
 }

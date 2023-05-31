@@ -1,18 +1,16 @@
+#![allow(dead_code)]
+
 mod format;
 
-use std::{
-    fs,
-    path::PathBuf,
-};
+use std::fs;
 
 use format::*;
-
 
 fn main() {
     let path = "rom/packfile.dat";
     let bytes = fs::read(path).expect("Could not read the data file");
 
-    let packfile = PackFile::load(&bytes, ()).unwrap();
+    let packfile = PackFile::load(&bytes).unwrap();
 
     println!("{:#?}", packfile);
 
@@ -64,4 +62,3 @@ fn main() {
     }
     */
 }
-

@@ -1,53 +1,8 @@
-use std::fmt::Display;
+# Asset files
 
-#[derive(Debug)]
-pub enum AssetType {
-    PackFile,
-    PackFileEntryHeader,
-    PackFileEntryData,
-    GammaTable,
-    ColorMap,
-    Model,
-    Sky,
-    LevelGeometry,
-    LevelCollision,
-    LevelWayPointNav,
-    Sprites,
-    TextureInfo,
-    SpriteTextures,
-    SoundData,
-    StringTable,
-}
-
-impl Display for AssetType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "{}",
-            match &self {
-                AssetType::PackFile => "Pack file",
-                AssetType::PackFileEntryHeader => "Pack file entry header",
-                AssetType::PackFileEntryData => "Pack file entry data",
-                AssetType::GammaTable => "Gamma table",
-                AssetType::ColorMap => "Color map",
-                AssetType::Model => "Model",
-                AssetType::Sky => "Sky",
-                AssetType::LevelGeometry => "Level geometry",
-                AssetType::LevelCollision => "Level collision",
-                AssetType::LevelWayPointNav => "Level way point nav",
-                AssetType::Sprites => "Sprites",
-                AssetType::TextureInfo => "Texture info",
-                AssetType::SpriteTextures => "Sprite textures",
-                AssetType::SoundData => "Sound data",
-                AssetType::StringTable => "String table",
-            }
-        )
-    }
-}
-
-// TODO
-#[allow(non_camel_case_types)]
-enum ASSET_FILES {
+```cpp
+enum ASSET_FILES : int32_t
+{
     ASSET_GAMMA_TABLE = 0x0,
     ASSET_CREATURECOLORMAP = 0x1,
     ASSET_G_CREATURECOLORMAP = 0x2,
@@ -205,5 +160,56 @@ enum ASSET_FILES {
     ASSET_STRINGTABLE_FRENCH = 0x9a,
     ASSET_STRINGTABLE_ITALIAN = 0x9b,
     ASSET_STRINGTABLE_GERMAN = 0x9c,
-    ASSET_STRINGTABLE_SPANISH = 0x9d,
-}
+    ASSET_STRINGTABLE_SPANISH = 0x9d
+};
+```
+
+# Pack file
+
+```cpp
+struct Asset::PackFileEntry
+{
+    uint32_t m_uAssetType;
+    uint32_t m_uOffset;
+    uint32_t m_uLength;
+    uint32_t m_reserved;
+};
+
+struct Asset::PackFileHeader
+{
+    uint32_t m_uId;
+    uint32_t m_uTotalEntries;
+    char m_strCopyright[0x38];
+};
+```
+
+# Asset
+
+```cpp
+class Asset
+{
+    uint8_t m_bInitialised;
+    class FileSystem* m_pFileSystem;
+    uint16_t m_szPackFileName[0x100];
+    uint16_t m_szFileId[0x64];
+    uint32_t m_uNumFiles;
+    struct Asset::PackFileEntry* m_pDirectory;
+    int32_t m_nFileHandle;
+};
+```
+
+```cpp
+struct DawnLevels::LevelData
+{
+    int32_t m_nIndex;
+    uint32_t m_uLevelAssetId;
+    uint32_t m_uLevelCollisionAssetId;
+    int32_t m_nLevelWaypointAssetId;
+    uint32_t m_uColorMapAssetId;
+    uint32_t m_uSkyAssetId;
+    uint32_t m_uSkyGhostPaletteAssetId;
+    int32_t m_f16SkyHorizontalTextureRevolutions;
+    int32_t m_f16SkyVerticalTextureRevolutions;
+    int32_t m_nSkyVerticalOffset;
+};
+```

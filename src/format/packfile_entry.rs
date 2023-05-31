@@ -2,7 +2,7 @@ use std::io::Read;
 
 use flate2::read::ZlibDecoder;
 
-use super::traits::*;
+use super::{traits::*, asset_table::AssetType};
 
 #[derive(Debug)]
 pub struct PackFileEntryHeader {
@@ -12,9 +12,7 @@ pub struct PackFileEntryHeader {
 }
 
 impl AssetLoad for PackFileEntryHeader {
-    type Data = ();
-
-    fn load(bytes: &[u8], _: Self::Data) -> Result<(Self, usize), DataError>
+    fn load(bytes: &[u8]) -> Result<(Self, usize), DataError>
     where
         Self: Sized,
     {
@@ -92,8 +90,8 @@ impl AssetLoad for PackFileEntryHeader {
         ))
     }
 
-    fn file_type() -> String {
-        "PackFileEntryHeader".to_string()
+    fn file_type() -> AssetType {
+        AssetType::PackFileEntryHeader
     }
 }
 
@@ -140,9 +138,7 @@ impl PackFileEntryData {
 }
 
 impl AssetLoad for PackFileEntryData {
-    type Data = ();
-
-    fn load(bytes: &[u8], _: Self::Data) -> Result<(Self, usize), DataError>
+    fn load(bytes: &[u8]) -> Result<(Self, usize), DataError>
     where
         Self: Sized,
     {
@@ -154,7 +150,7 @@ impl AssetLoad for PackFileEntryData {
         ))
     }
 
-    fn file_type() -> String {
-        "PackFileEntryData".to_string()
+    fn file_type() -> AssetType {
+        AssetType::PackFileEntryData
     }
 }
