@@ -8,6 +8,12 @@ use super::asset_table::AssetType;
 
 pub trait Printable: Debug + Display {}
 impl<T> Printable for T where T: Debug + Display {}
+impl PartialEq for dyn Printable {
+    fn eq(&self, other: &Self) -> bool {
+        // TODO find a better way of doing this
+        format!("{:?}", self) == format!("{:?}", other)
+    }
+}
 
 /// Expectation of some data.
 #[derive(Debug)]
@@ -21,6 +27,30 @@ pub enum ExpectedData {
     },
     /// Expected to something else.
     Other { description: String },
+}
+impl PartialEq for ExpectedData {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (ExpectedData::Equal { value: value1 }, ExpectedData::Equal { value: value2 }) => {
+                value1 == value2
+            }
+            (
+                ExpectedData::Bound {
+                    min: min1,
+                    max: max1,
+                },
+                ExpectedData::Bound {
+                    min: min2,
+                    max: max2,
+                },
+            ) => min1 == min2 && max1 == max2,
+            (
+                ExpectedData::Other { description: desc1 },
+                ExpectedData::Other { description: desc2 },
+            ) => desc1 == desc2,
+            _ => false,
+        }
+    }
 }
 
 impl Display for ExpectedData {
@@ -94,6 +124,16 @@ impl From<io::Error> for DataError {
                 description: "".to_string(),
             },
         }
+    }
+}
+
+impl PartialEq for DataError {
+    fn eq(&self, other: &Self) -> bool {
+        self.file_type == other.file_type
+            && self.section == other.section
+            && self.offset == other.offset
+            && *self.actual == *other.actual
+            && self.expected == other.expected
     }
 }
 

@@ -8,7 +8,11 @@ use super::traits::*;
 #[derive(Debug)]
 pub struct PackFile {
     pub copyright: String,
-    pub entries: Vec<(PackFileEntryHeader, PackFileEntryData, Option<Box<dyn AssetLoad>>)>,
+    pub entries: Vec<(
+        PackFileEntryHeader,
+        PackFileEntryData,
+        Option<Box<dyn AssetLoad>>,
+    )>,
 }
 
 impl AssetLoad for PackFile {
