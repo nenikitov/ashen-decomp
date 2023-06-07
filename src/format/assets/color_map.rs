@@ -1,6 +1,6 @@
 use crate::format::{asset_table::AssetType, *};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -59,7 +59,7 @@ impl AssetLoad for ColorMap {
 
         let colors: Vec<_> = bytes
             .chunks(4)
-            .map(|bytes| u16::from_le_bytes(bytes.try_into().unwrap()))
+            .map(|bytes| u16::from_le_bytes(bytes[0..2].try_into().unwrap()))
             .enumerate()
             .map(|(i, value)| {
                 Color::new_from_12_bit(value).map_err(|mut e| {
@@ -93,29 +93,74 @@ impl AssetConvert for ColorMap {
 mod test {
     use super::*;
 
-    #[test]
-    fn test_color_new_from_12_bit_assigns_rgb() {
-        let color = Color::new_from_12_bit(0x57D).unwrap();
-        assert_eq!(0x55, color.r);
-        assert_eq!(0x77, color.g);
-        assert_eq!(0xDD, color.b);
+    mod color {
+        use super::*;
+
+        mod new_from_12_bit {
+            use super::*;
+
+            #[test]
+            fn returns_parsed_color() {
+                let color = Color::new_from_12_bit(0x57D).unwrap();
+                assert_eq!(
+                    color,
+                    Color {
+                        r: 0x55,
+                        g: 0x77,
+                        b: 0xDD
+                    }
+                );
+            }
+
+            #[test]
+            fn returns_error_if_value_is_not_12_bit() {
+                let color = Color::new_from_12_bit(0xFFF1).unwrap_err();
+                assert_eq!(
+                    color,
+                    DataError {
+                        file_type: None,
+                        section: None,
+                        offset: None,
+                        actual: Box::from(0xFFF1),
+                        expected: ExpectedData::Bound {
+                            min: None,
+                            max: Some(Box::from(0xFFF))
+                        }
+                    }
+                );
+            }
+        }
     }
 
-    #[test]
-    fn test_color_new_from_12_bit_returns_error_if_value_is_not_12_bit() {
-        let color = Color::new_from_12_bit(0xFFF1).unwrap_err();
-        assert_eq!(
-            DataError {
-                file_type: None,
-                section: None,
-                offset: None,
-                actual: Box::from(0xFFF1),
-                expected: ExpectedData::Bound {
-                    min: None,
-                    max: Some(Box::from(0xFFF))
+    mod color_map {
+        use super::*;
+
+        mod asset_load {
+            use super::*;
+
+            mod load {
+                use super::*;
+
+                #[test]
+                fn returns_parsed_data() {
+                    let bytes = vec![
+                        0xBC, 0x0B, 0x00, 0x00, // #BBBBCC
+                        0x54, 0x06, 0x00, 0x00, // #665544
+                        0x13, 0x0F, 0x00, 0x00, // #FF1133
+                        0x06, 0x07, 0x00, 0x00, // #770066
+                    ];
+                    let color_map = ColorMap::load(&bytes).unwrap().0;
+                    assert_eq!(
+                        color_map.colors,
+                        vec![
+                            Color::new_from_12_bit(0xBBC).unwrap(),
+                            Color::new_from_12_bit(0x654).unwrap(),
+                            Color::new_from_12_bit(0xF13).unwrap(),
+                            Color::new_from_12_bit(0x706).unwrap()
+                        ]
+                    );
                 }
-            },
-            color
-        );
+            }
+        }
     }
 }

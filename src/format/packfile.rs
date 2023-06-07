@@ -91,34 +91,66 @@ impl AssetLoad for PackFile {
         };
 
         // Entries information
-        let entries: Result<Vec<_>, DataError> = (0..entries)
+        let entries: Vec<_> = (0..entries)
             .map(|i| {
-                let (header, _) = PackFileEntryHeader::load(&bytes[offset..])?;
+                let (header, header_offset) =
+                    PackFileEntryHeader::load(&bytes[offset..]).map_err(|mut e| {
+                        if let Some(error_offset) = e.offset.as_mut() {
+                            *error_offset += offset;
+                        }
+                        e
+                    })?;
+
                 let (data, _) = PackFileEntryData::load(
                     &bytes[header.offset as usize..(header.offset + header.length) as usize],
-                )?;
-                let parser: Option<Box<dyn AssetLoad>> = match i {
-                    1..=9 => Some(Box::from(ColorMap::load(&data.data()?)?.0)),
-                    _ => None,
-                };
+                )
+                .map_err(|mut e| {
+                    if let Some(error_offset) = e.offset.as_mut() {
+                        *error_offset += header.offset as usize;
+                    }
+                    e
+                })?;
 
-                Ok((header, data, parser))
+                let loaded = Self::index_to_asset_type(i).map(|loader| match loader {
+                    AssetType::ColorMap => Self::load_with_loader::<ColorMap>(&header, &data),
+                    _ => todo!(),
+                });
+                let loaded = loaded
+                    .map(|result| result.map(|(loaded, _)| loaded))
+                    .transpose()
+                    .map_err(|err| err)?;
+
+                offset += header_offset;
+                Ok((header, data, loaded))
             })
-            .collect();
-        let entries = match entries {
-            Ok(entries) => entries,
-            Err(mut error) => {
-                if let Some(offset_error) = &mut error.offset {
-                    *offset_error += offset;
-                }
-                return Err(error);
-            }
-        };
+            .collect::<Result<_, DataError>>()?;
 
         Ok((Self { copyright, entries }, offset))
     }
 
     fn file_type() -> AssetType {
         AssetType::PackFile
+    }
+}
+
+impl PackFile {
+    // TODO cover all cases and remove `Option`
+    fn index_to_asset_type(i: u32) -> Option<AssetType> {
+        match i {
+            1..=9 => Some(AssetType::ColorMap),
+            _ => None,
+        }
+    }
+
+    fn load_with_loader<T: AssetLoad + 'static>(
+        header: &PackFileEntryHeader,
+        data: &PackFileEntryData,
+    ) -> Result<(Box<dyn AssetLoad>, usize), DataError> {
+        let bytes = data.data().map_err(|mut e| {
+            e.file_type = Some(T::file_type());
+            e.offset = Some(header.offset as usize);
+            e
+        })?;
+        T::load(&bytes).map(|(load, size)| (Box::new(load) as Box<dyn AssetLoad>, size))
     }
 }
