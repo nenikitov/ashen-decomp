@@ -74,8 +74,7 @@ impl Display for ExpectedData {
 #[derive(Debug)]
 pub struct DataError {
     /// Type of the data file.
-    /// TODO change to an enum if possible.
-    pub file_type: Option<AssetType>,
+    pub asset_type: Option<AssetType>,
     /// Section of the data file.
     pub section: Option<String>,
     /// Offset in bytes since the start of the file.
@@ -89,7 +88,7 @@ pub struct DataError {
 impl Display for DataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Error encountered")?;
-        if let Some(ref file_type) = self.file_type {
+        if let Some(ref file_type) = self.asset_type {
             write!(f, " in {file_type}")?;
         }
         if let Some(ref section) = self.section {
@@ -116,7 +115,7 @@ impl Into<io::Error> for DataError {
 impl From<io::Error> for DataError {
     fn from(error: io::Error) -> Self {
         DataError {
-            file_type: None,
+            asset_type: None,
             section: None,
             offset: None,
             actual: Box::new(error.to_string()),
@@ -129,7 +128,7 @@ impl From<io::Error> for DataError {
 
 impl PartialEq for DataError {
     fn eq(&self, other: &Self) -> bool {
-        self.file_type == other.file_type
+        self.asset_type == other.asset_type
             && self.section == other.section
             && self.offset == other.offset
             && *self.actual == *other.actual

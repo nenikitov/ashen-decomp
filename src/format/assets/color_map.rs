@@ -11,13 +11,13 @@ impl Color {
     fn new_from_12_bit(value: u16) -> Result<Color, DataError> {
         if value > 0xFFF {
             return Err(DataError {
-                file_type: None,
+                asset_type: None,
                 section: None,
                 offset: None,
-                actual: Box::from(value),
+                actual: Box::new(value),
                 expected: ExpectedData::Bound {
                     min: None,
-                    max: Some(Box::from(0xFFF)),
+                    max: Some(Box::new(0xFFF)),
                 },
             });
         }
@@ -34,7 +34,7 @@ impl Color {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ColorMap {
     colors: Vec<Color>,
 }
@@ -47,7 +47,7 @@ impl AssetLoad for ColorMap {
         let size = bytes.len();
         if size % 4 != 0 {
             return Err(DataError {
-                file_type: Some(Self::file_type()),
+                asset_type: Some(Self::file_type()),
                 section: None,
                 offset: None,
                 actual: Box::new(bytes.len()),
@@ -69,7 +69,7 @@ impl AssetLoad for ColorMap {
             })
             .collect::<Result<Vec<_>, _>>()
             .map_err(|mut e| {
-                e.file_type = Some(Self::file_type());
+                e.asset_type = Some(Self::file_type());
                 e
             })?;
 
@@ -118,13 +118,13 @@ mod test {
                 assert_eq!(
                     color,
                     DataError {
-                        file_type: None,
+                        asset_type: None,
                         section: None,
                         offset: None,
-                        actual: Box::from(0xFFF1),
+                        actual: Box::new(0xFFF1),
                         expected: ExpectedData::Bound {
                             min: None,
-                            max: Some(Box::from(0xFFF))
+                            max: Some(Box::new(0xFFF))
                         }
                     }
                 );
@@ -151,14 +151,27 @@ mod test {
                     ];
                     let color_map = ColorMap::load(&bytes).unwrap().0;
                     assert_eq!(
-                        color_map.colors,
-                        vec![
-                            Color::new_from_12_bit(0xBBC).unwrap(),
-                            Color::new_from_12_bit(0x654).unwrap(),
-                            Color::new_from_12_bit(0xF13).unwrap(),
-                            Color::new_from_12_bit(0x706).unwrap()
-                        ]
+                        color_map,
+                        ColorMap {
+                            colors: vec![
+                                Color::new_from_12_bit(0xBBC).unwrap(),
+                                Color::new_from_12_bit(0x654).unwrap(),
+                                Color::new_from_12_bit(0xF13).unwrap(),
+                                Color::new_from_12_bit(0x706).unwrap()
+                            ]
+                        }
                     );
+                }
+
+                // TODO add failing tests
+            }
+
+            mod asset_type {
+                use super::*;
+
+                #[test]
+                fn returns_correctly() {
+                    assert_eq!(ColorMap::file_type(), AssetType::ColorMap)
                 }
             }
         }

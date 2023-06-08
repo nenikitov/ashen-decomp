@@ -1,7 +1,7 @@
 use std::str;
 
 use super::asset_table::AssetType;
-use super::assets::ColorMap;
+use super::assets::*;
 use super::packfile_entry::*;
 use super::traits::*;
 
@@ -28,7 +28,7 @@ impl AssetLoad for PackFile {
                 Ok(pman) => pman.to_string(),
                 Err(error) => {
                     return Err(DataError {
-                        file_type: Some(Self::file_type()),
+                        asset_type: Some(Self::file_type()),
                         section: Some("PMAN signature".to_string()),
                         offset: Some(offset + error.valid_up_to()),
                         actual: Box::new(format!("{:?}", pman.1)),
@@ -40,14 +40,14 @@ impl AssetLoad for PackFile {
             },
             Err(error) => {
                 let mut error = DataError::from(error);
-                error.file_type = Some(Self::file_type());
+                error.asset_type = Some(Self::file_type());
                 error.section = Some("PMAN signature".to_string());
                 return Err(error);
             }
         };
         if pman != "PMAN" {
             return Err(DataError {
-                file_type: Some(Self::file_type()),
+                asset_type: Some(Self::file_type()),
                 section: Some("PMAN signature".to_string()),
                 offset: Some(offset),
                 actual: Box::new(pman),
@@ -60,7 +60,7 @@ impl AssetLoad for PackFile {
             Ok(entries) => u32::from_le_bytes(*entries.0),
             Err(error) => {
                 let mut error = DataError::from(error);
-                error.file_type = Some(Self::file_type());
+                error.asset_type = Some(Self::file_type());
                 error.section = Some("Offset".to_string());
                 return Err(error);
             }
@@ -72,7 +72,7 @@ impl AssetLoad for PackFile {
                 Ok(copyright) => copyright.to_string(),
                 Err(error) => {
                     return Err(DataError {
-                        file_type: Some(Self::file_type()),
+                        asset_type: Some(Self::file_type()),
                         section: Some("Copyright".to_string()),
                         offset: Some(offset + error.valid_up_to()),
                         actual: Box::new(format!("{:?}", copyright.1)),
@@ -84,7 +84,7 @@ impl AssetLoad for PackFile {
             },
             Err(error) => {
                 let mut error = DataError::from(error);
-                error.file_type = Some(Self::file_type());
+                error.asset_type = Some(Self::file_type());
                 error.section = Some("Copyright".to_string());
                 return Err(error);
             }
@@ -147,7 +147,7 @@ impl PackFile {
         data: &PackFileEntryData,
     ) -> Result<(Box<dyn AssetLoad>, usize), DataError> {
         let bytes = data.data().map_err(|mut e| {
-            e.file_type = Some(T::file_type());
+            e.asset_type = Some(T::file_type());
             e.offset = Some(header.offset as usize);
             e
         })?;
