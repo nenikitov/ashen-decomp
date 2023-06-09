@@ -1,6 +1,5 @@
 mod assets;
 mod packfile;
-mod packfile_entry;
 mod traits;
 mod asset_table;
 

@@ -143,7 +143,7 @@ mod test {
 
                 #[test]
                 fn returns_parsed_data() {
-                    let bytes = vec![
+                    let bytes = [
                         0xBC, 0x0B, 0x00, 0x00, // #BBBBCC
                         0x54, 0x06, 0x00, 0x00, // #665544
                         0x13, 0x0F, 0x00, 0x00, // #FF1133

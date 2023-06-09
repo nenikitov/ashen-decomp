@@ -2,7 +2,6 @@ use std::str;
 
 use super::asset_table::AssetType;
 use super::assets::*;
-use super::packfile_entry::*;
 use super::traits::*;
 
 #[derive(Debug)]
@@ -10,7 +9,6 @@ pub struct PackFile {
     pub copyright: String,
     pub entries: Vec<(
         PackFileEntryHeader,
-        PackFileEntryData,
         Option<Box<dyn AssetLoad>>,
     )>,
 }
@@ -101,18 +99,11 @@ impl AssetLoad for PackFile {
                         e
                     })?;
 
-                let (data, _) = PackFileEntryData::load(
-                    &bytes[header.offset as usize..(header.offset + header.length) as usize],
-                )
-                .map_err(|mut e| {
-                    if let Some(error_offset) = e.offset.as_mut() {
-                        *error_offset += header.offset as usize;
-                    }
-                    e
-                })?;
-
                 let loaded = Self::index_to_asset_type(i).map(|loader| match loader {
-                    AssetType::ColorMap => Self::load_with_loader::<ColorMap>(&header, &data),
+                    AssetType::ColorMap => Self::load_with_loader::<ColorMap>(
+                    &bytes[header.offset as usize..(header.offset + header.length) as usize],
+                        header.offset
+                    ),
                     _ => todo!(),
                 });
                 let loaded = loaded
@@ -121,7 +112,7 @@ impl AssetLoad for PackFile {
                     .map_err(|err| err)?;
 
                 offset += header_offset;
-                Ok((header, data, loaded))
+                Ok((header, loaded))
             })
             .collect::<Result<_, DataError>>()?;
 
@@ -143,14 +134,15 @@ impl PackFile {
     }
 
     fn load_with_loader<T: AssetLoad + 'static>(
-        header: &PackFileEntryHeader,
-        data: &PackFileEntryData,
+        bytes: &[u8],
+        data_offset: u32,
     ) -> Result<(Box<dyn AssetLoad>, usize), DataError> {
-        let bytes = data.data().map_err(|mut e| {
+        let (bytes, _) = PackFileEntryData::load(&bytes).map_err(|mut e| {
             e.asset_type = Some(T::file_type());
-            e.offset = Some(header.offset as usize);
+            e.offset = Some(data_offset as usize);
             e
         })?;
-        T::load(&bytes).map(|(load, size)| (Box::new(load) as Box<dyn AssetLoad>, size))
+
+        T::load(&bytes.data).map(|(load, size)| (Box::new(load) as Box<dyn AssetLoad>, size))
     }
 }

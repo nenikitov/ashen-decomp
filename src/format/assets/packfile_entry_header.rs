@@ -110,7 +110,7 @@ mod test {
 
                 #[test]
                 fn returns_parsed_data() {
-                    let bytes = vec![
+                    let bytes = [
                         0x00, 0x00, 0x00, 0x00, // Asset type
                         0x38, 0x0D, 0x18, 0x00, // Offset
                         0x8B, 0x06, 0x00, 0x00, // Length
@@ -129,7 +129,7 @@ mod test {
 
                 #[test]
                 fn returns_error_if_asset_type_is_not_0() {
-                    let bytes = vec![
+                    let bytes = [
                         0x01, 0x00, 0x00, 0x00, // Asset type
                         0x38, 0x0D, 0x18, 0x00, // Offset
                         0x8B, 0x06, 0x00, 0x00, // Length
@@ -150,8 +150,8 @@ mod test {
 
                 #[test]
                 fn returns_error_if_asset_type_is_not_long_enough() {
-                    let bytes = vec![
-                        0x01, 0x00, 0x00, // Asset type INCOMPLETE
+                    let bytes = [
+                        0x01, 0x00, 0x00, // Asset type INVALID
                     ];
                     let header = PackFileEntryHeader::load(&bytes).unwrap_err();
                     assert_eq!(
@@ -170,9 +170,9 @@ mod test {
 
                 #[test]
                 fn returns_error_if_offset_is_not_long_enough() {
-                    let bytes = vec![
+                    let bytes = [
                         0x00, 0x00, 0x00, 0x00, // Asset type
-                        0x38, 0x0D, 0x18, // Offset INCOMPLETE
+                        0x38, 0x0D, 0x18, // Offset INVALID
                     ];
                     let header = PackFileEntryHeader::load(&bytes).unwrap_err();
                     assert_eq!(
@@ -191,10 +191,10 @@ mod test {
 
                 #[test]
                 fn returns_error_if_length_is_not_long_enough() {
-                    let bytes = vec![
+                    let bytes = [
                         0x00, 0x00, 0x00, 0x00, // Asset type
                         0x38, 0x0D, 0x18, 0x00, // Offset
-                        0x8B, 0x06, 0x00, // Length INCOMPLETE
+                        0x8B, 0x06, 0x00, // Length INVALID
                     ];
                     let header = PackFileEntryHeader::load(&bytes).unwrap_err();
                     assert_eq!(
@@ -213,7 +213,7 @@ mod test {
 
                 #[test]
                 fn returns_error_if_reserved_is_not_0() {
-                    let bytes = vec![
+                    let bytes = [
                         0x00, 0x00, 0x00, 0x00, // Asset type
                         0x38, 0x0D, 0x18, 0x00, // Offset
                         0x8B, 0x06, 0x00, 0x00, // Length
@@ -234,11 +234,11 @@ mod test {
 
                 #[test]
                 fn returns_error_if_reserved_is_not_long_enough() {
-                    let bytes = vec![
+                    let bytes = [
                         0x00, 0x00, 0x00, 0x00, // Asset type
                         0x38, 0x0D, 0x18, 0x00, // Offset
                         0x8B, 0x06, 0x00, 0x00, // Length
-                        0x01, 0x00, 0x00, // Reserved INCOMPLETE
+                        0x01, 0x00, 0x00, // Reserved INVLAID
                     ];
                     let header = PackFileEntryHeader::load(&bytes).unwrap_err();
                     assert_eq!(
