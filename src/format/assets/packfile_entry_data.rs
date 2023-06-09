@@ -87,63 +87,76 @@ mod test {
             }
         }
 
-        mod data {
+        mod asset_load {
             use super::*;
 
-            #[test]
-            fn returns_deflated_data_for_asset_zlib_stream() {
-                let data = [
-                    b'Z', b'L', // Asset Zlib signature
-                    0x06, 0x00, 0x00, // Stream size
-                    0x78, 0xDA, // Actual Zlib signature
-                    0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
-                ];
-                let data = PackFileEntryData::load(&data).unwrap().0;
-                assert_eq!(data.data, "Ashen\n".as_bytes());
-            }
+            mod load {
+                use super::*;
 
-            #[test]
-            fn returns_error_if_steam_has_invalid_size() {
-                let data = [
-                    b'Z', b'L', // Asset Zlib signature
-                    0x01, 0x00, 0x00, // Stream size INVALID
-                    0x78, 0xDA, // Actual Zlib signature
-                    0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
-                ];
-                let data = PackFileEntryData::load(&data).unwrap_err();
-                assert_eq!(
-                    data,
-                    DataError {
-                        asset_type: None,
-                        section: Some("Zlib data size".to_string()),
-                        offset: None,
-                        actual: Box::new(6),
-                        expected: ExpectedData::Equal { value: Box::new(1) }
-                    }
-                );
-            }
+                #[test]
+                fn returns_deflated_data_for_asset_zlib_stream() {
+                    let data = [
+                        b'Z', b'L', // Asset Zlib signature
+                        0x06, 0x00, 0x00, // Stream size
+                        0x78, 0xDA, // Actual Zlib signature
+                        0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
+                    ];
+                    let data = PackFileEntryData::load(&data).unwrap().0;
+                    assert_eq!(data.data, "Ashen\n".as_bytes());
+                }
 
-            #[test]
-            fn returns_error_if_steam_has_corruption() {
-                let bytes = [
-                    b'Z', b'L', // Asset Zlib signature
-                    0x06, 0x00, 0x00, // Stream size INVALID
-                    0x78, 0xDA, // Actual Zlib signature
-                    0x72, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
-                ];
-                let data = PackFileEntryData::load(&bytes).unwrap_err();
-                assert_eq!(
-                    data,
-                    DataError {
-                        asset_type: None,
-                        section: Some("Zlib data stream".to_string()),
-                        offset: None,
-                        actual: Box::new(format!("{:?}", &bytes[5..])),
-                        expected: ExpectedData::Other {
-                            description: "corrupt deflate stream".to_string()
+                #[test]
+                fn returns_error_if_steam_has_invalid_size() {
+                    let data = [
+                        b'Z', b'L', // Asset Zlib signature
+                        0x01, 0x00, 0x00, // Stream size INVALID
+                        0x78, 0xDA, // Actual Zlib signature
+                        0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
+                    ];
+                    let data = PackFileEntryData::load(&data).unwrap_err();
+                    assert_eq!(
+                        data,
+                        DataError {
+                            asset_type: None,
+                            section: Some("Zlib data size".to_string()),
+                            offset: None,
+                            actual: Box::new(6),
+                            expected: ExpectedData::Equal { value: Box::new(1) }
                         }
-                    }
-                );
+                    );
+                }
+
+                #[test]
+                fn returns_error_if_steam_has_corruption() {
+                    let bytes = [
+                        b'Z', b'L', // Asset Zlib signature
+                        0x06, 0x00, 0x00, // Stream size INVALID
+                        0x78, 0xDA, // Actual Zlib signature
+                        0x72, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
+                    ];
+                    let data = PackFileEntryData::load(&bytes).unwrap_err();
+                    assert_eq!(
+                        data,
+                        DataError {
+                            asset_type: None,
+                            section: Some("Zlib data stream".to_string()),
+                            offset: None,
+                            actual: Box::new(format!("{:?}", &bytes[5..])),
+                            expected: ExpectedData::Other {
+                                description: "corrupt deflate stream".to_string()
+                            }
+                        }
+                    );
+                }
+            }
+
+            mod asset_type {
+                use super::*;
+
+                #[test]
+                fn returns_correctly() {
+                    assert_eq!(PackFileEntryData::file_type(), AssetType::PackFileEntryData)
+                }
             }
         }
     }

@@ -8,6 +8,8 @@ pub struct Color {
 }
 
 impl Color {
+    pub const MAX: u16 = 0xFFF;
+
     fn new_from_12_bit(value: u16) -> Result<Color, DataError> {
         if value > 0xFFF {
             return Err(DataError {
@@ -17,7 +19,7 @@ impl Color {
                 actual: Box::new(value),
                 expected: ExpectedData::Bound {
                     min: None,
-                    max: Some(Box::new(0xFFF)),
+                    max: Some(Box::new(Self::MAX)),
                 },
             });
         }
@@ -49,21 +51,24 @@ impl AssetLoad for ColorMap {
             return Err(DataError {
                 asset_type: Some(Self::file_type()),
                 section: None,
-                offset: None,
+                offset: Some(0),
                 actual: Box::new(bytes.len()),
                 expected: ExpectedData::Other {
-                    description: "Divisible by 4 (because each color is 4 bytes)".to_string(),
+                    description: "Length divisible by 4 (because each color is 4 bytes)"
+                        .to_string(),
                 },
             });
         }
 
         let colors: Vec<_> = bytes
             .chunks(4)
-            .map(|bytes| u16::from_le_bytes(bytes[0..2].try_into().unwrap()))
+            .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()))
             .enumerate()
             .map(|(i, value)| {
-                Color::new_from_12_bit(value).map_err(|mut e| {
+                let value_16 = value.min(u16::MAX as u32) as u16;
+                Color::new_from_12_bit(value_16).map_err(|mut e| {
                     e.offset = Some(i * 4);
+                    e.actual = Box::new(value);
                     e
                 })
             })
@@ -163,7 +168,54 @@ mod test {
                     );
                 }
 
-                // TODO add failing tests
+                #[test]
+                fn returns_error_if_data_is_not_in_chunks_of_4_bytes() {
+                    let bytes = [
+                        0xBC, 0x0B, 0x00, 0x00, // #BBBBCC
+                        0x54, 0x06, 0x00, 0x00, // #665544
+                        0x13, 0x0F, 0x00, 0x00, // #FF1133
+                        0x06, 0x07, 0x00, // #770066 INVALID
+                    ];
+                    let color_map = ColorMap::load(&bytes).unwrap_err();
+                    assert_eq!(
+                        color_map,
+                        DataError {
+                            asset_type: Some(AssetType::ColorMap),
+                            section: None,
+                            offset: Some(0),
+                            actual: Box::new(15),
+                            expected: ExpectedData::Other {
+                                description:
+                                    "Length divisible by 4 (because each color is 4 bytes)"
+                                        .to_string()
+                            }
+                        }
+                    );
+                }
+
+                #[test]
+                fn returns_error_if_color_is_not_12_bit() {
+                    let bytes = [
+                        0xBC, 0x0B, 0x00, 0x00, // #BBBBCC
+                        0x54, 0x06, 0x00, 0x00, // #665544
+                        0x13, 0x0F, 0x00, 0x00, // #FF1133
+                        0x06, 0x07, 0x00, 0x01, // #770066 INVALID
+                    ];
+                    let color_map = ColorMap::load(&bytes).unwrap_err();
+                    assert_eq!(
+                        color_map,
+                        DataError {
+                            asset_type: Some(AssetType::ColorMap),
+                            section: None,
+                            offset: Some(12),
+                            actual: Box::new(0x1000706),
+                            expected: ExpectedData::Bound {
+                                min: None,
+                                max: Some(Box::new(0xFFF))
+                            }
+                        }
+                    );
+                }
             }
 
             mod asset_type {
