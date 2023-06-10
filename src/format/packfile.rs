@@ -1,76 +1,148 @@
-use super::{packfile_entry::*, data::*};
+use std::str;
 
+use super::asset_table::AssetType;
+use super::assets::*;
+use super::traits::*;
+
+#[derive(Debug)]
 pub struct PackFile {
     pub copyright: String,
-    pub entries: Vec<PackFileEntry>
+    pub entries: Vec<(
+        PackFileEntryHeader,
+        Option<Box<dyn AssetLoad>>,
+    )>,
 }
 
-impl DataFile for PackFile {
-    fn new_read(buffer: &[u8], offset: &mut usize) -> Result<Self, DataError>
-    where Self: Sized {
-        let mut read_part = |size| (offset.clone(), read_part(buffer, offset, size));
+impl AssetLoad for PackFile {
+    fn load(bytes: &[u8]) -> Result<(Self, usize), DataError>
+    where
+        Self: Sized,
+    {
+        let mut offset = 0;
 
-        // PMAN
-        let (pman_offset, pman) = read_part(4);
-        let pman =
-            if let Ok(s) = std::str::from_utf8(pman) {
-                s
+        // PMAN signature
+        let pman = match read_part::<4>(bytes, &mut offset) {
+            Ok(pman) => match str::from_utf8(pman.0) {
+                Ok(pman) => pman.to_string(),
+                Err(error) => {
+                    return Err(DataError {
+                        asset_type: Some(Self::file_type()),
+                        section: Some("PMAN signature".to_string()),
+                        offset: Some(offset + error.valid_up_to()),
+                        actual: Box::new(format!("{:?}", pman.1)),
+                        expected: ExpectedData::Other {
+                            description: "To be a valid UTF-8 string".to_string(),
+                        },
+                    })
+                }
+            },
+            Err(error) => {
+                let mut error = DataError::from(error);
+                error.asset_type = Some(Self::file_type());
+                error.section = Some("PMAN signature".to_string());
+                return Err(error);
             }
-            else {
-                return Err(DataError {
-                    file_type: String::from("PMan file"),
-                    offset: pman_offset,
-                    section: String::from("Header"),
-                    exepcted: ExpectedData::Other {
-                        description: String::from("Not a UTF-8 string")
-                    },
-                    actual: Box::new(pman.to_owned()),
-                })
-            };
+        };
         if pman != "PMAN" {
             return Err(DataError {
-                file_type: String::from("PMan file"),
-                offset: pman_offset,
-                section: String::from("Header"),
-                exepcted: ExpectedData::Equal {
-                    value: Box::new(String::from("PMAN"))
-                },
-                actual: Box::new(pman.to_owned()),
-            })
+                asset_type: Some(Self::file_type()),
+                section: Some("PMAN signature".to_string()),
+                offset: Some(offset),
+                actual: Box::new(pman),
+                expected: ExpectedData::Equal { value: Box::new(0) },
+            });
         }
 
-        // Number of files
-        let num_files = u32::from_le_bytes(
-            (*read_part(4).1).try_into().unwrap()
-        );
+        // Number of entries
+        let entries = match read_part::<4>(bytes, &mut offset) {
+            Ok(entries) => u32::from_le_bytes(*entries.0),
+            Err(error) => {
+                let mut error = DataError::from(error);
+                error.asset_type = Some(Self::file_type());
+                error.section = Some("Offset".to_string());
+                return Err(error);
+            }
+        };
 
         // Copyright
-        let (copyright_offset, copyright) = read_part(56);
-        let copyright =
-            if let Ok(s) = std::str::from_utf8(copyright) {
-                s
+        let copyright = match read_part::<56>(bytes, &mut offset) {
+            Ok(copyright) => match str::from_utf8(copyright.0) {
+                Ok(copyright) => copyright.to_string(),
+                Err(error) => {
+                    return Err(DataError {
+                        asset_type: Some(Self::file_type()),
+                        section: Some("Copyright".to_string()),
+                        offset: Some(offset + error.valid_up_to()),
+                        actual: Box::new(format!("{:?}", copyright.1)),
+                        expected: ExpectedData::Other {
+                            description: "To be a valid UTF-8 string".to_string(),
+                        },
+                    })
+                }
+            },
+            Err(error) => {
+                let mut error = DataError::from(error);
+                error.asset_type = Some(Self::file_type());
+                error.section = Some("Copyright".to_string());
+                return Err(error);
             }
-            else {
-                return Err(DataError {
-                    file_type: String::from("PMan file"),
-                    offset: copyright_offset,
-                    section: String::from("Copyright"),
-                    exepcted: ExpectedData::Other {
-                        description: String::from("Not a UTF-8 string")
-                    },
-                    actual: Box::new(pman.to_owned()),
-                })
-            };
+        };
 
-        // Chunks
-        let chunks = (0 .. num_files)
-            .map(|_| PackFileEntry::new_read(buffer, offset))
-            .collect::<Result::<_, _>>()?;
+        // Entries information
+        let entries: Vec<_> = (0..entries)
+            .map(|i| {
+                let (header, header_offset) =
+                    PackFileEntryHeader::load(&bytes[offset..]).map_err(|mut e| {
+                        if let Some(error_offset) = e.offset.as_mut() {
+                            *error_offset += offset;
+                        }
+                        e
+                    })?;
 
-        Ok(Self {
-            copyright: copyright.to_owned(),
-            entries: chunks
-        })
+                let loaded = Self::index_to_asset_type(i).map(|loader| match loader {
+                    AssetType::ColorMap => Self::load_with_loader::<ColorMap>(
+                    &bytes[header.offset as usize..(header.offset + header.length) as usize],
+                        header.offset
+                    ),
+                    _ => todo!(),
+                });
+                let loaded = loaded
+                    .map(|result| result.map(|(loaded, _)| loaded))
+                    .transpose()
+                    .map_err(|err| err)?;
+
+                offset += header_offset;
+                Ok((header, loaded))
+            })
+            .collect::<Result<_, DataError>>()?;
+
+        Ok((Self { copyright, entries }, offset))
+    }
+
+    fn file_type() -> AssetType {
+        AssetType::PackFile
     }
 }
 
+impl PackFile {
+    // TODO cover all cases and remove `Option`
+    fn index_to_asset_type(i: u32) -> Option<AssetType> {
+        match i {
+            1..=9 => Some(AssetType::ColorMap),
+            _ => None,
+        }
+    }
+
+    fn load_with_loader<T: AssetLoad + 'static>(
+        bytes: &[u8],
+        data_offset: u32,
+    ) -> Result<(Box<dyn AssetLoad>, usize), DataError> {
+        let (bytes, _) = PackFileEntryData::load(&bytes).map_err(|mut e| {
+            e.asset_type = Some(T::file_type());
+            e.offset = Some(data_offset as usize);
+            e
+        })?;
+
+        T::load(&bytes.data).map(|(load, size)| (Box::new(load) as Box<dyn AssetLoad>, size))
+    }
+}
