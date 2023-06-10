@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![feature(array_chunks)]
 
 mod format;
 

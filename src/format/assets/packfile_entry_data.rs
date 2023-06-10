@@ -101,8 +101,10 @@ mod test {
                         0x78, 0xDA, // Actual Zlib signature
                         0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
                     ];
-                    let data = PackFileEntryData::load(&data).unwrap().0;
-                    assert_eq!(data.data, "Ashen\n".as_bytes());
+                    let data = PackFileEntryData::load(&data).unwrap();
+
+                    assert_eq!(data.0.data, "Ashen\n".as_bytes());
+                    assert_eq!(data.1, 6);
                 }
 
                 #[test]
@@ -147,6 +149,14 @@ mod test {
                             }
                         }
                     );
+                }
+
+                #[test]
+                fn returns_raw_data_for_asset_non_zlib_stream() {
+                    let data = "Ashen".as_bytes();
+                    let data = PackFileEntryData::load(&data).unwrap();
+                    assert_eq!(data.0.data, "Ashen".as_bytes());
+                    assert_eq!(data.1, 5);
                 }
             }
 

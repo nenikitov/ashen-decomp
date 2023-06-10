@@ -9,3 +9,6 @@ edition = "2021"
 flate2 = "1.0"
 json = "0.12.4"
 
+[dev-dependencies]
+rand = "^0.8"
+

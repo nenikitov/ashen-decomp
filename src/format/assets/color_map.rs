@@ -61,8 +61,8 @@ impl AssetLoad for ColorMap {
         }
 
         let colors: Vec<_> = bytes
-            .chunks(4)
-            .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()))
+            .array_chunks::<4>()
+            .map(|bytes| u32::from_le_bytes(*bytes))
             .enumerate()
             .map(|(i, value)| {
                 let value_16 = value.min(u16::MAX as u32) as u16;
@@ -147,16 +147,17 @@ mod test {
                 use super::*;
 
                 #[test]
-                fn returns_parsed_data() {
+                fn returns_parsed_color_map() {
                     let bytes = [
                         0xBC, 0x0B, 0x00, 0x00, // #BBBBCC
                         0x54, 0x06, 0x00, 0x00, // #665544
                         0x13, 0x0F, 0x00, 0x00, // #FF1133
                         0x06, 0x07, 0x00, 0x00, // #770066
                     ];
-                    let color_map = ColorMap::load(&bytes).unwrap().0;
+                    let color_map = ColorMap::load(&bytes).unwrap();
+
                     assert_eq!(
-                        color_map,
+                        color_map.0,
                         ColorMap {
                             colors: vec![
                                 Color::new_from_12_bit(0xBBC).unwrap(),
@@ -166,6 +167,7 @@ mod test {
                             ]
                         }
                     );
+                    assert_eq!(color_map.1, 16);
                 }
 
                 #[test]
@@ -177,6 +179,7 @@ mod test {
                         0x06, 0x07, 0x00, // #770066 INVALID
                     ];
                     let color_map = ColorMap::load(&bytes).unwrap_err();
+
                     assert_eq!(
                         color_map,
                         DataError {

@@ -109,22 +109,24 @@ mod test {
                 use super::*;
 
                 #[test]
-                fn returns_parsed_data() {
+                fn returns_parsed_packfile_entry_header() {
                     let bytes = [
                         0x00, 0x00, 0x00, 0x00, // Asset type
                         0x38, 0x0D, 0x18, 0x00, // Offset
                         0x8B, 0x06, 0x00, 0x00, // Length
                         0x00, 0x00, 0x00, 0x00, // Reserved
                     ];
-                    let header = PackFileEntryHeader::load(&bytes).unwrap().0;
+                    let header = PackFileEntryHeader::load(&bytes).unwrap();
+
                     assert_eq!(
-                        header,
+                        header.0,
                         PackFileEntryHeader {
                             asset_type: 0,
                             offset: 0x180D38,
                             length: 0x68B
                         }
                     );
+                    assert_eq!(header.1, 16);
                 }
 
                 #[test]
