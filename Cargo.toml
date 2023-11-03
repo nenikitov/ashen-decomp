@@ -1,15 +1,5 @@
-[package]
-name = "rust"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-flate2 = "1.0"
-json = "0.12.4"
-paste = "1.0"
-
-[dev-dependencies]
-rand = "^0.8"
-
+members = [
+    "ashen",
+]
