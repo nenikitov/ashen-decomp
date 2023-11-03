@@ -3,3 +3,4 @@
 members = [
     "ashen",
 ]
+resolver = "2"
