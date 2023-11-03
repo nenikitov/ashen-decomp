@@ -5,12 +5,12 @@ An unarchiver of an obscure NGage game Ashen
 ## How to run?
 
 - Place the ROM
-    ```bash
+    ```sh
     mkdir ./rom/
     cp /path/to/packfile.dat ./rom/packfile.dat
     ```
 - Run
-    ```bash
+    ```sh
     cargo run --release
     ```
 
