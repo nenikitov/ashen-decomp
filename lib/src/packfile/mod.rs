@@ -2,6 +2,9 @@
 
 mod nom;
 
+use std::io::Read;
+
+use flate2::read::ZlibDecoder;
 #[allow(clippy::wildcard_imports)]
 use nom::*;
 
@@ -33,7 +36,7 @@ impl PackFile {
     const HEADER: &'static str = "PMAN";
     const COPYRIGHT_LENGTH: usize = 56;
 
-    pub fn new(bytes: &[u8]) -> Result<Self> {
+    pub fn new(input: &[u8]) -> Result<Self> {
         todo!()
     }
 
@@ -73,20 +76,37 @@ impl PackFile {
         entry_headers: &'_ [EntryHeader],
     ) -> Result<'a, Vec<EntryData>> {
         fn entry<'a>(input: &'a [u8], entry_header: &'_ EntryHeader) -> EntryData {
+            let bytes = &input[entry_header.offset as usize..][..entry_header.size as usize];
+            let bytes = if let [b'Z', b'L', s1, s2, s3, rest @ ..] = &bytes[..] {
+                let size = u32::from_le_bytes([*s1, *s2, *s3, 0]);
+
+                let mut decoder = ZlibDecoder::new(rest);
+                let mut data = Vec::with_capacity(size as usize);
+                decoder
+                    .read_to_end(&mut data)
+                    .expect("Data should be a valid zlib stream");
+                // TODO(nenikitov): Check if `data.len() == size`
+
+                data
+            } else {
+                bytes.to_vec()
+            };
+
             EntryData {
-                bytes: input[entry_header.offset as usize..][..entry_header.size as usize].to_vec(),
+                bytes,
                 kind: EntryKind::Unknown,
             }
         }
 
         let entries = entry_headers.iter().map(|h| entry(input, h)).collect();
 
-        Ok((&[], entries))
+        Ok((&input[input.len() - 1..], entries))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    // TODO(Unavailable): test using references for local scope
     use super::*;
 
     const INPUT: &'static [u8] = include_bytes!("../../res/packfile.dat");
@@ -132,6 +152,44 @@ mod tests {
                     offset: 0x6F20,
                     size: 0x8000,
                 },
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn packfile_entry_data_works() -> eyre::Result<()> {
+        #[rustfmt::skip]
+        let (_, entries) = PackFile::entries(
+            &[
+                // File 1
+                b'A', b's', b'h', b'e', b'n',
+                // File 2
+                b'Z', b'L', // Asset Zlib signature
+                0x06, 0x00, 0x00, // Stream size
+                0x78, 0xDA, // Actual Zlib signature
+            ],
+            &[
+                EntryHeader { offset: 0, size: 5 },
+                EntryHeader {
+                    offset: 5,
+                    size: 19,
+                },
+            ],
+        )?;
+
+        assert_eq!(
+            entries,
+            [
+                EntryData {
+                    bytes: b"Ashen".to_vec(),
+                    kind: EntryKind::Unknown
+                },
+                EntryData {
+                    bytes: b"Ashen\n".to_vec(),
+                    kind: EntryKind::Unknown
+                }
             ]
         );
 
