@@ -2,11 +2,22 @@
 
 mod nom;
 
+use flate2::read::ZlibDecoder;
 #[allow(clippy::wildcard_imports)]
 use nom::*;
+use std::io::Read;
 
 #[derive(Debug, PartialEq)]
-enum EntryKind {}
+enum EntryKind {
+    // TODO(nenikitov): Add more kinds
+    Unknown,
+}
+
+#[derive(Debug, PartialEq)]
+struct EntryHeader {
+    offset: u32,
+    size: u32,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct EntryData {
@@ -20,17 +31,11 @@ pub struct PackFile {
     entries: Vec<EntryData>,
 }
 
-#[derive(Debug, PartialEq)]
-struct EntryHeader {
-    offset: u32,
-    size: u32,
-}
-
 impl PackFile {
     const HEADER: &'static str = "PMAN";
     const COPYRIGHT_LENGTH: usize = 56;
 
-    pub fn new(bytes: &[u8]) -> Result<Self> {
+    pub fn new(input: &[u8]) -> Result<Self> {
         todo!()
     }
 
@@ -47,8 +52,8 @@ impl PackFile {
         Ok((input, (copyright, total_entries)))
     }
 
-    fn entries(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
-        fn entry(input: &[u8]) -> Result<EntryHeader> {
+    fn entry_headers(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
+        fn entry_header(input: &[u8]) -> Result<EntryHeader> {
             // TODO(nenikitov): add check for `asset_kind == 0`
             let (input, asset_kind) = number::le_u32(input)?;
 
@@ -62,7 +67,40 @@ impl PackFile {
             Ok((input, EntryHeader { offset, size }))
         }
 
-        multi::count(entry, total_entries as usize)(input)
+        multi::count(entry_header, total_entries as usize)(input)
+    }
+
+    #[allow(clippy::unnecessary_wraps)] // TODO(Unavailable): Rewrite using nom
+    fn entries<'a>(
+        input: &'a [u8],
+        entry_headers: &'_ [EntryHeader],
+    ) -> Result<'a, Vec<EntryData>> {
+        fn entry(input: &[u8], entry_header: &EntryHeader) -> EntryData {
+            let bytes = &input[entry_header.offset as usize..][..entry_header.size as usize];
+            let bytes = if let [b'Z', b'L', s1, s2, s3, bytes @ ..] = bytes {
+                let size = u32::from_le_bytes([*s1, *s2, *s3, 0]);
+
+                let mut decoder = ZlibDecoder::new(bytes);
+                let mut data = Vec::with_capacity(size as usize);
+                decoder
+                    .read_to_end(&mut data)
+                    .expect("Data should be a valid zlib stream");
+                // TODO(nenikitov): Check if `data.len() == size`
+
+                data
+            } else {
+                bytes.to_vec()
+            };
+
+            EntryData {
+                bytes,
+                kind: EntryKind::Unknown,
+            }
+        }
+
+        let entries = entry_headers.iter().map(|h| entry(input, h)).collect();
+
+        Ok((&[], entries))
     }
 }
 
@@ -83,7 +121,7 @@ mod tests {
     #[test]
     fn packfile_entries_works() -> eyre::Result<()> {
         #[rustfmt::skip]
-        let (_, entries) = PackFile::entries(
+        let (_, entries) = PackFile::entry_headers(
             &[
                 // File 1
                 0x00, 0x00, 0x00, 0x00,
@@ -110,6 +148,45 @@ mod tests {
                     offset: 0x6F20,
                     size: 0x8000,
                 },
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn packfile_entry_data_works() -> eyre::Result<()> {
+        #[rustfmt::skip]
+        let (_, entries) = PackFile::entries(
+            &[
+                // File 1
+                b'A', b's', b'h', b'e', b'n',
+                // File 2
+                b'Z', b'L', // Asset Zlib signature
+                0x06, 0x00, 0x00, // Stream size
+                0x78, 0xDA, // Actual Zlib signature
+                0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
+            ],
+            &[
+                EntryHeader { offset: 0, size: 5 },
+                EntryHeader {
+                    offset: 5,
+                    size: 19,
+                },
+            ],
+        )?;
+
+        assert_eq!(
+            entries,
+            [
+                EntryData {
+                    bytes: b"Ashen".to_vec(),
+                    kind: EntryKind::Unknown
+                },
+                EntryData {
+                    bytes: b"Ashen\n".to_vec(),
+                    kind: EntryKind::Unknown
+                }
             ]
         );
 
