@@ -5,18 +5,22 @@ mod nom;
 #[allow(clippy::wildcard_imports)]
 use nom::*;
 
+#[derive(Debug, PartialEq)]
 enum EntryKind {}
 
+#[derive(Debug, PartialEq)]
 pub struct EntryData {
     bytes: Vec<u8>,
     kind: EntryKind,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct PackFile {
     copyright: String,
     entries: Vec<EntryData>,
 }
 
+#[derive(Debug, PartialEq)]
 struct EntryHeader {
     offset: u32,
     size: u32,
@@ -44,7 +48,21 @@ impl PackFile {
     }
 
     fn entries(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
-        todo!()
+        fn entry(input: &[u8]) -> Result<EntryHeader> {
+            // TODO(nenikitov): add check for `asset_kind == 0`
+            let (input, asset_kind) = number::le_u32(input)?;
+
+            let (input, offset) = number::le_u32(input)?;
+
+            let (input, size) = number::le_u32(input)?;
+
+            // TODO(nenikitov): add check for `reserved == 0`
+            let (input, reserved) = number::le_u32(input)?;
+
+            Ok((input, EntryHeader { offset, size }))
+        }
+
+        multi::count(entry, total_entries as usize)(input)
     }
 }
 
@@ -83,6 +101,20 @@ mod tests {
             ],
             2
         )?;
+
+        assert_eq!(
+            entries,
+            [
+                EntryHeader {
+                    offset: 0x0A20,
+                    size: 0x6500,
+                },
+                EntryHeader {
+                    offset: 0x6F20,
+                    size: 0x8000,
+                },
+            ]
+        );
 
         Ok(())
     }

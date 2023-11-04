@@ -13,4 +13,8 @@ re_export!(bytes);
 re_export!(character);
 re_export!(number);
 
+pub mod multi {
+    pub use nom::multi::*;
+}
+
 pub type Result<'a, T> = nom::IResult<&'a [u8], T>;
