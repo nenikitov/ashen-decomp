@@ -6,7 +6,16 @@ mod nom;
 use nom::*;
 
 #[derive(Debug, PartialEq)]
-enum EntryKind {}
+enum EntryKind {
+    // TODO(nenikitov): Add more kinds
+    Unknown,
+}
+
+#[derive(Debug, PartialEq)]
+struct EntryHeader {
+    offset: u32,
+    size: u32,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct EntryData {
@@ -18,12 +27,6 @@ pub struct EntryData {
 pub struct PackFile {
     copyright: String,
     entries: Vec<EntryData>,
-}
-
-#[derive(Debug, PartialEq)]
-struct EntryHeader {
-    offset: u32,
-    size: u32,
 }
 
 impl PackFile {
@@ -47,8 +50,8 @@ impl PackFile {
         Ok((input, (copyright, total_entries)))
     }
 
-    fn entries(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
-        fn entry(input: &[u8]) -> Result<EntryHeader> {
+    fn entry_headers(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
+        fn entry_header(input: &[u8]) -> Result<EntryHeader> {
             // TODO(nenikitov): add check for `asset_kind == 0`
             let (input, asset_kind) = number::le_u32(input)?;
 
@@ -62,7 +65,23 @@ impl PackFile {
             Ok((input, EntryHeader { offset, size }))
         }
 
-        multi::count(entry, total_entries as usize)(input)
+        multi::count(entry_header, total_entries as usize)(input)
+    }
+
+    fn entries<'a>(
+        input: &'a [u8],
+        entry_headers: &'_ [EntryHeader],
+    ) -> Result<'a, Vec<EntryData>> {
+        fn entry<'a>(input: &'a [u8], entry_header: &'_ EntryHeader) -> EntryData {
+            EntryData {
+                bytes: input[entry_header.offset as usize..][..entry_header.size as usize].to_vec(),
+                kind: EntryKind::Unknown,
+            }
+        }
+
+        let entries = entry_headers.iter().map(|h| entry(input, h)).collect();
+
+        Ok((&[], entries))
     }
 }
 
@@ -83,7 +102,7 @@ mod tests {
     #[test]
     fn packfile_entries_works() -> eyre::Result<()> {
         #[rustfmt::skip]
-        let (_, entries) = PackFile::entries(
+        let (_, entries) = PackFile::entry_headers(
             &[
                 // File 1
                 0x00, 0x00, 0x00, 0x00,
