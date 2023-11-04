@@ -15,7 +15,7 @@ jobs:
     name: ubuntu / ${{ matrix.toolchain }}
     strategy:
       matrix:
-        toolchain: [stable, beta]
+        toolchain: [nightly]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,24 +35,22 @@ jobs:
         run: cargo test --locked --all-features --doc
   minimal:
     runs-on: ubuntu-latest
-    name: ubuntu / stable / minimal-versions
+    name: ubuntu / nightly / minimal-versions
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
       - name: Install nightly for -Zminimal-versions
         uses: dtolnay/rust-toolchain@nightly
-      - name: rustup default stable
-        run: rustup default stable
+      - name: rustup default nightly
+        run: rustup default nightly
       - name: cargo update -Zminimal-versions
-        run: cargo +nightly update -Zminimal-versions
+        run: cargo update -Zminimal-versions
       - name: cargo test
         run: cargo test --locked --all-features --all-targets
   os-check:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} / stable
+    name: ${{ matrix.os }} / nightly
     strategy:
       fail-fast: false
       matrix:
@@ -67,8 +65,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install nightly
+        uses: dtolnay/rust-toolchain@nightly
       - name: cargo generate-lockfile
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile
