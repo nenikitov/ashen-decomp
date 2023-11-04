@@ -2,6 +2,7 @@
 
 mod nom;
 
+#[allow(clippy::wildcard_imports)]
 use nom::*;
 
 enum EntryKind {}
@@ -16,11 +17,16 @@ pub struct PackFile {
     entries: Vec<EntryData>,
 }
 
+struct EntryHeader {
+    offset: u32,
+    size: u32,
+}
+
 impl PackFile {
     const HEADER: &'static str = "PMAN";
     const COPYRIGHT_LENGTH: usize = 56;
 
-    fn new(bytes: &[u8]) -> Result<()> {
+    pub fn new(bytes: &[u8]) -> Result<Self> {
         todo!()
     }
 
@@ -35,6 +41,10 @@ impl PackFile {
             .to_string();
 
         Ok((input, (copyright, total_entries)))
+    }
+
+    fn entries(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
+        todo!()
     }
 }
 
@@ -51,6 +61,28 @@ mod tests {
 
         assert_eq!(copyright, "Copyright (c) 2004 Torus Games Pty. Ltd.");
         assert_eq!(file_count, FILE_COUNT);
+
+        Ok(())
+    }
+
+    #[test]
+    fn packfile_entries_works() -> eyre::Result<()> {
+        #[rustfmt::skip]
+        let (_, entries) = PackFile::entries(
+            &[
+                // File 1
+                0x00, 0x00, 0x00, 0x00,
+                0x20, 0x0A, 0x00, 0x00,
+                0x00, 0x65, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                // File 2
+                0x00, 0x00, 0x00, 0x00,
+                0x20, 0x6F, 0x00, 0x00,
+                0x00, 0x80, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ],
+            2
+        )?;
 
         Ok(())
     }
