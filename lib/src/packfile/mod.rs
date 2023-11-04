@@ -166,6 +166,7 @@ mod tests {
                 b'Z', b'L', // Asset Zlib signature
                 0x06, 0x00, 0x00, // Stream size
                 0x78, 0xDA, // Actual Zlib signature
+                0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
             ],
             &[
                 EntryHeader { offset: 0, size: 5 },
