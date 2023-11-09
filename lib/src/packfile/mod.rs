@@ -2,11 +2,10 @@
 
 mod nom;
 
-use std::io::Read;
-
 use flate2::read::ZlibDecoder;
 #[allow(clippy::wildcard_imports)]
 use nom::*;
+use std::io::Read;
 
 #[derive(Debug, PartialEq)]
 enum EntryKind {
@@ -71,16 +70,17 @@ impl PackFile {
         multi::count(entry_header, total_entries as usize)(input)
     }
 
+    #[allow(clippy::unnecessary_wraps)] // TODO(Unavailable): Rewrite using nom
     fn entries<'a>(
         input: &'a [u8],
         entry_headers: &'_ [EntryHeader],
     ) -> Result<'a, Vec<EntryData>> {
-        fn entry<'a>(input: &'a [u8], entry_header: &'_ EntryHeader) -> EntryData {
+        fn entry(input: &[u8], entry_header: &EntryHeader) -> EntryData {
             let bytes = &input[entry_header.offset as usize..][..entry_header.size as usize];
-            let bytes = if let [b'Z', b'L', s1, s2, s3, rest @ ..] = &bytes[..] {
+            let bytes = if let [b'Z', b'L', s1, s2, s3, bytes @ ..] = bytes {
                 let size = u32::from_le_bytes([*s1, *s2, *s3, 0]);
 
-                let mut decoder = ZlibDecoder::new(rest);
+                let mut decoder = ZlibDecoder::new(bytes);
                 let mut data = Vec::with_capacity(size as usize);
                 decoder
                     .read_to_end(&mut data)
@@ -100,13 +100,12 @@ impl PackFile {
 
         let entries = entry_headers.iter().map(|h| entry(input, h)).collect();
 
-        Ok((&input[input.len() - 1..], entries))
+        Ok((&[], entries))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    // TODO(Unavailable): test using references for local scope
     use super::*;
 
     const INPUT: &'static [u8] = include_bytes!("../../res/packfile.dat");
@@ -114,6 +113,9 @@ mod tests {
 
     #[test]
     fn packfile_header_works() -> eyre::Result<()> {
+        // TODO(Unavailable): Both other tests have manual written tests, so we
+        // might as well write this also without the need of a real packfile.dat
+
         let (_, (copyright, file_count)) = PackFile::header(INPUT)?;
 
         assert_eq!(copyright, "Copyright (c) 2004 Torus Games Pty. Ltd.");
