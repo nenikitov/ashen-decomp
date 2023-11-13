@@ -1,6 +1,6 @@
-# Ashen PackFile unpacker
+# Ashen source port
 
-An unarchiver of an obscure NGage game Ashen
+A playable source port of an obscure NGage game Ashen
 
 ## How to run?
 
