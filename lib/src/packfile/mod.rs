@@ -1,7 +1,7 @@
 //! This only works with the last version of Ashen :).
 
-mod nom;
 mod directory;
+mod nom;
 
 use flate2::read::ZlibDecoder;
 #[allow(clippy::wildcard_imports)]
