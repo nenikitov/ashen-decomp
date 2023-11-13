@@ -9,10 +9,13 @@ pub enum Kind {
 pub enum Extension {
     #[default]
     Dat,
-    Custom(String)
+    Custom(String),
 }
 
-pub trait Asset where Self: Sized {
+pub trait Asset
+where
+    Self: Sized,
+{
     fn kind() -> Kind;
     // TODO(Unavailable): Result > panic!
     fn parse(bytes: &[u8], extension: Extension) -> Self;
