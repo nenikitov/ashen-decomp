@@ -8,12 +8,6 @@ use nom::*;
 use std::io::Read;
 
 #[derive(Debug, PartialEq)]
-enum EntryKind {
-    // TODO(nenikitov): Add more kinds
-    Unknown,
-}
-
-#[derive(Debug, PartialEq)]
 struct EntryHeader {
     offset: u32,
     size: u32,
@@ -22,7 +16,6 @@ struct EntryHeader {
 #[derive(Debug, PartialEq)]
 pub struct EntryData {
     bytes: Vec<u8>,
-    kind: EntryKind,
 }
 
 #[derive(Debug, PartialEq)]
@@ -36,7 +29,14 @@ impl PackFile {
     const COPYRIGHT_LENGTH: usize = 56;
 
     pub fn new(input: &[u8]) -> Result<Self> {
-        todo!()
+        let (copyright, entries) = {
+            let (input, (copyright, total_entries)) = Self::header(input)?;
+            let (input, (headers)) = Self::entry_headers(input, total_entries)?;
+            (copyright, headers)
+        };
+        let (input, entries) = Self::entries(input, &entries)?;
+
+        Ok((input, Self { copyright, entries }))
     }
 
     fn header(input: &[u8]) -> Result<(String, u32)> {
@@ -92,10 +92,7 @@ impl PackFile {
                 bytes.to_vec()
             };
 
-            EntryData {
-                bytes,
-                kind: EntryKind::Unknown,
-            }
+            EntryData { bytes }
         }
 
         let entries = entry_headers.iter().map(|h| entry(input, h)).collect();
@@ -181,11 +178,9 @@ mod tests {
             [
                 EntryData {
                     bytes: b"Ashen".to_vec(),
-                    kind: EntryKind::Unknown
                 },
                 EntryData {
                     bytes: b"Ashen\n".to_vec(),
-                    kind: EntryKind::Unknown
                 }
             ]
         );
