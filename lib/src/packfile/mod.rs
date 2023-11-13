@@ -1,6 +1,7 @@
 //! This only works with the last version of Ashen :).
 
 mod nom;
+mod directory;
 
 use flate2::read::ZlibDecoder;
 #[allow(clippy::wildcard_imports)]
@@ -13,7 +14,7 @@ struct EntryHeader {
     size: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct EntryData {
     bytes: Vec<u8>,
 }
