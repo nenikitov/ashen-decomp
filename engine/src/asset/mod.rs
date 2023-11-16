@@ -1,8 +1,10 @@
 pub mod gamma_table;
+pub mod color_map;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
     GammaTable,
+    ColorMap,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
