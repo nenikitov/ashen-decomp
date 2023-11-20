@@ -45,6 +45,68 @@ impl Asset for ColorMap {
 
         assert!(extension == Extension::Dat);
         // TODO(nenikitov): Remove `expect()` when parsing changes to return errors
-        multi::count(colors, SHADES_COUNT)(input).expect("Color map is of correct format (256x32 array of 12-bit colors)")
+        multi::count(colors, SHADES_COUNT)(input)
+            .expect("Color map is of correct format (256x32 array of 12-bit colors)")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const COLORS: [(u8, Color); 6] = [
+        (
+            0x100,
+            Color {
+                r: 0x11,
+                g: 0,
+                b: 0,
+            },
+        ),
+        (
+            0x010,
+            Color {
+                r: 0,
+                g: 0x11,
+                b: 0,
+            },
+        ),
+        (
+            0x001,
+            Color {
+                r: 0,
+                g: 0,
+                b: 0x11,
+            },
+        ),
+        (
+            0x220,
+            Color {
+                r: 0x22,
+                g: 0x22,
+                b: 0,
+            },
+        ),
+        (
+            0x022,
+            Color {
+                r: 0,
+                g: 0x22,
+                b: 0x22,
+            },
+        ),
+        (
+            0x333,
+            Color {
+                r: 0x33,
+                g: 0x33,
+                b: 0x33,
+            },
+        ),
+    ];
+
+    #[test]
+    fn parse_works() {
+        fn create_color(color: u8, brightness: u8) {
+        }
     }
 }
