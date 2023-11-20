@@ -1,0 +1,14 @@
+[package]
+name = "ashen"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+engine = { path = "../engine/" }
+flate2 = "1.0.28"
+
+[dev-dependencies]
+eyre = "0.6.8"

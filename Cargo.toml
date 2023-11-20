@@ -1,11 +1,16 @@
-[package]
-name = "rust"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = [
+    "ashen",
+    "engine",
+]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace.lints.rust]
+unused = "allow"
+unused_imports = "warn"
 
-[dependencies]
-flate2 = "1.0"
-json = "0.12.4"
-
+[workspace.lints.clippy]
+pedantic = "warn"
+default_trait_access = "allow"
+module_name_repetitions = "allow"
+wildcard_imports = "allow"

@@ -1,0 +1,17 @@
+[package]
+name = "engine"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+loom = { version = "0.7.1", optional = true }
+nom = "7.1.3"
+
+[dev-dependencies]
+eyre = "0.6.8"
+
+[features]
+loom = ["dep:loom"]
