@@ -3,6 +3,5 @@
 members = [
     "ashen",
     "engine",
-    "lib"
 ]
 resolver = "2"
