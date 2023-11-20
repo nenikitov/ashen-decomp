@@ -30,7 +30,7 @@ where
     // ```
     //
     // the only disadvantage is that `Self` also needs to be `'static` which
-    // prevents us for implement `Asset` for `&`-wed types. Right now is not
+    // prevents us for implementing `Asset` for `&`-ed types. Right now is not
     // clear that we might need that, so I would hold this changes until then.
 
     /// Returns this Asset's kind.

@@ -7,7 +7,8 @@ use std::num::NonZeroUsize;
 // I really don't know how the output should look like, can be done later. When
 // implementing `Error` don't forget to add nom as `source`.
 
-/// An error that could be encountered when calling the [`Asset::parse`].
+/// An error that could be encountered when calling the [`Asset::parse`]
+/// function.
 ///
 /// [`Asset::parse`]: crate::asset::Asset::parse
 #[derive(Debug, Clone)]
