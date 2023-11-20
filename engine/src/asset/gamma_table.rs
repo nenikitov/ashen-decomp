@@ -31,7 +31,7 @@ impl Asset for GammaTable {
         // Technically this can't never fail.
         let (input, bytes) = bytes::take(GAMMA_TABLE_LENGTH)(input)?;
 
-        // SAFETY: bytes::take() should return at least `ROWS_COUNT * COLS_COUNT`
+        // SAFETY: bytes::take() should return exactly `ROWS_COUNT * COLS_COUNT`
         // bytes; also slices and arrays are guaranteed to have the same memory
         // layout.
         let lookups = unsafe { mem::transmute_copy::<_, &[[u8; ROWS_COUNT]; COLS_COUNT]>(&bytes) };
