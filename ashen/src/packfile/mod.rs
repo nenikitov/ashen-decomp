@@ -1,7 +1,7 @@
 //! This only works with the last version of Ashen :).
 
-use flate2::read::ZlibDecoder;
 use engine::utils::nom::*;
+use flate2::read::ZlibDecoder;
 use std::io::Read;
 
 #[derive(Debug, PartialEq)]

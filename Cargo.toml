@@ -11,5 +11,6 @@ unused_imports = "warn"
 
 [workspace.lints.clippy]
 pedantic = "warn"
-module_name_repetitions = "allow"
 default_trait_access = "allow"
+module_name_repetitions = "allow"
+wildcard_imports = "allow"
