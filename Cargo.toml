@@ -1,8 +1,15 @@
 [workspace]
-
+resolver = "2"
 members = [
     "ashen",
     "engine",
-    "lib"
 ]
-resolver = "2"
+
+[workspace.lints.rust]
+unused = "allow"
+unused_imports = "warn"
+
+[workspace.lints.clippy]
+pedantic = "warn"
+module_name_repetitions = "allow"
+default_trait_access = "allow"
