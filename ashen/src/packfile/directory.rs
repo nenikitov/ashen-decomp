@@ -37,7 +37,7 @@ impl Directory for PackFileDirectory {
     }
 }
 
-const ASSETS: [&'static str; 158] = [
+const ASSETS: [&str; 158] = [
     "misc/gamma_table",
     "color_map/creature",
     "color_map/creature.ghost",

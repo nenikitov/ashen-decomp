@@ -1,8 +1,8 @@
 //! This only works with the last version of Ashen :).
 
 mod directory;
-mod nom;
 
+use engine::utils::nom;
 use flate2::read::ZlibDecoder;
 #[allow(clippy::wildcard_imports)]
 use nom::*;
