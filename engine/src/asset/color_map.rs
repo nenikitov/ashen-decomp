@@ -47,25 +47,25 @@ impl Asset for ColorMap {
             multi::count_const::<COLORS_COUNT, _, _, _>(shade)(input)
         }
 
-        if extension != Extension::Dat {
-            return Err(error::ParseError::unsupported_extension(input, extension).into());
+        match extension {
+            Extension::Dat => {
+                error::ensure_bytes_length(
+                    input,
+                    mem::size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
+                    "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
+                )?;
+
+                let (input, colors) = multi::count_const::<SHADES_COUNT, _, _, _>(colors)(input)?;
+
+                Ok((
+                    input,
+                    Self {
+                        shades: Box::new(colors),
+                    },
+                ))
+            }
+            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }
-
-        // NOTE: These checks depend on which `extension` is being parsed.
-        error::ensure_bytes_length(
-            input,
-            mem::size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
-            "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
-        )?;
-
-        let (input, colors) = multi::count_const::<SHADES_COUNT, _, _, _>(colors)(input)?;
-
-        Ok((
-            input,
-            Self {
-                shades: Box::new(colors),
-            },
-        ))
     }
 }
 
