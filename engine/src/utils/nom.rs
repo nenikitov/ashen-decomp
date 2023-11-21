@@ -1,4 +1,6 @@
-//! Re-export `nom::{*}::complete` stuff because it is easier to use :).
+//! Re-exports some `nom` items, to make it easier to use.
+//!
+//! This is pretty much the library's nom prelude.
 
 macro_rules! re_export {
     ($path:ident) => {
@@ -36,4 +38,6 @@ pub mod multi {
     }
 }
 
-pub type Result<'a, T> = nom::IResult<&'a [u8], T>;
+pub type Input<'a> = &'a [u8];
+
+pub type Result<'a, T> = nom::IResult<Input<'a>, T, crate::error::ParseError>;

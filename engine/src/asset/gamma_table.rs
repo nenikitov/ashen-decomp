@@ -1,8 +1,10 @@
 use super::{Asset, Extension, Kind};
+use crate::{error, utils::nom::*};
 use std::mem;
 
 const ROWS_COUNT: usize = 256;
 const COLS_COUNT: usize = 101;
+const GAMMA_TABLE_LENGTH: usize = ROWS_COUNT * COLS_COUNT;
 
 #[derive(Clone, Debug)]
 pub struct GammaTable {
@@ -14,16 +16,32 @@ impl Asset for GammaTable {
         Kind::GammaTable
     }
 
-    fn parse(bytes: &[u8], extension: Extension) -> Self {
-        assert!(bytes.len() == ROWS_COUNT * COLS_COUNT);
-        assert!(extension == Extension::Dat);
+    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
+        match extension {
+            Extension::Dat => {
+                error::ensure_bytes_length(
+                    input,
+                    GAMMA_TABLE_LENGTH,
+                    "Incorrect `GammaTable` format (256x101 array of u8s)",
+                )?;
 
-        // SAFETY: we already check that bytes are the same length, and slices and arrays are
-        // guaranteed to have the same memory layout.
-        let lookups = unsafe { mem::transmute_copy::<_, &[[u8; ROWS_COUNT]; COLS_COUNT]>(&bytes) };
+                // Technically this can't never fail.
+                let (input, bytes) = bytes::take(GAMMA_TABLE_LENGTH)(input)?;
 
-        Self {
-            lookups: Box::new(*lookups),
+                // SAFETY: bytes::take() should return exactly `ROWS_COUNT * COLS_COUNT`
+                // bytes; also slices and arrays are guaranteed to have the same memory
+                // layout.
+                let lookups =
+                    unsafe { mem::transmute_copy::<_, &[[u8; ROWS_COUNT]; COLS_COUNT]>(&bytes) };
+
+                Ok((
+                    input,
+                    Self {
+                        lookups: Box::new(*lookups),
+                    },
+                ))
+            }
+            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }
     }
 }
@@ -33,10 +51,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_works() {
+    fn parse_works() -> eyre::Result<()> {
         let bytes: Vec<_> = (0..ROWS_COUNT)
             .flat_map(|_| vec![0u8; COLS_COUNT])
             .collect();
-        GammaTable::parse(&bytes, Default::default());
+
+        GammaTable::parse(&bytes, Default::default())?;
+
+        Ok(())
     }
 }
