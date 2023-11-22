@@ -64,7 +64,7 @@ impl PackFile {
             Ok((input, EntryHeader { offset, size }))
         }
 
-        multi::count(entry_header, total_entries as usize)(input)
+        multi::count!(entry_header, total_entries as usize)(input)
     }
 
     #[allow(clippy::unnecessary_wraps)] // TODO(Unavailable): Rewrite using nom

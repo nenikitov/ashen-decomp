@@ -15,7 +15,8 @@ pub struct Color {
 
 // TODO(Unavailable): derive
 pub struct ColorMap {
-    // TODO(nenikitov): This probably shouldn't be `pub` and should have an accessor that will hide the "ugly" internal 2D-array structure
+    // TODO(nenikitov): This probably shouldn't be `pub` and should have an
+    // accessor that will hide the "ugly" internal 2D-array structure.
     pub shades: Box<[[Color; COLORS_COUNT]; SHADES_COUNT]>,
 }
 
@@ -44,7 +45,7 @@ impl Asset for ColorMap {
 
     fn parse(input: &[u8], extension: Extension) -> Result<Self> {
         fn colors(input: &[u8]) -> Result<[Color; COLORS_COUNT]> {
-            multi::count_const::<COLORS_COUNT, _, _, _>(shade)(input)
+            multi::count!(shade)(input)
         }
 
         match extension {
@@ -55,14 +56,18 @@ impl Asset for ColorMap {
                     "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
                 )?;
 
-                let (input, colors) = multi::count_const::<SHADES_COUNT, _, _, _>(colors)(input)?;
+                let (input, colors) = multi::count!(colors, SHADES_COUNT)(input)?;
 
-                Ok((
-                    input,
-                    Self {
-                        shades: Box::new(colors),
-                    },
-                ))
+                let colors = {
+                    let colors = colors.into_boxed_slice();
+                    // Ensure the original box is not dropped.
+                    let mut colors = mem::ManuallyDrop::new(colors);
+                    // SAFETY: [_] and [_; N] has the same memory layout as long
+                    // as the slice contains exactly N elements.
+                    unsafe { Box::from_raw(colors.as_mut_ptr().cast()) }
+                };
+
+                Ok((input, Self { shades: colors }))
             }
             _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }
