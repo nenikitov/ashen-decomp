@@ -2,11 +2,13 @@ use crate::utils::nom::Result;
 
 pub mod color_map;
 pub mod gamma_table;
+pub mod sound;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
     GammaTable,
     ColorMap,
+    SoundCollection,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

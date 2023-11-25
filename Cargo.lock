@@ -55,6 +55,7 @@ name = "engine"
 version = "0.1.0"
 dependencies = [
  "eyre",
+ "flate2",
  "loom",
  "nom",
 ]
