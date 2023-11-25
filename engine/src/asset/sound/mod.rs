@@ -22,6 +22,7 @@ struct Song {
     channel_count: u8,
     pattern_count: u8,
     instrument_count: u8,
+    sample_count: u8,
     speed: u8,
     bpm: u8,
 }
@@ -32,6 +33,9 @@ impl SoundAssetCollection {
     fn pack_info(input: &[u8]) -> Result<PackInfo> {
         let (input, offset) = number::le_u32(input)?;
         let (input, size) = number::le_u32(input)?;
+        let (input, padding) = number::le_u32(input)?;
+
+        assert_eq!(padding, 0);
 
         Ok((input, PackInfo { offset, size }))
     }
@@ -39,7 +43,7 @@ impl SoundAssetCollection {
     fn song_chunk_header(input: &[u8]) -> Result<Vec<PackInfo>> {
         let (input, song_count) = number::le_u32(input)?;
         // TODO(nenikitov): Figure out how the `song_count` works
-        let (input, offsets) = multi::count!(Self::pack_info, 1)(input)?;
+        let (input, offsets) = multi::count!(Self::pack_info, 13)(input)?;
 
         Ok((input, offsets))
     }
@@ -62,11 +66,14 @@ impl SoundAssetCollection {
     }
 
     fn song(input: &[u8]) -> Result<Song> {
+        std::fs::write("/home/nenikitov/Shared/Documents/Projects/Programming/Rust/ashen-unpacker/output/songs/main-menu.dat", input).unwrap();
+
         let (input, song_length) = number::le_u8(input)?;
         let (input, restart_order) = number::le_u8(input)?;
         let (input, channel_count) = number::le_u8(input)?;
         let (input, pattern_count) = number::le_u8(input)?;
         let (input, instrument_count) = number::le_u8(input)?;
+        let (input, sample_count) = number::le_u8(input)?;
         let (input, speed) = number::le_u8(input)?;
         let (input, bpm) = number::le_u8(input)?;
 
@@ -76,11 +83,10 @@ impl SoundAssetCollection {
             channel_count,
             pattern_count,
             instrument_count,
+            sample_count,
             speed,
             bpm,
         };
-
-        dbg!(&song);
 
         Ok((input, song))
     }
@@ -119,8 +125,10 @@ impl Asset for SoundAssetCollection {
                             let (_, s) = Self::song(deflated.as_slice()).unwrap();
                             Ok(s)
                         })
-                        .collect::<std::result::Result<Vec<_>, _>>()?;
+                        .collect::<std::result::Result<Vec<_>, _>>()?
                 };
+
+                dbg!(&songs[0xc]);
 
                 todo!()
             }
