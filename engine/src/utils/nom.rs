@@ -2,6 +2,11 @@
 //!
 //! This is pretty much the library's nom prelude.
 
+use std::{
+    ops::{Index, Range},
+    slice::SliceIndex,
+};
+
 macro_rules! re_export {
     ($path:ident) => {
         #[doc = concat!("Re-exports all `nom::", stringify!($path), "::complete` items.")]

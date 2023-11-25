@@ -2,6 +2,7 @@ use crate::utils::nom::Result;
 
 pub mod color_map;
 pub mod gamma_table;
+pub(self) mod pack_info;
 pub mod sound;
 
 #[derive(Clone, Copy, Debug)]
@@ -44,4 +45,12 @@ where
     ///
     /// If the `input` is invalid for the provided `extension`.
     fn parse(input: &[u8], extension: Extension) -> Result<Self>;
+}
+
+// TODO(nenikitov): Discuss if this is useful
+pub(self) trait AssetChunk
+where
+    Self: Sized,
+{
+    fn parse(input: &[u8]) -> Result<Self>;
 }
