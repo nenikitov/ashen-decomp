@@ -46,19 +46,24 @@ impl Asset for SoundAssetCollection {
                 let songs = {
                     let (_, songs) = SongChunkHeader::parse(&input[header.songs])?;
 
+                    /* songs
+                    .songs
+                    .iter()
+                    .map(|s| Self::deflate(&input[s]))
+                    .map(|s| -> std::result::Result<TSong, ParseError> {
+                        // TODO(nenikitov): use `Result` properly
+                        let (_, s) = TSong::parse(s.as_slice()).unwrap();
+                        Ok(s)
+                    })
+                    .collect::<std::result::Result<Vec<_>, _>>()? */
                     songs
                         .songs
                         .iter()
                         .map(|s| Self::deflate(&input[s]))
-                        .map(|s| -> std::result::Result<TSong, ParseError> {
-                            // TODO(nenikitov): use `Result` properly
-                            let (_, s) = TSong::parse(s.as_slice()).unwrap();
-                            Ok(s)
-                        })
-                        .collect::<std::result::Result<Vec<_>, _>>()?
+                        .collect::<Vec<_>>()
                 };
 
-                dbg!(&songs[0xc]);
+                TSong::parse(songs[0xc].as_slice()).unwrap();
 
                 todo!()
             }

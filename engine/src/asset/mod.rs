@@ -48,7 +48,7 @@ where
 }
 
 // TODO(nenikitov): Discuss if this is useful
-pub(self) trait AssetChunk
+pub(crate) trait AssetChunk
 where
     Self: Sized,
 {
