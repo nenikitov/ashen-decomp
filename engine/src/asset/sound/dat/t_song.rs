@@ -1,8 +1,14 @@
+use std::{
+    fmt::write,
+    io::{self, Cursor},
+};
+
 use crate::{
     asset::{pack_info::PackInfo, AssetChunk},
     utils::nom::*,
 };
 use itertools::Itertools;
+use lewton::inside_ogg::OggStreamReader;
 
 #[derive(Debug)]
 pub struct TSong {
@@ -10,21 +16,36 @@ pub struct TSong {
     speed: u8,
     restart_order: u8,
     orders: Vec<u8>,
-    /// Reusable and repeatable sequence -> Row -> Channel (Option for play nothing)
+    /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
     patterns: Vec<Vec<Vec<Option<TPattern>>>>,
+    samples: Vec<Vec<u8>>,
 }
 
 impl TSong {
-    fn uncompress(bytes: &[u8]) -> Vec<u8> {
+    fn uncompress(bytes: &[u8]) -> Vec<i16> {
         if let [b'V', b'B', u1, u2, u3, c1, c2, c3, bytes @ ..] = bytes {
             let size_uncompressed = u32::from_le_bytes([*u1, *u2, *u3, 0]);
             let size_compressed = u32::from_le_bytes([*c1, *c2, *c3, 0]);
 
             let bytes = &bytes[..size_compressed as usize];
 
-            bytes.to_vec()
+            // TODO(nenikitov): Use `Result`
+            let mut data = OggStreamReader::new(io::Cursor::new(bytes))
+                .expect("Sample should be a valid OGG stream");
+            let mut samples: Vec<_> = Vec::with_capacity(size_uncompressed as usize / 2);
+            // TODO(nenikitov): For whatever reason, last packet seems to be wrong. We shouldn't just ignore it.
+            while let Ok(Some(packet)) = data.read_dec_packet_itl() {
+                samples.extend(packet);
+            }
+            // For whatever reason, the game has the samples stored as 16-bit signed PCE,
+            // But resamples them to 8-bit PCE before playback
+            // Which would reduce the quality of music and add unnecessary code here
+            // It's 2023 and we can afford to play 16-bit PCE at 18000 Hz
+            assert_eq!(samples.len(), size_uncompressed as usize / 2);
+
+            samples
         } else {
-            bytes.to_vec()
+            todo!("Figure out which format is used and how to interpret it if it's not compressed")
         }
     }
 }
@@ -73,20 +94,33 @@ impl AssetChunk for TSong {
             .collect::<std::result::Result<_, _>>()?
         };
 
-        dbg!(&patterns[0]);
-
         let (_, instruments) = multi::count!(TInstrument::parse, header.instrument_count as usize)(
             &input[pointers.instruments as usize..],
         )?;
 
-        let (_, samples) = multi::count!(TSample::parse, header.sample_count as usize)(
-            &input[pointers.samples as usize..],
-        )?;
+        let samples: Vec<_> = {
+            let data = Self::uncompress(&input[pointers.sample_data as usize..]);
 
-        let sample_data = Self::uncompress(&input[pointers.sample_data as usize..]);
+            multi::count!(TSample::parse, header.sample_count as usize)(
+                &input[pointers.samples as usize..],
+            )?
+            .1
+            .into_iter()
+            .map(|sample| {
+                TSampleParsed::parse(
+                    &sample,
+                    &data[sample.sample as usize..sample.loop_end as usize],
+                )
+            })
+            .collect()
+        };
 
-        // TODO(nenikitov): Remove this after done debugging
-        std::fs::write("/home/nenikitov/SharedFiles/Projects/rust/ashen-decomp/output/parsed/songs/final/samples.ogg", &sample_data).unwrap();
+        for (i, s) in samples.iter().enumerate() {
+            std::fs::write(
+            format!("/home/nenikitov/SharedFiles/Projects/rust/ashen-decomp/output/parsed/songs/final/{i}.raw"),
+                s.sample_full().iter().flat_map(|d| d.to_le_bytes()).collect::<Vec<u8>>()
+            );
+        }
 
         Ok((
             input,
@@ -96,6 +130,7 @@ impl AssetChunk for TSong {
                 restart_order: header.restart_order,
                 orders,
                 patterns,
+                samples: todo!(),
             },
         ))
     }
@@ -310,8 +345,8 @@ struct TSample {
     align: u8,
     finetune: u32,
     loop_length: u32,
-    sample_start: u32,
-    sample_end: u32,
+    loop_end: u32,
+    sample: u32,
 }
 
 impl AssetChunk for TSample {
@@ -334,9 +369,43 @@ impl AssetChunk for TSample {
                 align,
                 finetune,
                 loop_length,
-                sample_start: loop_end,
-                sample_end: sample,
+                // The game uses offset for `i16`, but it's much more conventient to just use indeces
+                loop_end: loop_end / 2,
+                sample: sample / 2,
             },
         ))
+    }
+}
+
+#[derive(Debug)]
+struct TSampleParsed {
+    flags: u8,
+    volume: u8,
+    panning: u8,
+    align: u8,
+    finetune: u32,
+    loop_length: u32,
+    sample: Vec<i16>,
+}
+
+impl TSampleParsed {
+    pub fn parse(header: &TSample, sample_data: &[i16]) -> Self {
+        Self {
+            flags: header.flags,
+            volume: header.volume,
+            panning: header.panning,
+            align: header.align,
+            finetune: header.finetune,
+            loop_length: header.loop_length,
+            sample: sample_data.to_vec(),
+        }
+    }
+
+    pub fn sample_full(&self) -> &[i16] {
+        &self.sample
+    }
+
+    pub fn sample_loop(&self) -> &[i16] {
+        &self.sample[self.sample.len() - 1 - self.loop_length as usize..]
     }
 }
