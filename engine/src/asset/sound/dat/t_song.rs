@@ -2,6 +2,7 @@ use crate::{
     asset::{pack_info::PackInfo, AssetChunk},
     utils::nom::*,
 };
+use itertools::Itertools;
 
 #[derive(Debug)]
 pub struct TSong {
@@ -9,10 +10,10 @@ pub struct TSong {
     speed: u8,
     restart_order: u8,
     orders: Vec<u8>,
-    patterns: Vec<TPattern>,
-    // TODO(nenikitov) for debug - remove this
-    bytes: Vec<u8>,
+    /// Reusable and repeatable sequence -> Row -> Channel (Option for play nothing)
+    patterns: Vec<Vec<Vec<Option<TPattern>>>>,
 }
+
 impl TSong {
     fn uncompress(bytes: &[u8]) -> Vec<u8> {
         if let [b'V', b'B', u1, u2, u3, c1, c2, c3, bytes @ ..] = bytes {
@@ -40,15 +41,39 @@ impl AssetChunk for TSong {
             &input[pointers.orders as usize..],
         )?;
 
-        let patterns = multi::count!(number::le_u32, header.pattern_count as usize)(
-            &input[pointers.patterns as usize..],
-        )?
-        .1
-        .into_iter()
-        .map(|p| p + pointers.pattern_data)
-        .map(|p| -> Result<_> { TPattern::parse(&input[p as usize..]) })
-        .map(|p| p.and_then(|p| Ok(p.1)))
-        .collect::<std::result::Result<_, _>>()?;
+        let patterns: Vec<_> = {
+            let (_, lengths) = multi::count!(number::le_u8, header.pattern_count as usize)(
+                &input[pointers.pattern_lengths as usize..],
+            )?;
+
+            multi::count!(number::le_u32, header.pattern_count as usize)(
+                &input[pointers.patterns as usize..],
+            )?
+            .1
+            .into_iter()
+            .map(|position| position + pointers.pattern_data)
+            .map(|position| &input[position as usize..])
+            .zip(lengths)
+            .map(|(input, length)| {
+                multi::count!(
+                    <Option<TPattern>>::parse,
+                    header.channel_count as usize * length as usize
+                )(input)
+            })
+            .map(|patterns| patterns.map(|p| p.1))
+            .map(|patterns| {
+                patterns.map(|p| -> Vec<Vec<_>> {
+                    p.into_iter()
+                        .chunks(header.channel_count as usize)
+                        .into_iter()
+                        .map(|p| p.collect())
+                        .collect()
+                })
+            })
+            .collect::<std::result::Result<_, _>>()?
+        };
+
+        dbg!(&patterns[0]);
 
         let (_, instruments) = multi::count!(TInstrument::parse, header.instrument_count as usize)(
             &input[pointers.instruments as usize..],
@@ -61,7 +86,7 @@ impl AssetChunk for TSong {
         let sample_data = Self::uncompress(&input[pointers.sample_data as usize..]);
 
         // TODO(nenikitov): Remove this after done debugging
-        std::fs::write("/home/nenikitov/Shared/Documents/Projects/Programming/Rust/ashen-unpacker/output/songs/main-menu-samples.ogg", &sample_data).unwrap();
+        std::fs::write("/home/nenikitov/SharedFiles/Projects/rust/ashen-decomp/output/parsed/songs/final/samples.ogg", &sample_data).unwrap();
 
         Ok((
             input,
@@ -71,8 +96,6 @@ impl AssetChunk for TSong {
                 restart_order: header.restart_order,
                 orders,
                 patterns,
-                // TODO(nenikitov) for debug - remove this
-                bytes: input.to_vec(),
             },
         ))
     }
@@ -183,6 +206,18 @@ impl AssetChunk for TPattern {
                 effect_2,
             },
         ))
+    }
+}
+
+impl AssetChunk for Option<TPattern> {
+    fn parse(input: &[u8]) -> Result<Self> {
+        let (after_flags, flags) = number::le_u8(input)?;
+        if (flags & 0x20) != 0 {
+            Ok((after_flags, None))
+        } else {
+            let (input, pattern) = TPattern::parse(input)?;
+            Ok((input, Some(pattern)))
+        }
     }
 }
 
