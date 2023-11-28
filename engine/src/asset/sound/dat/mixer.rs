@@ -34,17 +34,19 @@ impl Mixer {
 }
 
 pub trait SoundEffect {
-    fn pitch(&self, note: u8) -> Samples;
-    fn volume(&self, volume: f32) -> Samples;
+    fn pitch(self, note: u8) -> Samples;
+    fn volume(self, volume: f32) -> Samples;
 }
 
 impl SoundEffect for Samples {
-    fn pitch(&self, note: u8) -> Samples {
+    fn pitch(self, note: u8) -> Samples {
         todo!()
     }
 
-    fn volume(&self, volume: f32) -> Samples {
-        self.iter().map(|&s| (s as f32 * volume) as i16).collect()
+    fn volume(self, volume: f32) -> Samples {
+        self.into_iter()
+            .map(|s| (s as f32 * volume) as i16)
+            .collect()
     }
 }
 

@@ -68,8 +68,9 @@ impl TSong {
                             let sample = instrument.samples[(entry.note - 1) as usize];
                             if sample != 0xFF {
                                 let sample = &self.samples[sample as usize];
+                                let data = sample.sample.clone();
 
-                                m.add_samples(&sample.sample, i * 1000);
+                                m.add_samples(&data.volume(Self::volume(sample.volume)), i * 1000);
                             }
                         }
                     }
@@ -78,6 +79,10 @@ impl TSong {
         }
 
         m.mix()
+    }
+
+    fn volume(volume: u8) -> f32 {
+        volume as f32 / u8::MAX as f32
     }
 }
 
