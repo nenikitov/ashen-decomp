@@ -46,24 +46,19 @@ impl Asset for SoundAssetCollection {
                 let songs = {
                     let (_, songs) = SongChunkHeader::parse(&input[header.songs])?;
 
-                    /* songs
-                    .songs
-                    .iter()
-                    .map(|s| Self::deflate(&input[s]))
-                    .map(|s| -> std::result::Result<TSong, ParseError> {
-                        // TODO(nenikitov): use `Result` properly
-                        let (_, s) = TSong::parse(s.as_slice()).unwrap();
-                        Ok(s)
-                    })
-                    .collect::<std::result::Result<Vec<_>, _>>()? */
                     songs
                         .songs
-                        .iter()
+                        .into_iter()
                         .map(|s| Self::deflate(&input[s]))
+                        // TODO(nenikitov): use `Result` properly
+                        .map(|s| TSong::parse(s.as_slice()).unwrap().1)
                         .collect::<Vec<_>>()
                 };
 
-                TSong::parse(songs[0xc].as_slice()).unwrap();
+                std::fs::write(
+                    format!("/home/nenikitov/Shared/Documents/Projects/Programming/Rust/ashen-unpacker/output/songs/game/out.pcm"),
+                    songs[0xc].mix().iter().flat_map(|d| d.to_le_bytes()).collect::<Vec<u8>>()
+                );
 
                 todo!()
             }

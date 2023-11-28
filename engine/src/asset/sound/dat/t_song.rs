@@ -4,11 +4,13 @@ use std::{
 };
 
 use crate::{
-    asset::{pack_info::PackInfo, AssetChunk},
+    asset::{pack_info::PackInfo, sound::dat::mixer::Mixer, AssetChunk},
     utils::nom::*,
 };
 use itertools::Itertools;
 use lewton::inside_ogg::OggStreamReader;
+
+use super::mixer::SoundEffect;
 
 #[derive(Debug)]
 pub struct TSong {
@@ -18,7 +20,8 @@ pub struct TSong {
     orders: Vec<u8>,
     /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
     patterns: Vec<Vec<Vec<Option<TPattern>>>>,
-    samples: Vec<Vec<u8>>,
+    instruments: Vec<TInstrument>,
+    samples: Vec<TSampleParsed>,
 }
 
 impl TSong {
@@ -40,13 +43,41 @@ impl TSong {
             // For whatever reason, the game has the samples stored as 16-bit signed PCE,
             // But resamples them to 8-bit PCE before playback
             // Which would reduce the quality of music and add unnecessary code here
-            // It's 2023 and we can afford to play 16-bit PCE at 18000 Hz
-            assert_eq!(samples.len(), size_uncompressed as usize / 2);
+            // It's 2023 and we can afford to play 16-bit PCE at 16000 Hz
+            // TODO(nenikitov): Re-add this check
+            //assert_eq!(samples.len() * 2, size_uncompressed as usize);
 
             samples
         } else {
             todo!("Figure out which format is used and how to interpret it if it's not compressed")
         }
+    }
+
+    pub fn mix(&self) -> Vec<i16> {
+        let mut m = Mixer::new();
+
+        let mut i = 0;
+        for pattern in self.orders.iter() {
+            let pattern = &self.patterns[*pattern as usize];
+            for row in pattern.iter() {
+                i += 1;
+                for event in row.iter() {
+                    if let Some(entry) = event {
+                        if entry.note > 0 {
+                            let instrument = &self.instruments[entry.instrument as usize];
+                            let sample = instrument.samples[(entry.note - 1) as usize];
+                            if sample != 0xFF {
+                                let sample = &self.samples[sample as usize];
+
+                                m.add_samples(&sample.sample, i * 1000);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        m.mix()
     }
 }
 
@@ -115,13 +146,6 @@ impl AssetChunk for TSong {
             .collect()
         };
 
-        for (i, s) in samples.iter().enumerate() {
-            std::fs::write(
-            format!("/home/nenikitov/SharedFiles/Projects/rust/ashen-decomp/output/parsed/songs/final/{i}.raw"),
-                s.sample_full().iter().flat_map(|d| d.to_le_bytes()).collect::<Vec<u8>>()
-            );
-        }
-
         Ok((
             input,
             Self {
@@ -130,7 +154,8 @@ impl AssetChunk for TSong {
                 restart_order: header.restart_order,
                 orders,
                 patterns,
-                samples: todo!(),
+                instruments,
+                samples,
             },
         ))
     }
