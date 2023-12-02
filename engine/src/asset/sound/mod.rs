@@ -44,17 +44,13 @@ impl Asset for SoundAssetCollection {
             Extension::Dat => {
                 let (_, header) = SongAssetHeader::parse(input)?;
 
-                let songs = {
-                    let (_, songs) = SongChunkHeader::parse(&input[header.songs])?;
-
-                    songs
-                        .songs
-                        .into_iter()
-                        .map(|s| Self::deflate(&input[s]))
-                        // TODO(nenikitov): use `Result` properly
-                        .map(|s| TSong::parse(s.as_slice()).unwrap().1)
-                        .collect::<Vec<_>>()
-                };
+                let (_, songs) = SongChunkHeader::parse(&input[header.songs])?;
+                let songs = songs
+                    .songs
+                    .into_iter()
+                    .map(|s| Self::deflate(&input[s]))
+                    .map(|s| TSong::parse(s.as_slice()).map(|(_, d)| d))
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
 
                 std::fs::write(
                     format!("/home/nenikitov/Shared/Documents/Projects/Programming/Rust/ashen-unpacker/output/songs/game/out.pcm"),
