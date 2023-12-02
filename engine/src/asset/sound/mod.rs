@@ -1,7 +1,7 @@
 mod dat;
 
 use flate2::read::ZlibDecoder;
-use std::io::Read;
+use std::{io::Read, ops::Index};
 
 use super::{pack_info::PackInfo, Asset, AssetChunk, Extension, Kind};
 use crate::{
@@ -15,6 +15,7 @@ use crate::{
 pub struct SoundAssetCollection {}
 
 impl SoundAssetCollection {
+    // TODO(nenikitov): Move to utils
     // TODO(nenikitov): Return `Result`
     fn deflate(input: &[u8]) -> Vec<u8> {
         if let [b'Z', b'L', s1, s2, s3, bytes @ ..] = input {

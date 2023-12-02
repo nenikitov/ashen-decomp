@@ -1,4 +1,4 @@
-pub(super) mod asset_header;
-pub(super) mod chunk_header;
-pub(super) mod t_song;
-pub(super) mod mixer;
+pub mod asset_header;
+pub mod chunk_header;
+pub mod t_song;
+pub mod mixer;

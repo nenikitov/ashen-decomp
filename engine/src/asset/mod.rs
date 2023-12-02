@@ -2,8 +2,8 @@ use crate::utils::nom::Result;
 
 pub mod color_map;
 pub mod gamma_table;
-pub(self) mod pack_info;
 pub mod sound;
+mod pack_info;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
@@ -47,7 +47,6 @@ where
     fn parse(input: &[u8], extension: Extension) -> Result<Self>;
 }
 
-// TODO(nenikitov): Discuss if this is useful
 pub(crate) trait AssetChunk
 where
     Self: Sized,
