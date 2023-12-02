@@ -60,7 +60,8 @@ A playable source port of an obscure NGage game Ashen
 
 **⚠️ WARNING ⚠️**
 
-I use the packfile that comes with Ashen 1.06. Your packfile may have different offsets to files, I didn't test with different versions.
+I use the packfile that comes with Ashen 1.06.
+Your packfile may have different offsets to files, I didn't test with different versions.
 
 Notes:
 - **⚠️** - Unknown file
