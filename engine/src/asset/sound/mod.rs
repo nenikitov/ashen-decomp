@@ -53,11 +53,11 @@ impl Asset for SoundAssetCollection {
                     .collect::<std::result::Result<Vec<_>, _>>()?;
 
                 std::fs::write(
-                    format!("/home/nenikitov/Shared/Documents/Projects/Programming/Rust/ashen-unpacker/output/songs/game/out.pcm"),
-                    songs[0xc].mix().iter().flat_map(|d| d.to_le_bytes()).collect::<Vec<u8>>()
+                    "/home/nenikitov/Shared/Documents/Projects/Programming/Rust/ashen-unpacker/output/songs/game/out.pcm",
+                    songs[0xc].mix().into_iter().flat_map(i16::to_le_bytes).collect::<Vec<_>>()
                 );
 
-                todo!()
+                todo!("(nenikitov): Return something when we decide on the audio structure")
             }
             _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }

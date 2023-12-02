@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 type Sample = i16;
 type Samples = Vec<Sample>;
 
@@ -40,7 +38,7 @@ pub trait SoundEffect {
 
 impl SoundEffect for Samples {
     fn pitch(self, note: u8) -> Samples {
-        todo!()
+        todo!("(nenikitov): Figure out how this work")
     }
 
     fn volume(self, volume: f32) -> Samples {

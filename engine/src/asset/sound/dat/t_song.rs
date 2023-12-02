@@ -1,7 +1,4 @@
-use std::{
-    fmt::write,
-    io::{self, Cursor},
-};
+use std::io::{self, Cursor};
 
 use crate::{
     asset::{pack_info::PackInfo, sound::dat::mixer::Mixer, AssetChunk},
@@ -49,7 +46,7 @@ impl TSong {
 
             samples
         } else {
-            todo!("Figure out which format is used and how to interpret it if it's not compressed")
+            todo!("(nenikitov): Figure out which format is used and how to interpret it if it's not compressed")
         }
     }
 
@@ -57,15 +54,17 @@ impl TSong {
         let mut m = Mixer::new();
 
         let mut i = 0;
-        for pattern in self.orders.iter() {
+        for pattern in &self.orders {
             let pattern = &self.patterns[*pattern as usize];
-            for row in pattern.iter() {
+            for row in pattern {
                 i += 1;
-                for event in row.iter() {
+                for event in row {
                     if let Some(entry) = event {
+                        // TODO(nenikitov): Meke `note` option
                         if entry.note > 0 {
                             let instrument = &self.instruments[entry.instrument as usize];
                             let sample = instrument.samples[(entry.note - 1) as usize];
+                            // TODO(nenikitov): Find out what sample index `255` means
                             if sample != 0xFF {
                                 let sample = &self.samples[sample as usize];
                                 let data = sample.sample.clone();
@@ -117,7 +116,7 @@ impl AssetChunk for TSong {
                     header.channel_count as usize * length as usize
                 )(input)
             })
-            .map(|patterns| patterns.map(|p| p.1))
+            .map(|patterns| patterns.map(|(_, p)| p))
             .map(|patterns| {
                 patterns.map(|p| -> Vec<Vec<_>> {
                     p.into_iter()
@@ -328,8 +327,7 @@ impl AssetChunk for TInstrument {
         let (input, pan_end) = number::le_u16(input)?;
         let (input, pan_sustain) = number::le_u16(input)?;
         let (input, pan_envelope_border) = number::le_u16(input)?;
-        // TODO(nenikitov): Figure out why Rust can't figure out this type
-        let (input, pan_envelope): (&[u8], [u8; 325]) = multi::count!(number::le_u8)(input)?;
+        let (input, pan_envelope) = multi::count!(number::le_u8)(input)?;
 
         let (input, _) = bytes::take(1usize)(input)?;
 
@@ -355,7 +353,7 @@ impl AssetChunk for TInstrument {
                 pan_end,
                 pan_sustain,
                 pan_envelope_border,
-                pan_envelope: Box::new(volume_envelope),
+                pan_envelope: Box::new(pan_envelope),
                 vibrato_depth,
                 vibrato_speed,
                 vibrato_sweep,
