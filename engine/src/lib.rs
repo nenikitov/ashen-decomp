@@ -2,6 +2,7 @@
 // https://github.com/rust-lang/rust/pull/101179
 #![feature(maybe_uninit_uninit_array_transpose)]
 #![feature(let_chains)]
+#![feature(array_chunks)]
 
 pub mod asset;
 pub mod directory;

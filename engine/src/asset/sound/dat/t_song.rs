@@ -1,13 +1,13 @@
 use std::io::{self, Cursor};
 
 use crate::{
-    asset::{pack_info::PackInfo, sound::dat::mixer::Mixer, AssetChunk},
+    asset::{sound::dat::mixer::Mixer, AssetChunk},
     utils::nom::*,
 };
 use itertools::Itertools;
 use lewton::inside_ogg::OggStreamReader;
 
-use super::mixer::SoundEffect;
+use super::{mixer::SoundEffect, t_instrument::*};
 
 #[derive(Debug)]
 pub struct TSong {
@@ -37,16 +37,25 @@ impl TSong {
             while let Ok(Some(packet)) = data.read_dec_packet_itl() {
                 samples.extend(packet);
             }
-            // For whatever reason, the game has the samples stored as 16-bit signed PCE,
-            // But resamples them to 8-bit PCE before playback
-            // Which would reduce the quality of music and add unnecessary code here
-            // It's 2023 and we can afford to play 16-bit PCE at 16000 Hz
+
+            // For whatever reason, the game has the samples stored as 16-bit signed PCM,
+            // but resamples them to 8-bit PCM before playback.
+            // Which would reduce the quality of music and add unnecessary code here...
+            // It's 2023 and we can afford to play 16-bit PCM at 16000 Hz.
+
             // TODO(nenikitov): Re-add this check
             //assert_eq!(samples.len() * 2, size_uncompressed as usize);
 
             samples
         } else {
-            todo!("(nenikitov): Figure out which format is used and how to interpret it if it's not compressed")
+            // Non-compressed steam is in 8-bit PCM.
+            // Because compressed data is 16-bit PCM, to keep higher quality,
+            // we need to resample non-compressed stream into 16-bit.
+            bytes
+                .array_chunks::<1>()
+                .map(|bytes| i8::from_le_bytes(*bytes) as i16)
+                .map(|sample| sample * (i16::MIN / i8::MIN as i16))
+                .collect()
         }
     }
 
@@ -284,158 +293,5 @@ impl AssetChunk for Option<TPattern> {
             let (input, pattern) = TPattern::parse(input)?;
             Ok((input, Some(pattern)))
         }
-    }
-}
-
-#[derive(Debug)]
-struct TInstrument {
-    flags: u8,
-
-    volume_begin: u16,
-    volume_end: u16,
-    volume_sustain: u16,
-    volume_envelope_border: u16,
-    volume_envelope: Box<[u8; 325]>,
-
-    pan_begin: u16,
-    pan_end: u16,
-    pan_sustain: u16,
-    pan_envelope_border: u16,
-    pan_envelope: Box<[u8; 325]>,
-
-    vibrato_depth: u8,
-    vibrato_speed: u8,
-    vibrato_sweep: u8,
-
-    fadeout: u32,
-    vibrato_table: u32,
-
-    samples: Box<[u8; 96]>,
-}
-
-impl AssetChunk for TInstrument {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, flags) = number::le_u8(input)?;
-
-        let (input, _) = bytes::take(1usize)(input)?;
-
-        let (input, volume_begin) = number::le_u16(input)?;
-        let (input, volume_end) = number::le_u16(input)?;
-        let (input, volume_sustain) = number::le_u16(input)?;
-        let (input, volume_envelope_border) = number::le_u16(input)?;
-        let (input, volume_envelope) = multi::count!(number::le_u8)(input)?;
-
-        let (input, pan_begin) = number::le_u16(input)?;
-        let (input, pan_end) = number::le_u16(input)?;
-        let (input, pan_sustain) = number::le_u16(input)?;
-        let (input, pan_envelope_border) = number::le_u16(input)?;
-        let (input, pan_envelope) = multi::count!(number::le_u8)(input)?;
-
-        let (input, _) = bytes::take(1usize)(input)?;
-
-        let (input, vibrato_depth) = number::le_u8(input)?;
-        let (input, vibrato_speed) = number::le_u8(input)?;
-        let (input, vibrato_sweep) = number::le_u8(input)?;
-
-        let (input, fadeout) = number::le_u32(input)?;
-        let (input, vibrato_table) = number::le_u32(input)?;
-
-        let (input, samples) = multi::count!(number::le_u8)(input)?;
-
-        Ok((
-            input,
-            Self {
-                flags,
-                volume_begin,
-                volume_end,
-                volume_sustain,
-                volume_envelope_border,
-                volume_envelope: Box::new(volume_envelope),
-                pan_begin,
-                pan_end,
-                pan_sustain,
-                pan_envelope_border,
-                pan_envelope: Box::new(pan_envelope),
-                vibrato_depth,
-                vibrato_speed,
-                vibrato_sweep,
-                fadeout,
-                vibrato_table,
-                samples: Box::new(samples),
-            },
-        ))
-    }
-}
-
-#[derive(Debug)]
-struct TSample {
-    flags: u8,
-    volume: u8,
-    panning: u8,
-    align: u8,
-    finetune: u32,
-    loop_length: u32,
-    loop_end: u32,
-    sample: u32,
-}
-
-impl AssetChunk for TSample {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, flags) = number::le_u8(input)?;
-        let (input, volume) = number::le_u8(input)?;
-        let (input, panning) = number::le_u8(input)?;
-        let (input, align) = number::le_u8(input)?;
-        let (input, finetune) = number::le_u32(input)?;
-        let (input, loop_length) = number::le_u32(input)?;
-        let (input, loop_end) = number::le_u32(input)?;
-        let (input, sample) = number::le_u32(input)?;
-
-        Ok((
-            input,
-            Self {
-                flags,
-                volume,
-                panning,
-                align,
-                finetune,
-                loop_length,
-                // The game uses offset for `i16`, but it's much more conventient to just use indeces
-                loop_end: loop_end / 2,
-                sample: sample / 2,
-            },
-        ))
-    }
-}
-
-#[derive(Debug)]
-struct TSampleParsed {
-    flags: u8,
-    volume: u8,
-    panning: u8,
-    align: u8,
-    finetune: u32,
-    loop_length: u32,
-    sample: Vec<i16>,
-}
-
-impl TSampleParsed {
-    pub fn parse(header: &TSample, sample_data: &[i16]) -> Self {
-        Self {
-            flags: header.flags,
-            volume: header.volume,
-            panning: header.panning,
-            align: header.align,
-            finetune: header.finetune,
-            loop_length: header.loop_length,
-            sample: sample_data.to_vec(),
-        }
-    }
-
-    pub fn sample_full(&self) -> &[i16] {
-        &self.sample
-    }
-
-    pub fn sample_loop(&self) -> &[i16] {
-        &self.sample[self.sample.len() - 1 - self.loop_length as usize..]
     }
 }

@@ -8,12 +8,12 @@ use std::{
     path::Path,
 };
 
-use self::dat::mixer::SoundEffect;
+use self::dat::{mixer::SoundEffect, t_effect::TEffect};
 
 use super::{pack_info::PackInfo, Asset, AssetChunk, Extension, Kind};
 use crate::{
     asset::sound::dat::{
-        asset_header::SongAssetHeader, chunk_header::SongChunkHeader, t_song::TSong,
+        asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
     error::{self, ParseError},
     utils::nom::*,
@@ -39,10 +39,11 @@ fn deflate(input: &[u8]) -> Vec<u8> {
 
 pub struct SoundAssetCollection {
     songs: Vec<TSong>,
+    effects: Vec<TEffect>,
 }
 
 impl SoundAssetCollection {
-    fn save<P>(&self, path: P) -> io::Result<()>
+    fn save_songs<P>(&self, path: P) -> io::Result<()>
     where
         P: AsRef<Path>,
     {
@@ -51,6 +52,20 @@ impl SoundAssetCollection {
 
         for (i, song) in self.songs.iter().enumerate() {
             fs::write(dir.join(format!("{i:X}.wav")), song.mix().to_wave())?
+        }
+
+        Ok(())
+    }
+
+    fn save_effects<P>(&self, path: P) -> io::Result<()>
+    where
+        P: AsRef<Path>,
+    {
+        let dir = path.as_ref();
+        fs::create_dir_all(dir)?;
+
+        for (i, effect) in self.effects.iter().enumerate() {
+            fs::write(dir.join(format!("{i:X}.wav")), effect.mix().to_wave())?
         }
 
         Ok(())
@@ -65,18 +80,25 @@ impl Asset for SoundAssetCollection {
     fn parse(input: &[u8], extension: Extension) -> Result<Self> {
         match extension {
             Extension::Dat => {
-                let (_, header) = SongAssetHeader::parse(input)?;
+                let (_, header) = SoundAssetHeader::parse(input)?;
 
-                let (_, songs) = SongChunkHeader::parse(&input[header.songs])?;
-
+                let (_, songs) = SoundChunkHeader::parse(&input[header.songs])?;
                 let songs = songs
-                    .songs
+                    .infos
                     .into_iter()
                     .map(|s| deflate(&input[s]))
                     .map(|s| TSong::parse(s.as_slice()).map(|(_, d)| d))
                     .collect::<std::result::Result<Vec<_>, _>>()?;
 
-                Ok((&[], SoundAssetCollection { songs }))
+                let (_, effects) = SoundChunkHeader::parse(&input[header.effects])?;
+                let effects = effects
+                    .infos
+                    .into_iter()
+                    .map(|s| deflate(&input[s]))
+                    .map(|s| TEffect::parse(s.as_slice()).map(|(_, d)| d))
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
+
+                Ok((&[], SoundAssetCollection { songs, effects }))
             }
             _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }
@@ -97,9 +119,27 @@ mod tests {
 
         let (_, sac) = SoundAssetCollection::parse(&bytes, Extension::Dat)?;
 
-        sac.save(concat!(
+        sac.save_songs(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../output/songs/game/"
+            "/../output/sounds/songs/"
+        ))?;
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "uses files that are local"]
+    fn output_effects() -> eyre::Result<()> {
+        let bytes = fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../output/deflated/BBC974.dat"
+        ))?;
+
+        let (_, sac) = SoundAssetCollection::parse(&bytes, Extension::Dat)?;
+
+        sac.save_effects(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../output/sounds/effects/"
         ))?;
 
         Ok(())
