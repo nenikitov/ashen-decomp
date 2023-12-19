@@ -2,8 +2,8 @@ use crate::utils::nom::Result;
 
 pub mod color_map;
 pub mod gamma_table;
-pub mod sound;
 mod pack_info;
+pub mod sound;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
