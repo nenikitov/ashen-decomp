@@ -2,11 +2,14 @@ use crate::utils::nom::Result;
 
 pub mod color_map;
 pub mod gamma_table;
+mod pack_info;
+pub mod sound;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
     GammaTable,
     ColorMap,
+    SoundCollection,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -42,4 +45,11 @@ where
     ///
     /// If the `input` is invalid for the provided `extension`.
     fn parse(input: &[u8], extension: Extension) -> Result<Self>;
+}
+
+pub(crate) trait AssetChunk
+where
+    Self: Sized,
+{
+    fn parse(input: &[u8]) -> Result<Self>;
 }
