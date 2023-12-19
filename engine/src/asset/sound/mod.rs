@@ -88,6 +88,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "uses files that are local"]
     fn output_songs() -> eyre::Result<()> {
         let bytes = fs::read(concat!(
             env!("CARGO_MANIFEST_DIR"),

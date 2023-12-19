@@ -72,10 +72,7 @@ impl TSong {
                             let sample = &self.samples[sample as usize];
                             let data = sample.sample.clone();
 
-                            m.add_samples(
-                                &data.volume(Self::volume(sample.volume)),
-                                i * 1000,
-                            );
+                            m.add_samples(&data.volume(Self::volume(sample.volume)), i * 1000);
                         }
                     }
                 }
