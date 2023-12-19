@@ -61,7 +61,7 @@ impl TSong {
                 for event in row {
                     if let Some(entry) = event {
                         // TODO(nenikitov): Meke `note` option
-                        if entry.note > 0 {
+                        if entry.note > 0 && entry.instrument != 255 {
                             let instrument = &self.instruments[entry.instrument as usize];
                             let sample = instrument.samples[(entry.note - 1) as usize];
                             // TODO(nenikitov): Find out what sample index `255` means
