@@ -59,18 +59,23 @@ impl TSong {
             for row in pattern {
                 i += 1;
                 for event in row {
-                    if let Some(entry) = event {
-                        // TODO(nenikitov): Meke `note` option
-                        if entry.note > 0 && entry.instrument != 255 {
-                            let instrument = &self.instruments[entry.instrument as usize];
-                            let sample = instrument.samples[(entry.note - 1) as usize];
-                            // TODO(nenikitov): Find out what sample index `255` means
-                            if sample != 0xFF {
-                                let sample = &self.samples[sample as usize];
-                                let data = sample.sample.clone();
+                    if let Some(entry) = event
+                        && let Some(note) = entry.note
+                        // TODO(nenikitov): Find out what special instrument `0xFF` means
+                        && entry.instrument != 0xFF
+                    {
+                        let instrument = &self.instruments[entry.instrument as usize];
+                        // TODO(nenikitov): See if doing `- 1` in parsing will look nicer
+                        let sample = instrument.samples[(note - 1) as usize];
+                        // TODO(nenikitov): Find out what special sample `0xFF` means
+                        if sample != 0xFF {
+                            let sample = &self.samples[sample as usize];
+                            let data = sample.sample.clone();
 
-                                m.add_samples(&data.volume(Self::volume(sample.volume)), i * 1000);
-                            }
+                            m.add_samples(
+                                &data.volume(Self::volume(sample.volume)),
+                                i * 1000,
+                            );
                         }
                     }
                 }
@@ -243,7 +248,7 @@ impl AssetChunk for TSongPointers {
 #[derive(Debug)]
 struct TPattern {
     flags: u8,
-    note: u8,
+    note: Option<u8>,
     instrument: u8,
     volume: u8,
     effect_1: u16,
@@ -263,7 +268,7 @@ impl AssetChunk for TPattern {
             input,
             Self {
                 flags,
-                note,
+                note: (note != 0).then_some(note),
                 instrument,
                 volume,
                 effect_1,
