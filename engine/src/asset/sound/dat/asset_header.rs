@@ -3,18 +3,18 @@ use crate::{
     utils::nom::*,
 };
 
-pub struct SongAssetHeader {
+pub struct SoundAssetHeader {
     pub songs: PackInfo,
     pub effects: PackInfo,
     pub emitters: PackInfo,
     pub maps: PackInfo,
 }
 
-impl SongAssetHeader {
+impl SoundAssetHeader {
     const HEADER: &'static str = "TSND";
 }
 
-impl AssetChunk for SongAssetHeader {
+impl AssetChunk for SoundAssetHeader {
     fn parse(input: &[u8]) -> Result<Self> {
         let (input, _) = bytes::tag(Self::HEADER)(input)?;
 
