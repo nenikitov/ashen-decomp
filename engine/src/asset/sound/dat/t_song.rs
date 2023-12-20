@@ -41,7 +41,7 @@ impl TSong {
                         // TODO(nenikitov): Find out what special sample `0xFF` means
                         if sample != 0xFF {
                             let sample = &self.samples[sample as usize];
-                            let data = sample.sample.clone();
+                            let data = sample.data.clone();
 
                             m.add_samples(&data.volume(Self::volume(sample.volume)), i * 1000);
                         }
@@ -95,7 +95,7 @@ impl AssetChunk for TSong {
                     p.into_iter()
                         .chunks(header.channel_count as usize)
                         .into_iter()
-                        .map(|p| p.collect())
+                        .map(Iterator::collect)
                         .collect()
                 })
             })

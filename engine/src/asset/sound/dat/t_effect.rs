@@ -20,9 +20,7 @@ pub struct TEffect {
 impl TEffect {
     pub fn mix(&self) -> Vec<i16> {
         let mut m = Mixer::new();
-
-        m.add_samples(&self.sample.sample, 0);
-
+        m.add_samples(&self.sample.data, 0);
         m.mix()
     }
 }

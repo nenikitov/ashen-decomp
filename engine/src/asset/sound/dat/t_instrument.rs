@@ -137,7 +137,7 @@ pub struct TSampleParsed {
     pub align: u8,
     pub finetune: u32,
     pub loop_length: u32,
-    pub sample: Vec<i16>,
+    pub data: Vec<i16>,
 }
 
 impl TSampleParsed {
@@ -149,15 +149,15 @@ impl TSampleParsed {
             align: header.align,
             finetune: header.finetune,
             loop_length: header.loop_length,
-            sample: sample_data.to_vec(),
+            data: sample_data.to_vec(),
         }
     }
 
     pub fn sample_full(&self) -> &[i16] {
-        &self.sample
+        &self.data
     }
 
     pub fn sample_loop(&self) -> &[i16] {
-        &self.sample[self.sample.len() - 1 - self.loop_length as usize..]
+        &self.data[self.data.len() - 1 - self.loop_length as usize..]
     }
 }

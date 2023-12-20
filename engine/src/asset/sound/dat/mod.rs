@@ -40,7 +40,7 @@ fn uncompress(bytes: &[u8]) -> Vec<i16> {
         // Because compressed data is 16-bit PCM, to keep higher quality,
         // we need to resample non-compressed stream into 16-bit.
         bytes
-            .into_iter()
+            .iter()
             .copied()
             .map(|sample| i8::from_le_bytes([sample]) as i16)
             .map(|sample| sample * (i16::MIN / i8::MIN as i16))

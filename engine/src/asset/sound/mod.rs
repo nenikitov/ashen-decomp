@@ -51,7 +51,7 @@ impl SoundAssetCollection {
         fs::create_dir_all(dir)?;
 
         for (i, song) in self.songs.iter().enumerate() {
-            fs::write(dir.join(format!("{i:X}.wav")), song.mix().to_wave())?
+            fs::write(dir.join(format!("{i:X}.wav")), song.mix().to_wave())?;
         }
 
         Ok(())
@@ -65,7 +65,7 @@ impl SoundAssetCollection {
         fs::create_dir_all(dir)?;
 
         for (i, effect) in self.effects.iter().enumerate() {
-            fs::write(dir.join(format!("{i:X}.wav")), effect.mix().to_wave())?
+            fs::write(dir.join(format!("{i:X}.wav")), effect.mix().to_wave())?;
         }
 
         Ok(())
