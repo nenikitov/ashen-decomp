@@ -1,11 +1,12 @@
 use crate::utils::nom::Result;
 
+mod pack_info;
+
 pub mod color_map;
 pub mod gamma_table;
+pub mod skybox;
 pub mod sound;
 pub mod string_table;
-
-mod pack_info;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
@@ -13,6 +14,7 @@ pub enum Kind {
     ColorMap,
     SoundCollection,
     StringTable,
+    Skybox,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
