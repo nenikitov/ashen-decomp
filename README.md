@@ -9,9 +9,10 @@ A playable source port of an obscure NGage game Ashen
     mkdir ./rom/
     cp /path/to/packfile.dat ./rom/packfile.dat
     ```
-- Run
+- Parse files (output will be in `output/parsed/`)
     ```sh
-    cargo run --release
+    cargo test --release -- --ignored parse_rom_packfile
+    cargo test --release -- --ignored parse_rom_asset
     ```
 
 ## File structure

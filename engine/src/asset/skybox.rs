@@ -1,4 +1,4 @@
-use super::{Asset, AssetChunk, Extension, Kind};
+use super::{Asset, Extension, Kind};
 use crate::{asset::color_map::Color, error, utils::nom::*};
 use itertools::Itertools;
 

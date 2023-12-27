@@ -41,15 +41,19 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-      - name: cargo generate-lockfile
+      - name: Generate lock file
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile
       # https://twitter.com/jonhoo/status/1571290371124260865
-      - name: cargo test --locked
+      - name: Test
         run: cargo test --locked --all-features --all-targets
       # https://github.com/rust-lang/cargo/issues/6669
-      - name: cargo test --doc
+      - name: Doc tests
         run: cargo test --locked --all-features --doc
+      - name: ROM - Deflate
+        run: cargo test --locked -- --ignored parse_rom_packfile
+      - name: ROM - Assets
+        run: cargo test --locked -- --ignored parse_rom_asset
   minimal:
     runs-on: ubuntu-latest
     name: ubuntu / nightly / minimal-versions
