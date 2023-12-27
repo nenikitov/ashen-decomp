@@ -6,6 +6,7 @@ macro_rules! re_export {
     ($path:ident) => {
         #[doc = concat!("Re-exports all `nom::", stringify!($path), "::complete` items.")]
         pub mod $path {
+            #[allow(unused_imports)]
             pub use nom::$path::complete::*;
         }
     };

@@ -28,7 +28,7 @@ impl PackFile {
     pub fn new(input: &[u8]) -> Result<Self> {
         let (copyright, entries) = {
             let (input, (copyright, total_entries)) = Self::header(input)?;
-            let (_input, headers) = Self::entry_headers(input, total_entries)?;
+            let (input, (headers)) = Self::entry_headers(input, total_entries)?;
             (copyright, headers)
         };
         let (input, entries) = Self::entries(input, &entries)?;
@@ -52,14 +52,14 @@ impl PackFile {
     fn entry_headers(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
         fn entry_header(input: &[u8]) -> Result<EntryHeader> {
             // TODO(nenikitov): add check for `asset_kind == 0`
-            let (input, _asset_kind) = number::le_u32(input)?;
+            let (input, asset_kind) = number::le_u32(input)?;
 
             let (input, offset) = number::le_u32(input)?;
 
             let (input, size) = number::le_u32(input)?;
 
             // TODO(nenikitov): add check for `reserved == 0`
-            let (input, _reserved) = number::le_u32(input)?;
+            let (input, reserved) = number::le_u32(input)?;
 
             Ok((input, EntryHeader { offset, size }))
         }
@@ -102,7 +102,7 @@ impl PackFile {
 mod tests {
     use std::{cell::LazyCell, path::PathBuf};
 
-    use crate::utils::fs::*;
+    use crate::utils::test::*;
 
     use super::*;
 
