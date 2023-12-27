@@ -1,6 +1,9 @@
 pub mod nom;
 
 pub mod fs {
+    use std::path::Path;
+    use std::{fs, io};
+
     /// Gets a path relative to the workspace directory.
     macro_rules! workspace_file {
         ($file:expr) => {
@@ -33,8 +36,7 @@ pub mod fs {
         inner(path.as_ref(), contents.as_ref())
     }
 
-    use std::{fs, io, path::Path};
-
+    #[allow(unused)]
     pub(crate) use {deflated, workspace_file};
 }
 
