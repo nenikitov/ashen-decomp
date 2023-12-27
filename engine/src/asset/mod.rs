@@ -4,6 +4,7 @@ mod pack_info;
 
 pub mod color_map;
 pub mod gamma_table;
+pub mod model;
 pub mod pack_file;
 pub mod skybox;
 pub mod sound;
@@ -16,6 +17,7 @@ pub enum Kind {
     SoundCollection,
     StringTable,
     Skybox,
+    Model,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

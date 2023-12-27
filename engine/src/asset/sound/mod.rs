@@ -10,7 +10,7 @@ use crate::{
     asset::sound::dat::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
-    error::{self},
+    error,
     utils::nom::*,
 };
 
@@ -78,7 +78,7 @@ impl Asset for SoundAssetCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{format::WaveFile, test::*};
+    use crate::utils::{format::*, test::*};
     use std::{cell::LazyCell, path::PathBuf};
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");

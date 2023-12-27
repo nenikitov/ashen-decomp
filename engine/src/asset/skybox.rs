@@ -6,7 +6,8 @@ const COLOR_COUNT: usize = 256;
 
 #[derive(Debug)]
 pub struct Skybox {
-    pub texture: Vec<Vec<Color>>,
+    pub palette: Vec<Color>,
+    pub texture: Vec<Vec<u8>>,
 }
 
 impl Asset for Skybox {
@@ -28,13 +29,12 @@ impl Asset for Skybox {
                     multi::count!(number::le_u8, (width * height) as usize)(input)?;
                 let texture = texture
                     .into_iter()
-                    .map(|c| palette[c as usize])
                     .chunks(width as usize)
                     .into_iter()
                     .map(Iterator::collect)
                     .collect();
 
-                Ok((&[], Self { texture }))
+                Ok((&[], Self { palette, texture }))
             }
             _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }
@@ -44,7 +44,10 @@ impl Asset for Skybox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{format::*, test::*};
+    use crate::{
+        asset::color_map::PaletteTexture,
+        utils::{format::*, test::*},
+    };
     use std::cell::LazyCell;
 
     const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated_file!("3C.dat");
@@ -56,7 +59,7 @@ mod tests {
 
         output_file(
             parsed_file_path!("skyboxes/level-1.ppm"),
-            skybox.texture.to_ppm(),
+            skybox.texture.with_palette(&skybox.palette).to_ppm(),
         )?;
 
         Ok(())
