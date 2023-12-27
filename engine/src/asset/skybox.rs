@@ -44,7 +44,7 @@ impl Asset for Skybox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::fs::*;
+    use crate::utils::{format::*, fs::*};
     use std::{cell::LazyCell, fs};
 
     const SKYBOX_DATA: LazyCell<Vec<u8>> = LazyCell::new(|| {
@@ -56,21 +56,10 @@ mod tests {
     fn parse_works() -> eyre::Result<()> {
         let (_, skybox) = Skybox::parse(&SKYBOX_DATA, Extension::Dat)?;
 
-        let bytes: Vec<u8> = format!(
-            "P6 {} {} 255\n",
-            skybox.texture[0].len(),
-            skybox.texture.len()
-        )
-        .bytes()
-        .chain(
-            skybox
-                .texture
-                .iter()
-                .flat_map(|r| r.iter().flat_map(|c| [c.r, c.g, c.b]).collect::<Vec<_>>()),
-        )
-        .collect();
-
-        output_file(workspace_file!("output/skyboxes/19C57C.ppm"), bytes)?;
+        output_file(
+            workspace_file!("output/skyboxes/19C57C.ppm"),
+            skybox.texture.to_ppm(),
+        )?;
 
         Ok(())
     }

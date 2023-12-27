@@ -16,7 +16,7 @@ use crate::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
     error::{self, ParseError},
-    utils::nom::*,
+    utils::{format::*, nom::*},
 };
 
 // TODO(nenikitov): Move to utils
@@ -43,12 +43,18 @@ pub struct SoundAssetCollection {
 }
 
 impl SoundAssetCollection {
+    const SAMPLE_RATE: usize = 16000;
+    const CHANNEL_COUNT: usize = 2;
+
     fn save_songs<P>(&self, path: P) -> io::Result<()>
     where
         P: AsRef<Path>,
     {
         self.songs.iter().enumerate().try_for_each(|(i, song)| {
-            crate::utils::fs::output_file(format!("{i:X}.wav"), song.mix().to_wave())
+            crate::utils::fs::output_file(
+                format!("{i:X}.wav"),
+                song.mix().to_wave(Self::SAMPLE_RATE, Self::CHANNEL_COUNT),
+            )
         })
     }
 
@@ -57,7 +63,10 @@ impl SoundAssetCollection {
         P: AsRef<Path>,
     {
         self.effects.iter().enumerate().try_for_each(|(i, effect)| {
-            crate::utils::fs::output_file(format!("{i:X}.wav"), effect.mix().to_wave())
+            crate::utils::fs::output_file(
+                format!("{i:X}.wav"),
+                effect.mix().to_wave(Self::SAMPLE_RATE, Self::CHANNEL_COUNT),
+            )
         })
     }
 }
