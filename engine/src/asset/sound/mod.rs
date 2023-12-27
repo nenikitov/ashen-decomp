@@ -42,26 +42,6 @@ pub struct SoundAssetCollection {
     effects: Vec<TEffect>,
 }
 
-impl SoundAssetCollection {
-    fn save_songs<P>(&self, path: P) -> io::Result<()>
-    where
-        P: AsRef<Path>,
-    {
-        self.songs.iter().enumerate().try_for_each(|(i, song)| {
-            crate::utils::fs::output_file(format!("{i:X}.wav"), song.mix().to_wave())
-        })
-    }
-
-    fn save_effects<P>(&self, path: P) -> io::Result<()>
-    where
-        P: AsRef<Path>,
-    {
-        self.effects.iter().enumerate().try_for_each(|(i, effect)| {
-            crate::utils::fs::output_file(format!("{i:X}.wav"), effect.mix().to_wave())
-        })
-    }
-}
-
 impl Asset for SoundAssetCollection {
     fn kind() -> Kind {
         Kind::SoundCollection
@@ -99,26 +79,28 @@ impl Asset for SoundAssetCollection {
 mod tests {
     use super::*;
     use crate::utils::fs::*;
-    use std::cell::LazyCell;
+    use std::{cell::LazyCell, path::PathBuf};
 
-    const SOUND_DATA: LazyCell<Vec<u8>> = LazyCell::new(|| {
-        fs::read(workspace_file!("output/deflated/BBC974.dat")).expect("deflated test ran")
-    });
+    const SOUND_DATA: LazyCell<Vec<u8>> = deflated!("BBC974.dat");
 
     #[test]
     #[ignore = "uses files that are local"]
-    fn output_songs() -> eyre::Result<()> {
+    fn output_works() -> eyre::Result<()> {
         let (_, sac) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
-        sac.save_songs(workspace_file!("output/sounds/songs/"))?;
 
-        Ok(())
-    }
+        let mut output_dir = PathBuf::from(workspace_file!("output/sounds/songs/"));
 
-    #[test]
-    #[ignore = "uses files that are local"]
-    fn output_effects() -> eyre::Result<()> {
-        let (_, sac) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
-        sac.save_effects(workspace_file!("output/sounds/effects/"))?;
+        sac.songs.iter().enumerate().try_for_each(|(i, song)| {
+            let file = output_dir.join(format!("{i:0>2X}.wav"));
+            crate::utils::fs::output_file(file, song.mix().to_wave())
+        })?;
+
+        let mut output_dir = PathBuf::from(workspace_file!("output/sounds/effects/"));
+
+        sac.effects.iter().enumerate().try_for_each(|(i, effect)| {
+            let file = output_dir.join(format!("{i:0>2X}.wav"));
+            crate::utils::fs::output_file(file, effect.mix().to_wave())
+        })?;
 
         Ok(())
     }

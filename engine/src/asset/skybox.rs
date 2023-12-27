@@ -47,9 +47,7 @@ mod tests {
     use crate::utils::fs::*;
     use std::{cell::LazyCell, fs};
 
-    const SKYBOX_DATA: LazyCell<Vec<u8>> = LazyCell::new(|| {
-        fs::read(workspace_file!("output/deflated/19C57C.dat")).expect("deflated test ran")
-    });
+    const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated!("19C57C.dat");
 
     #[test]
     #[ignore = "uses files that are local"]
