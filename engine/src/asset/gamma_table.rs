@@ -49,14 +49,35 @@ impl Asset for GammaTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        asset::color_map::Color,
+        utils::{format::*, test::*},
+    };
+    use std::cell::LazyCell;
+
+    const GAMMA_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("00.dat");
 
     #[test]
-    fn parse_works() -> eyre::Result<()> {
-        let bytes: Vec<_> = (0..ROWS_COUNT)
-            .flat_map(|_| vec![0u8; COLS_COUNT])
-            .collect();
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_asset() -> eyre::Result<()> {
+        let (_, gamma_table) = GammaTable::parse(&GAMMA_TABLE_DATA, Extension::Dat)?;
 
-        GammaTable::parse(&bytes, Default::default())?;
+        let gamma_table = gamma_table
+            .lookups
+            .to_vec()
+            .into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .map(|color| Color {
+                        r: color,
+                        g: color,
+                        b: color,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+
+        output_file(parsed_file_path!("gamma-table.ppm"), gamma_table.to_ppm())?;
 
         Ok(())
     }

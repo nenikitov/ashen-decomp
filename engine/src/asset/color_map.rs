@@ -86,7 +86,10 @@ impl Asset for ColorMap {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::LazyCell;
+
     use super::*;
+    use crate::utils::{format::*, test::*};
 
     #[test]
     fn shade_works() -> eyre::Result<()> {
@@ -138,6 +141,21 @@ mod tests {
                 b: 0x33
             },
         );
+
+        Ok(())
+    }
+
+    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_asset() -> eyre::Result<()> {
+        let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat)?;
+
+        output_file(
+            parsed_file_path!("color-map/monsters.ppm"),
+            color_map.shades.as_slice().to_ppm(),
+        )?;
 
         Ok(())
     }

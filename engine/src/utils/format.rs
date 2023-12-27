@@ -1,21 +1,29 @@
 use crate::asset::color_map::Color;
+use std::ops::Deref;
 
 pub trait PpmFile {
     fn to_ppm(&self) -> Vec<u8>;
 }
 
-impl PpmFile for Vec<Vec<Color>> {
+// impl for any 2D array like data structure.
+impl<Outer: ?Sized, Inner> PpmFile for Outer
+where
+    Outer: Deref<Target = [Inner]>,
+    Inner: AsRef<[Color]>,
+{
     fn to_ppm(&self) -> Vec<u8> {
-        let width = self[0].len();
+        let width = self[0].as_ref().len();
         let height = self.len();
 
-        format!("P6 {width} {height} 255\n")
-            .bytes()
-            .chain(
-                self.iter()
-                    .flat_map(|r| r.iter().flat_map(|c| [c.r, c.g, c.b]).collect::<Vec<_>>()),
-            )
-            .collect()
+        let mut bytes = format!("P6 {width} {height} 255\n").into_bytes();
+        bytes.extend(self.iter().flat_map(|slice| {
+            slice
+                .as_ref()
+                .iter()
+                .flat_map(|color| [color.r, color.g, color.b])
+        }));
+
+        bytes
     }
 }
 
