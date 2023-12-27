@@ -50,7 +50,7 @@ pub mod format {
             let width = self[0].len();
             let height = self.len();
 
-            format!("P6 {} {} 255\n", width, height)
+            format!("P6 {width} {height} 255\n")
                 .bytes()
                 .chain(
                     self.iter()
