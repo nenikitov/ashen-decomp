@@ -43,19 +43,18 @@ impl Asset for Skybox {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use super::*;
+    use crate::utils::fs::*;
+    use std::{cell::LazyCell, fs};
+
+    const SKYBOX_DATA: LazyCell<Vec<u8>> = LazyCell::new(|| {
+        fs::read(workspace_file!("output/deflated/19C57C.dat")).expect("deflated test ran")
+    });
 
     #[test]
     #[ignore = "uses files that are local"]
     fn parse_works() -> eyre::Result<()> {
-        let bytes = fs::read(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../output/deflated/19C57C.dat"
-        ))?;
-
-        let (_, skybox) = Skybox::parse(&bytes, Extension::Dat)?;
+        let (_, skybox) = Skybox::parse(&SKYBOX_DATA, Extension::Dat)?;
 
         let bytes: Vec<u8> = format!(
             "P6 {} {} 255\n",
@@ -71,11 +70,7 @@ mod tests {
         )
         .collect();
 
-        // TODO(nenikitov): Make this uniform with other test (create directory if doesn't exist, etc)
-        fs::write(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/../output/skyboxes/19C57C.ppm"),
-            bytes,
-        )?;
+        output_file(workspace_file!("output/skyboxes/19C57C.ppm"), bytes)?;
 
         Ok(())
     }

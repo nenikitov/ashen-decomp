@@ -47,28 +47,18 @@ impl SoundAssetCollection {
     where
         P: AsRef<Path>,
     {
-        let dir = path.as_ref();
-        fs::create_dir_all(dir)?;
-
-        for (i, song) in self.songs.iter().enumerate() {
-            fs::write(dir.join(format!("{i:X}.wav")), song.mix().to_wave())?;
-        }
-
-        Ok(())
+        self.songs.iter().enumerate().try_for_each(|(i, song)| {
+            crate::utils::fs::output_file(format!("{i:X}.wav"), song.mix().to_wave())
+        })
     }
 
     fn save_effects<P>(&self, path: P) -> io::Result<()>
     where
         P: AsRef<Path>,
     {
-        let dir = path.as_ref();
-        fs::create_dir_all(dir)?;
-
-        for (i, effect) in self.effects.iter().enumerate() {
-            fs::write(dir.join(format!("{i:X}.wav")), effect.mix().to_wave())?;
-        }
-
-        Ok(())
+        self.effects.iter().enumerate().try_for_each(|(i, effect)| {
+            crate::utils::fs::output_file(format!("{i:X}.wav"), effect.mix().to_wave())
+        })
     }
 }
 
@@ -108,21 +98,18 @@ impl Asset for SoundAssetCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::fs::*;
+    use std::cell::LazyCell;
+
+    const SOUND_DATA: LazyCell<Vec<u8>> = LazyCell::new(|| {
+        fs::read(workspace_file!("output/deflated/BBC974.dat")).expect("deflated test ran")
+    });
 
     #[test]
     #[ignore = "uses files that are local"]
     fn output_songs() -> eyre::Result<()> {
-        let bytes = fs::read(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../output/deflated/BBC974.dat"
-        ))?;
-
-        let (_, sac) = SoundAssetCollection::parse(&bytes, Extension::Dat)?;
-
-        sac.save_songs(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../output/sounds/songs/"
-        ))?;
+        let (_, sac) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
+        sac.save_songs(workspace_file!("output/sounds/songs/"))?;
 
         Ok(())
     }
@@ -130,17 +117,8 @@ mod tests {
     #[test]
     #[ignore = "uses files that are local"]
     fn output_effects() -> eyre::Result<()> {
-        let bytes = fs::read(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../output/deflated/BBC974.dat"
-        ))?;
-
-        let (_, sac) = SoundAssetCollection::parse(&bytes, Extension::Dat)?;
-
-        sac.save_effects(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../output/sounds/effects/"
-        ))?;
+        let (_, sac) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
+        sac.save_effects(workspace_file!("output/sounds/effects/"))?;
 
         Ok(())
     }
