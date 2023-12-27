@@ -1,4 +1,4 @@
-use super::{Asset, Extension, Kind};
+use super::{Asset, AssetChunk, Extension, Kind};
 use crate::{asset::color_map::Color, error, utils::nom::*};
 use itertools::Itertools;
 
@@ -44,18 +44,18 @@ impl Asset for Skybox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{format::*, fs::*};
+    use crate::utils::{format::*, test::*};
     use std::cell::LazyCell;
 
-    const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated!("19C57C.dat");
+    const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated_file!("3C.dat");
 
     #[test]
-    #[ignore = "uses files that are local"]
-    fn parse_works() -> eyre::Result<()> {
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_asset() -> eyre::Result<()> {
         let (_, skybox) = Skybox::parse(&SKYBOX_DATA, Extension::Dat)?;
 
         output_file(
-            workspace_file!("output/skyboxes/19C57C.ppm"),
+            parsed_file_path!("skyboxes/level-1.ppm"),
             skybox.texture.to_ppm(),
         )?;
 

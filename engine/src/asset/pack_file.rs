@@ -1,6 +1,6 @@
 //! This only works with the last version of Ashen :).
 
-use engine::utils::nom::*;
+use crate::utils::nom::*;
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
@@ -28,7 +28,7 @@ impl PackFile {
     pub fn new(input: &[u8]) -> Result<Self> {
         let (copyright, entries) = {
             let (input, (copyright, total_entries)) = Self::header(input)?;
-            let (_input, headers) = Self::entry_headers(input, total_entries)?;
+            let (input, (headers)) = Self::entry_headers(input, total_entries)?;
             (copyright, headers)
         };
         let (input, entries) = Self::entries(input, &entries)?;
@@ -52,14 +52,14 @@ impl PackFile {
     fn entry_headers(input: &[u8], total_entries: u32) -> Result<Vec<EntryHeader>> {
         fn entry_header(input: &[u8]) -> Result<EntryHeader> {
             // TODO(nenikitov): add check for `asset_kind == 0`
-            let (input, _asset_kind) = number::le_u32(input)?;
+            let (input, asset_kind) = number::le_u32(input)?;
 
             let (input, offset) = number::le_u32(input)?;
 
             let (input, size) = number::le_u32(input)?;
 
             // TODO(nenikitov): add check for `reserved == 0`
-            let (input, _reserved) = number::le_u32(input)?;
+            let (input, reserved) = number::le_u32(input)?;
 
             Ok((input, EntryHeader { offset, size }))
         }
@@ -100,10 +100,14 @@ impl PackFile {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::LazyCell, path::PathBuf};
+
+    use crate::utils::test::*;
+
     use super::*;
 
     #[test]
-    fn packfile_header_works() -> eyre::Result<()> {
+    fn header_works() -> eyre::Result<()> {
         let (_, (copyright, file_count)) = PackFile::header(b"PMAN\x64\x00\x00\x00Copyright string goes here...\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")?;
 
         assert_eq!(copyright, "Copyright string goes here...");
@@ -113,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn packfile_entries_works() -> eyre::Result<()> {
+    fn entries_works() -> eyre::Result<()> {
         #[rustfmt::skip]
         let (_, entries) = PackFile::entry_headers(
             &[
@@ -149,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn packfile_entry_data_works() -> eyre::Result<()> {
+    fn entry_data_works() -> eyre::Result<()> {
         #[rustfmt::skip]
         let (_, entries) = PackFile::entries(
             &[
@@ -181,6 +185,29 @@ mod tests {
                 }
             ]
         );
+
+        Ok(())
+    }
+
+    const ROM_DATA: LazyCell<Vec<u8>> = std::cell::LazyCell::new(|| {
+        std::fs::read(workspace_file_path!("rom/packfile.dat")).expect("ROM is present")
+    });
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_packfile() -> eyre::Result<()> {
+        let (_, pack_file) = PackFile::new(&ROM_DATA)?;
+
+        let mut output_dir = PathBuf::from(workspace_file_path!(DEFLATED_PATH));
+
+        pack_file
+            .entries
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, entry)| {
+                let file = output_dir.join(format!("{i:0>2X}.dat"));
+                output_file(file, &entry.bytes)
+            })?;
 
         Ok(())
     }

@@ -6,6 +6,7 @@ macro_rules! re_export {
     ($path:ident) => {
         #[doc = concat!("Re-exports all `nom::", stringify!($path), "::complete` items.")]
         pub mod $path {
+            #[allow(unused_imports)]
             pub use nom::$path::complete::*;
         }
     };
@@ -28,7 +29,7 @@ pub mod multi {
     /// If the macro is called with a single parameter (the nom parser), then an
     /// array with a inferred `N` (count) would be returned e.g:
     ///
-    /// ```
+    /// ```ignore
     /// use engine::utils::nom::{Result, multi, number};
     ///
     /// fn parse_u32s<const COUNT: usize>(input: &[u8]) -> Result<[u32; COUNT]> {

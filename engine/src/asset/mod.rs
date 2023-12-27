@@ -4,6 +4,7 @@ mod pack_info;
 
 pub mod color_map;
 pub mod gamma_table;
+pub mod pack_file;
 pub mod skybox;
 pub mod sound;
 pub mod string_table;

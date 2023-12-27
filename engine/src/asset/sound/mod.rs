@@ -39,7 +39,7 @@ pub struct SoundAssetCollection {
 
 impl SoundAssetCollection {
     const SAMPLE_RATE: usize = 16000;
-    const CHANNEL_COUNT: usize = 2;
+    const CHANNEL_COUNT: usize = 1;
 }
 
 impl Asset for SoundAssetCollection {
@@ -78,21 +78,21 @@ impl Asset for SoundAssetCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{format::WaveFile, fs::*};
+    use crate::utils::{format::WaveFile, test::*};
     use std::{cell::LazyCell, path::PathBuf};
 
-    const SOUND_DATA: LazyCell<Vec<u8>> = deflated!("BBC974.dat");
+    const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
 
     #[test]
-    #[ignore = "uses files that are local"]
-    fn output_works() -> eyre::Result<()> {
-        let (_, sac) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_asset() -> eyre::Result<()> {
+        let (_, asset) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
 
-        let mut output_dir = PathBuf::from(workspace_file!("output/sounds/songs/"));
+        let mut output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 
-        sac.songs.iter().enumerate().try_for_each(|(i, song)| {
+        asset.songs.iter().enumerate().try_for_each(|(i, song)| {
             let file = output_dir.join(format!("{i:0>2X}.wav"));
-            crate::utils::fs::output_file(
+            output_file(
                 file,
                 song.mix().to_wave(
                     SoundAssetCollection::SAMPLE_RATE,
@@ -101,18 +101,22 @@ mod tests {
             )
         })?;
 
-        let mut output_dir = PathBuf::from(workspace_file!("output/sounds/effects/"));
+        let mut output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
 
-        sac.effects.iter().enumerate().try_for_each(|(i, effect)| {
-            let file = output_dir.join(format!("{i:0>2X}.wav"));
-            crate::utils::fs::output_file(
-                file,
-                effect.mix().to_wave(
-                    SoundAssetCollection::SAMPLE_RATE,
-                    SoundAssetCollection::CHANNEL_COUNT,
-                ),
-            )
-        })?;
+        asset
+            .effects
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, effect)| {
+                let file = output_dir.join(format!("{i:0>2X}.wav"));
+                output_file(
+                    file,
+                    effect.mix().to_wave(
+                        SoundAssetCollection::SAMPLE_RATE,
+                        SoundAssetCollection::CHANNEL_COUNT,
+                    ),
+                )
+            })?;
 
         Ok(())
     }
