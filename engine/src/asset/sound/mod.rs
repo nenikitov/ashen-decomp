@@ -78,7 +78,7 @@ impl Asset for SoundAssetCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::fs::*;
+    use crate::utils::{format::WaveFile, fs::*};
     use std::{cell::LazyCell, path::PathBuf};
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated!("BBC974.dat");

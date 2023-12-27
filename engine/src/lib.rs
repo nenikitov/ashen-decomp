@@ -1,12 +1,12 @@
+#![warn(clippy::pedantic)]
 #![allow(
     unused,
-    clippy::cast_lossless,
     clippy::default_trait_access,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
     clippy::wildcard_imports
 )]
-#![warn(clippy::pedantic, unused_imports)]
+#![warn(unused_imports)]
 #![feature(
     // Discussion about possible future alternatives:
     // https://github.com/rust-lang/rust/pull/101179
