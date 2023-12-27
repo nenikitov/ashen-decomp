@@ -39,16 +39,16 @@ mod tests {
     use crate::utils::fs::*;
     use std::{cell::LazyCell, fs};
 
-    const SPANISH_STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated!("DA5B9C.dat");
+    const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98.dat");
 
     #[test]
-    #[ignore = "uses files that are local"]
-    fn parse_works() -> eyre::Result<()> {
-        let (_, string_table) = StringTable::parse(&SPANISH_STRING_TABLE_DATA, Extension::Dat)?;
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_asset() -> eyre::Result<()> {
+        let (_, string_table) = StringTable::parse(&STRING_TABLE_DATA, Extension::Dat)?;
 
         output_file(
-            workspace_file!("output/strings/spanish.txt"),
-            string_table.table.join("\n"),
+            parsed_file_path!("strings/english-uk.txt"),
+            string_table.table.join("\n---\n"),
         )?;
 
         Ok(())

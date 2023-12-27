@@ -8,7 +8,3 @@ workspace = true
 
 [dependencies]
 engine = { path = "../engine/" }
-flate2 = "1.0.28"
-
-[dev-dependencies]
-eyre = "0.6.8"
