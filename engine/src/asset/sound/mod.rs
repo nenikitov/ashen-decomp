@@ -1,11 +1,9 @@
 mod dat;
 
 use flate2::read::ZlibDecoder;
-use std::{
-    io::{Read},
-};
+use std::io::Read;
 
-use self::dat::{t_effect::TEffect};
+use self::dat::t_effect::TEffect;
 
 use super::{Asset, AssetChunk, Extension, Kind};
 use crate::{
@@ -13,7 +11,7 @@ use crate::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
     error::{self},
-    utils::{nom::*},
+    utils::nom::*,
 };
 
 // TODO(nenikitov): Move to utils

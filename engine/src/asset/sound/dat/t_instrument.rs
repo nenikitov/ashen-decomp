@@ -1,7 +1,4 @@
-use crate::{
-    asset::AssetChunk,
-    utils::nom::*,
-};
+use crate::{asset::AssetChunk, utils::nom::*};
 
 #[derive(Debug)]
 pub struct TInstrument {

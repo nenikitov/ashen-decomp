@@ -34,8 +34,6 @@ pub mod fs {
     }
 
     use std::{fs, io, path::Path};
-
-    
 }
 
 pub mod format {
