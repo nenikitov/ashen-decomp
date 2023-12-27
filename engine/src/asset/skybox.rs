@@ -1,4 +1,4 @@
-use super::{Asset, AssetChunk, Extension, Kind};
+use super::{Asset, Extension, Kind};
 use crate::{asset::color_map::Color, error, utils::nom::*};
 use itertools::Itertools;
 
@@ -45,7 +45,7 @@ impl Asset for Skybox {
 mod tests {
     use super::*;
     use crate::utils::{format::*, fs::*};
-    use std::{cell::LazyCell, fs};
+    use std::cell::LazyCell;
 
     const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated_file!("3C.dat");
 

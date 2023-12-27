@@ -37,7 +37,7 @@ impl Asset for StringTable {
 mod tests {
     use super::*;
     use crate::utils::fs::*;
-    use std::{cell::LazyCell, fs};
+    use std::cell::LazyCell;
 
     const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98.dat");
 

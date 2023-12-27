@@ -1,4 +1,4 @@
-use crate::{asset::Asset, utils::nom::Result};
+use crate::asset::Asset;
 
 pub trait Directory {
     // TODO(nenikitov): Return `Option` or `Result`.

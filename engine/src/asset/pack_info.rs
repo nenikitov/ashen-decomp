@@ -1,6 +1,5 @@
 use super::AssetChunk;
 use crate::utils::nom::*;
-use nom::error::{ErrorKind, ParseError};
 use std::ops::Index;
 
 #[derive(Debug)]

@@ -3,9 +3,6 @@ name = "engine"
 version = "0.1.0"
 edition = "2021"
 
-[lints]
-workspace = true
-
 [dependencies]
 const_format = "0.2.32"
 flate2 = "1.0.28"

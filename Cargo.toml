@@ -4,14 +4,3 @@ members = [
     "ashen",
     "engine",
 ]
-
-[workspace.lints.rust]
-unused = "allow"
-unused_imports = "warn"
-
-[workspace.lints.clippy]
-pedantic = "warn"
-default_trait_access = "allow"
-module_name_repetitions = "allow"
-must_use_candidate = "allow"
-wildcard_imports = "allow"

@@ -1,13 +1,4 @@
-use std::io::{self, Cursor};
-
-use crate::{
-    asset::{pack_info::PackInfo, sound::dat::mixer::Mixer, AssetChunk},
-    utils::nom::*,
-};
-use itertools::Itertools;
-use lewton::inside_ogg::OggStreamReader;
-
-use super::mixer::SoundEffect;
+use crate::{asset::AssetChunk, utils::nom::*};
 
 #[derive(Debug)]
 pub struct TInstrument {

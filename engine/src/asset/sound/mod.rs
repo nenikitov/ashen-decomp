@@ -1,22 +1,17 @@
 mod dat;
 
 use flate2::read::ZlibDecoder;
-use std::{
-    fs,
-    io::{self, Read},
-    ops::Index,
-    path::Path,
-};
+use std::io::Read;
 
-use self::dat::{mixer::SoundEffect, t_effect::TEffect};
+use self::dat::t_effect::TEffect;
 
-use super::{pack_info::PackInfo, Asset, AssetChunk, Extension, Kind};
+use super::{Asset, AssetChunk, Extension, Kind};
 use crate::{
     asset::sound::dat::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
-    error::{self, ParseError},
-    utils::{format::*, nom::*},
+    error::{self},
+    utils::nom::*,
 };
 
 // TODO(nenikitov): Move to utils
@@ -83,7 +78,7 @@ impl Asset for SoundAssetCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::fs::*;
+    use crate::utils::{format::WaveFile, fs::*};
     use std::{cell::LazyCell, path::PathBuf};
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
