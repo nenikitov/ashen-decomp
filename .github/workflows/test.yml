@@ -51,11 +51,9 @@ jobs:
       - name: Doc tests
         run: cargo test --locked --all-features --doc
       - name: ROM - Deflate
-        run: |
-          cargo test --locked -- --ignored parse_rom_packfile
+        run: cargo test --locked -- --ignored parse_rom_packfile
       - name: ROM - Assets
-        run: |
-          cargo test --locked -- --ignored parse_rom_asset
+        run: cargo test --locked -- --ignored parse_rom_asset
   minimal:
     runs-on: ubuntu-latest
     name: ubuntu / nightly / minimal-versions
