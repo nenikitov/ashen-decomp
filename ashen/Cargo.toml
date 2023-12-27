@@ -3,9 +3,6 @@ name = "ashen"
 version = "0.1.0"
 edition = "2021"
 
-[lints]
-workspace = true
-
 [dependencies]
 engine = { path = "../engine/" }
 flate2 = "1.0.28"

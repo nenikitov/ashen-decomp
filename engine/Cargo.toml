@@ -3,9 +3,6 @@ name = "engine"
 version = "0.1.0"
 edition = "2021"
 
-[lints]
-workspace = true
-
 [dependencies]
 flate2 = "1.0.28"
 itertools = "0.12.0"

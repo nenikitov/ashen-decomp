@@ -35,7 +35,7 @@ pub mod fs {
 
     use std::{fs, io, path::Path};
 
-    pub(crate) use {deflated, workspace_file};
+    
 }
 
 pub mod format {
