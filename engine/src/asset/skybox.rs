@@ -43,38 +43,20 @@ impl Asset for Skybox {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use super::*;
+    use crate::utils::{format::*, fs::*};
+    use std::{cell::LazyCell, fs};
+
+    const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated!("19C57C.dat");
 
     #[test]
     #[ignore = "uses files that are local"]
     fn parse_works() -> eyre::Result<()> {
-        let bytes = fs::read(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../output/deflated/19C57C.dat"
-        ))?;
+        let (_, skybox) = Skybox::parse(&SKYBOX_DATA, Extension::Dat)?;
 
-        let (_, skybox) = Skybox::parse(&bytes, Extension::Dat)?;
-
-        let bytes: Vec<u8> = format!(
-            "P6 {} {} 255\n",
-            skybox.texture[0].len(),
-            skybox.texture.len()
-        )
-        .bytes()
-        .chain(
-            skybox
-                .texture
-                .iter()
-                .flat_map(|r| r.iter().flat_map(|c| [c.r, c.g, c.b]).collect::<Vec<_>>()),
-        )
-        .collect();
-
-        // TODO(nenikitov): Make this uniform with other test (create directory if doesn't exist, etc)
-        fs::write(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/../output/skyboxes/19C57C.ppm"),
-            bytes,
+        output_file(
+            workspace_file!("output/skyboxes/19C57C.ppm"),
+            skybox.texture.to_ppm(),
         )?;
 
         Ok(())

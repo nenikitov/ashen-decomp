@@ -36,20 +36,18 @@ impl Asset for StringTable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+    use crate::utils::fs::*;
+    use std::{cell::LazyCell, fs};
+
+    const SPANISH_STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated!("DA5B9C.dat");
 
     #[test]
     #[ignore = "uses files that are local"]
     fn parse_works() -> eyre::Result<()> {
-        let bytes = fs::read(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../output/deflated/DA5B9C.dat"
-        ))?;
+        let (_, string_table) = StringTable::parse(&SPANISH_STRING_TABLE_DATA, Extension::Dat)?;
 
-        let (_, string_table) = StringTable::parse(&bytes, Extension::Dat)?;
-
-        fs::write(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/../output/strings/DA5B9C.txt"),
+        output_file(
+            workspace_file!("output/strings/spanish.txt"),
             string_table.table.join("\n"),
         )?;
 
