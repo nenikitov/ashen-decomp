@@ -2,6 +2,8 @@ mod dat;
 
 use itertools::Itertools;
 
+use self::dat::triangle::ModelTriangle;
+
 use super::{Asset, Extension, Kind};
 use crate::{
     asset::{model::dat::header::ModelHeader, AssetChunk},
@@ -11,6 +13,7 @@ use crate::{
 
 pub struct Model {
     texture: Vec<Vec<u8>>,
+    triangles: Vec<ModelTriangle>,
 }
 
 impl Asset for Model {
@@ -23,6 +26,13 @@ impl Asset for Model {
             Extension::Dat => {
                 let (_, header) = ModelHeader::parse(input)?;
 
+                dbg!(header.vertex_count);
+
+                let (_, triangles) = multi::count!(
+                    ModelTriangle::parse,
+                    header.triangle_count as usize
+                )(&input[header.offset_triangles as usize..])?;
+
                 let (_, texture) = multi::count!(
                     number::le_u8,
                     (header.texture_width * header.texture_height) as usize
@@ -34,7 +44,7 @@ impl Asset for Model {
                     .map(Iterator::collect)
                     .collect();
 
-                Ok((&[0], Self { texture }))
+                Ok((&[0], Self { triangles, texture }))
             }
             _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }
