@@ -16,7 +16,7 @@ use crate::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
     error::{self, ParseError},
-    utils::nom::*,
+    utils::{format::*, nom::*},
 };
 
 // TODO(nenikitov): Move to utils
@@ -40,6 +40,11 @@ fn deflate(input: &[u8]) -> Vec<u8> {
 pub struct SoundAssetCollection {
     songs: Vec<TSong>,
     effects: Vec<TEffect>,
+}
+
+impl SoundAssetCollection {
+    const SAMPLE_RATE: usize = 16000;
+    const CHANNEL_COUNT: usize = 2;
 }
 
 impl Asset for SoundAssetCollection {
@@ -92,14 +97,26 @@ mod tests {
 
         sac.songs.iter().enumerate().try_for_each(|(i, song)| {
             let file = output_dir.join(format!("{i:0>2X}.wav"));
-            crate::utils::fs::output_file(file, song.mix().to_wave())
+            crate::utils::fs::output_file(
+                file,
+                song.mix().to_wave(
+                    SoundAssetCollection::SAMPLE_RATE,
+                    SoundAssetCollection::CHANNEL_COUNT,
+                ),
+            )
         })?;
 
         let mut output_dir = PathBuf::from(workspace_file!("output/sounds/effects/"));
 
         sac.effects.iter().enumerate().try_for_each(|(i, effect)| {
             let file = output_dir.join(format!("{i:0>2X}.wav"));
-            crate::utils::fs::output_file(file, effect.mix().to_wave())
+            crate::utils::fs::output_file(
+                file,
+                effect.mix().to_wave(
+                    SoundAssetCollection::SAMPLE_RATE,
+                    SoundAssetCollection::CHANNEL_COUNT,
+                ),
+            )
         })?;
 
         Ok(())
