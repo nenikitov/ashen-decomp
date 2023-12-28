@@ -6,14 +6,21 @@ use self::dat::triangle::ModelTriangle;
 
 use super::{Asset, Extension, Kind};
 use crate::{
-    asset::{model::dat::header::ModelHeader, AssetChunk},
+    asset::{
+        model::dat::{
+            header::ModelHeader,
+            sequence::{ModelSequence, ModelSequenceParsed},
+        },
+        AssetChunk,
+    },
     error,
     utils::nom::*,
 };
 
 pub struct Model {
-    texture: Vec<Vec<u8>>,
-    triangles: Vec<ModelTriangle>,
+    pub texture: Vec<Vec<u8>>,
+    pub triangles: Vec<ModelTriangle>,
+    pub sequences: Vec<ModelSequenceParsed>,
 }
 
 impl Asset for Model {
@@ -44,7 +51,23 @@ impl Asset for Model {
                     .map(Iterator::collect)
                     .collect();
 
-                Ok((&[0], Self { triangles, texture }))
+                let (_, sequences) = multi::count!(
+                    ModelSequence::parse,
+                    header.sequence_count as usize
+                )(&input[header.offset_sequences as usize..])?;
+                let sequences = sequences
+                    .into_iter()
+                    .map(|s| ModelSequenceParsed::parse(input, s).map(|(_, d)| d))
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
+
+                Ok((
+                    &[0],
+                    Self {
+                        triangles,
+                        texture,
+                        sequences,
+                    },
+                ))
             }
             _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
         }
@@ -60,17 +83,19 @@ mod tests {
     };
     use std::cell::LazyCell;
 
-    const PICKUP_COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("04.dat");
-    const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("2D.dat");
+    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
+    const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0E.dat");
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
         let (_, model) = Model::parse(&MODEL_DATA, Extension::Dat)?;
-        let (_, color_map) = ColorMap::parse(&PICKUP_COLOR_MAP_DATA, Extension::Dat)?;
+        let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat)?;
+
+        dbg!(model.sequences);
 
         output_file(
-            parsed_file_path!("models/pickup-pistol.ppm"),
+            parsed_file_path!("models/hunter.ppm"),
             model.texture.with_palette(&color_map.shades[15]).to_ppm(),
         )?;
 

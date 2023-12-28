@@ -6,10 +6,6 @@ pub struct ModelPoint {
     pub v: u16,
 }
 
-pub struct ModelTriangle {
-    points: [ModelPoint; 3],
-}
-
 impl AssetChunk for ModelPoint {
     fn parse(input: &[u8]) -> Result<Self> {
         let (input, vertex_index) = number::le_u16(input)?;
@@ -18,6 +14,10 @@ impl AssetChunk for ModelPoint {
 
         Ok((input, Self { vertex_index, u, v }))
     }
+}
+
+pub struct ModelTriangle {
+    points: [ModelPoint; 3],
 }
 
 impl AssetChunk for ModelTriangle {
