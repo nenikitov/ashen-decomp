@@ -17,7 +17,7 @@ impl AssetChunk for ModelPoint {
 }
 
 pub struct ModelTriangle {
-    points: [ModelPoint; 3],
+    pub points: [ModelPoint; 3],
 }
 
 impl AssetChunk for ModelTriangle {
