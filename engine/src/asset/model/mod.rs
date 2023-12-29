@@ -36,7 +36,7 @@ impl Asset for Model {
                 let (_, header) = ModelHeader::parse(input)?;
 
                 let (_, triangles) = multi::count!(
-                    ModelTriangle::parse,
+                    ModelTriangle::parse(header.texture_width, header.texture_height),
                     header.triangle_count as usize
                 )(&input[header.offset_triangles as usize..])?;
 
@@ -89,8 +89,8 @@ mod tests {
     };
     use std::{cell::LazyCell, fmt::Display, path::PathBuf};
 
-    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("04.dat");
-    const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0E.dat");
+    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
+    const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0A.dat");
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
@@ -98,14 +98,14 @@ mod tests {
         let (_, model) = Model::parse(&MODEL_DATA, Extension::Dat)?;
         let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat)?;
 
-        let output_dir = PathBuf::from(parsed_file_path!("models/hunter/"));
+        let output_dir = PathBuf::from(parsed_file_path!("models/aquagore/"));
 
         output_file(
-            output_dir.join("hunter.ppm"),
+            output_dir.join("aquagore.ppm"),
             model.texture.with_palette(&color_map.shades[15]).to_ppm(),
         )?;
 
-        output_file(output_dir.join("hunter.py"), model.to_py())?;
+        output_file(output_dir.join("aquagore.py"), model.to_py())?;
 
         dbg!(model.sequences);
 
@@ -119,8 +119,7 @@ mod tests {
     impl ModelPythonFile for Model {
         fn to_py(&self) -> String {
             format!(
-                r#"\
-import bpy
+                r#"import bpy
 
 vertices = [
 {}
@@ -146,10 +145,16 @@ mesh.from_pydata(
         for t in triangles
     ]
 )
+uv = mesh.uv_layers.new(name="UV")
+for loop in mesh.loops:
+    i = loop.index
+    triangle_point = triangles[i // 3]["points"][i % 3]
+    uv.data[i].uv = (triangle_point["u"], triangle_point["v"])
 
 bpy.context.collection.objects.link(object)
+object.select_set(True)
             "#,
-                self.frames[97]
+                self.frames[0]
                     .vertices
                     .iter()
                     .map(|v| format!("    {v}"))
@@ -166,8 +171,8 @@ bpy.context.collection.objects.link(object)
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
-                r#"{{ "x": {}, "y": {}, "z": {} }}"#,
-                self.x, self.y, self.z
+                r#"{{ "x": {}, "y": {}, "z": {}, "lightmap": {} }}"#,
+                self.x, self.y, self.z, self.light_normal_index
             )
         }
     }
@@ -176,10 +181,16 @@ bpy.context.collection.objects.link(object)
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
-                r#"{{ "points": [{{ "vertex_index": {} }}, {{ "vertex_index": {} }}, {{ "vertex_index": {} }}] }}"#,
+                r#"{{ "points": [{{ "vertex_index": {}, "u": {}, "v": {} }}, {{ "vertex_index": {}, "u": {}, "v": {} }}, {{ "vertex_index": {}, "u": {}, "v": {} }}] }}"#,
                 self.points[0].vertex_index,
+                self.points[0].u,
+                self.points[0].v,
                 self.points[1].vertex_index,
+                self.points[1].u,
+                self.points[1].v,
                 self.points[2].vertex_index,
+                self.points[2].u,
+                self.points[2].v,
             )
         }
     }
