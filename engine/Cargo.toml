@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 const_format = "0.2.32"
+fixed = "1.24.0"
 flate2 = "1.0.28"
 itertools = "0.12.0"
 lewton = "0.10.2"

@@ -82,14 +82,14 @@ impl Asset for Model {
 
 #[cfg(test)]
 mod tests {
-    use super::{dat::frame::ModelVertex, *};
+    use super::{dat::frame::ModelVertexParsed, *};
     use crate::{
         asset::color_map::{ColorMap, PaletteTexture},
         utils::{format::*, test::*},
     };
     use std::{cell::LazyCell, fmt::Display, path::PathBuf};
 
-    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
+    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("04.dat");
     const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0E.dat");
 
     #[test]
@@ -105,24 +105,21 @@ mod tests {
             model.texture.with_palette(&color_map.shades[15]).to_ppm(),
         )?;
 
-        model.frames.iter().enumerate().try_for_each(|(i, frame)| {
-            let file = output_dir.join(format!("{i:0>2}.py"));
-            output_file(file, frame.to_py(&model.triangles))
-        })?;
+        output_file(output_dir.join("hunter.py"), model.to_py())?;
+
+        dbg!(model.sequences);
 
         Ok(())
     }
 
-    // TODO(nenikitov): Make it export fbx or something
-    // Relying on Blender for model generation is a hack
     pub trait ModelPythonFile {
-        fn to_py(&self, triangles: &[ModelTriangle]) -> String;
+        fn to_py(&self) -> String;
     }
 
-    impl ModelPythonFile for ModelFrame {
-        fn to_py(&self, triangles: &[ModelTriangle]) -> String {
+    impl ModelPythonFile for Model {
+        fn to_py(&self) -> String {
             format!(
-                r#"
+                r#"\
 import bpy
 
 vertices = [
@@ -132,8 +129,12 @@ triangles = [
 {}
 ]
 
+for obj in bpy.data.objects:
+    bpy.data.objects.remove(obj, do_unlink=True)
+
 mesh = bpy.data.meshes.new("Mesh")
 object = bpy.data.objects.new("Model", mesh)
+
 mesh.from_pydata(
     [
         (v["x"], v["y"], v["z"])
@@ -148,19 +149,20 @@ mesh.from_pydata(
 
 bpy.context.collection.objects.link(object)
             "#,
-                self.vertices
+                self.frames[97]
+                    .vertices
                     .iter()
                     .map(|v| format!("    {v}"))
                     .join(",\n"),
-                triangles
+                self.triangles
                     .iter()
-                    .map(|t| format!("    {t}"))
+                    .map(|v| format!("    {v}"))
                     .join(",\n"),
             )
         }
     }
 
-    impl Display for ModelVertex {
+    impl Display for ModelVertexParsed {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
