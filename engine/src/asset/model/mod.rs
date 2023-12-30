@@ -82,7 +82,10 @@ impl Asset for Model {
 
 #[cfg(test)]
 mod tests {
-    use super::{dat::frame::ModelVertexParsed, *};
+    use super::{
+        dat::{frame::ModelVertexParsed, triangle::ModelPoint},
+        *,
+    };
     use crate::{
         asset::color_map::{ColorMap, PaletteTexture},
         utils::{format::*, test::*},
@@ -106,8 +109,6 @@ mod tests {
         )?;
 
         output_file(output_dir.join("aquagore.py"), model.to_py())?;
-
-        dbg!(model.sequences);
 
         Ok(())
     }
@@ -181,16 +182,18 @@ object.select_set(True)
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
-                r#"{{ "points": [{{ "vertex_index": {}, "u": {}, "v": {} }}, {{ "vertex_index": {}, "u": {}, "v": {} }}, {{ "vertex_index": {}, "u": {}, "v": {} }}] }}"#,
-                self.points[0].vertex_index,
-                self.points[0].u,
-                self.points[0].v,
-                self.points[1].vertex_index,
-                self.points[1].u,
-                self.points[1].v,
-                self.points[2].vertex_index,
-                self.points[2].u,
-                self.points[2].v,
+                r#"{{ "points": [{}, {}, {}] }}"#,
+                self.points[0], self.points[1], self.points[2],
+            )
+        }
+    }
+
+    impl Display for ModelPoint {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                r#"{{ "vertex_index": {}, "u": {}, "v": {} }}"#,
+                self.vertex_index, self.u, self.v
             )
         }
     }
