@@ -61,7 +61,11 @@ impl Asset for Model {
                     .collect::<std::result::Result<Vec<_>, _>>()?;
 
                 let (_, frames) = multi::count!(
-                    ModelFrame::parse(header.vertex_count as usize, header.frame_size as usize),
+                    ModelFrame::parse(
+                        header.vertex_count as usize,
+                        header.triangle_count as usize,
+                        header.frame_size as usize
+                    ),
                     header.frame_count as usize
                 )(&input[header.offset_frames as usize..])?;
 
@@ -215,7 +219,7 @@ object.select_set(True)
             write!(
                 f,
                 r#"{{ "x": {}, "y": {}, "z": {}, "lightmap": {} }}"#,
-                self.x, self.y, self.z, self.light_normal_index
+                self.x, self.y, self.z, self.normal_index
             )
         }
     }

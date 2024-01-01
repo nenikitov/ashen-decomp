@@ -59,7 +59,7 @@ impl ModelVertex {
             x: scale_origin.x - scale.x * (self.x as f32 - scale_origin.x),
             y: scale_origin.y - scale.y * (self.y as f32 - scale_origin.y),
             z: scale_origin.z - scale.z * (self.z as f32 - scale_origin.z),
-            light_normal_index: self.light_normal_index,
+            normal_index: self.light_normal_index,
         }
     }
 }
@@ -68,17 +68,22 @@ pub struct ModelVertexParsed {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-    pub light_normal_index: u8,
+    pub normal_index: u8,
 }
 
 pub struct ModelFrame {
     // TODO(nenikitov): In game those are fixed point values and not integers
     pub bounding_sphere_radius: i32,
     pub vertices: Vec<ModelVertexParsed>,
+    pub triangle_normal_indexes: Vec<u8>,
 }
 
 impl ModelFrame {
-    pub fn parse(vertex_count: usize, frame_size: usize) -> impl Fn(&[u8]) -> Result<Self> {
+    pub fn parse(
+        vertex_count: usize,
+        triangle_count: usize,
+        frame_size: usize,
+    ) -> impl Fn(&[u8]) -> Result<Self> {
         move |input| {
             let (input, scale) = Vec3::parse(input)?;
             let (input, scale_origin) = Vec3::parse(input)?;
@@ -91,22 +96,27 @@ impl ModelFrame {
                 .map(|v| v.to_parsed(&scale, &scale_origin))
                 .collect();
 
-            // TODO(nenikitov): Figure out what this data does
-            // This ugly formula is probably not needed when I figure out what the data does
+            let (input, triangle_normal_indexes) =
+                multi::count!(number::le_u8, triangle_count)(input)?;
+
+            // This ugly formula calculates the padding after the frame data until next frame data
             // ```
             // frame_size
             //    - sizeof(scale)
             //    - sizeof(scale_origin)
             //    - sizeof(bounding_sphere_radius)
-            //    - sizeof(vertices) // sizeof(ModelVertex) * vertex_count
+            //    - sizeof(vertices)                // sizeof(ModelVertex) * vertex_count
+            //    - sizeof(triangle_normalindexes)  // sizeof(u8) triangle_count
             // ```
-            let (input, _) = bytes::take(frame_size - 28 - 4 * vertex_count)(input)?;
+            let (input, _) =
+                bytes::take(frame_size - 28 - 4 * vertex_count - triangle_count)(input)?;
 
             Ok((
                 input,
                 Self {
                     bounding_sphere_radius,
                     vertices,
+                    triangle_normal_indexes,
                 },
             ))
         }
