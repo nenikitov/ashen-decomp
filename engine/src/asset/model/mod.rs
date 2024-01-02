@@ -94,7 +94,11 @@ mod tests {
         asset::color_map::{Color, ColorMap, PaletteTexture},
         utils::test::*,
     };
-    use std::{cell::LazyCell, fmt::Display, path::PathBuf};
+    use std::{
+        cell::LazyCell,
+        fmt::{Display, Formatter},
+        path::PathBuf,
+    };
 
     const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
     const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0E.dat");
@@ -124,15 +128,19 @@ mod tests {
             format!(
                 r#"import bpy
 
+# Data
 texture_width = {}
 texture_height = {}
 texture = [
 {}
 ]
-vertices = [
+frames = [
 {}
 ]
 triangles = [
+{}
+]
+sequences = [
 {}
 ]
 
@@ -140,14 +148,13 @@ triangles = [
 for obj in bpy.data.objects:
     bpy.data.objects.remove(obj, do_unlink=True)
 
-
 # Mesh
 mesh = bpy.data.meshes.new("Mesh")
 object = bpy.data.objects.new("Model", mesh)
 mesh.from_pydata(
     [
         (v["x"], v["y"], v["z"])
-        for v in vertices
+        for v in frames[0]
     ],
     [],
     [
@@ -175,9 +182,29 @@ material_texture.image = image
 material_texture.interpolation = "Closest"
 material.node_tree.links.new(material_texture.outputs["Color"], material_bsdf.inputs["Base Color"])
 mesh.materials.append(material)
+# Shape keys
+shape_keys = []
+for i, f in enumerate(frames):
+    shape_keys.append(object.shape_key_add(name=f"Key {{i}}"))
+    for v_i, v in enumerate(f):
+        shape_keys[i].data[v_i].co = (v["x"], v["y"], v["z"])
+# Actions
+actions = []
+mesh.shape_keys.animation_data_create()
+for i, s in enumerate(sequences):
+    actions.append(bpy.data.actions.new(f"Action {{i}}"))
+    actions[i].use_fake_user = True
+    actions[i].frame_end = len(s["frames"])
+    actions[i].use_frame_range = True
+    mesh.shape_keys.animation_data.action = actions[i]
+    for f_i, frame in enumerate(s["frames"]):
+        for s_i, shape_key in enumerate(shape_keys):
+            shape_key.value = 1.0 if s_i == frame else 0.0
+            shape_key.keyframe_insert(data_path="value", frame=f_i + 1)
 
 # Finalize
 bpy.context.collection.objects.link(object)
+bpy.context.view_layer.objects.active = object
 object.select_set(True)
             "#,
                 self.texture[0].len(),
@@ -189,21 +216,27 @@ object.select_set(True)
                     .rev()
                     .map(|r| format!("    {}", r.into_iter().map(|c| c.to_string()).join(", ")))
                     .join(",\n"),
-                self.frames[0]
-                    .vertices
+                self.frames
                     .iter()
-                    .map(|v| format!("    {v}"))
+                    .map(|f| format!(
+                        "    [{}]",
+                        f.vertices.iter().map(|v| v.to_string()).join(", ")
+                    ))
                     .join(",\n"),
                 self.triangles
                     .iter()
                     .map(|v| format!("    {v}"))
                     .join(",\n"),
+                self.sequences
+                    .iter()
+                    .map(|s| format!("    {s}"))
+                    .join(",\n")
             )
         }
     }
 
     impl Display for Color {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
                 r#"{}, {}, {}, 1.0"#,
@@ -215,7 +248,7 @@ object.select_set(True)
     }
 
     impl Display for ModelVertexParsed {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
                 r#"{{ "x": {}, "y": {}, "z": {}, "lightmap": {} }}"#,
@@ -225,7 +258,7 @@ object.select_set(True)
     }
 
     impl Display for ModelTriangle {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
                 r#"{{ "points": [{}, {}, {}] }}"#,
@@ -235,11 +268,21 @@ object.select_set(True)
     }
 
     impl Display for ModelPoint {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
                 r#"{{ "vertex_index": {}, "u": {}, "v": {} }}"#,
                 self.vertex_index, self.u, self.v
+            )
+        }
+    }
+
+    impl Display for ModelSequenceParsed {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                r#"{{ "frames": [{}] }}"#,
+                self.frames.iter().map(u32::to_string).join(", ")
             )
         }
     }
