@@ -1,5 +1,4 @@
 use crate::{asset::AssetChunk, utils::nom::*};
-use fixed::types::I8F24;
 
 // TODO(nenikitov): Should probably be a fancy utility class
 // With generics for data type and dimension
@@ -12,16 +11,16 @@ pub struct Vec3 {
 
 impl AssetChunk for Vec3 {
     fn parse(input: &[u8]) -> Result<Self> {
-        let (input, x) = number::le_i32(input)?;
-        let (input, y) = number::le_i32(input)?;
-        let (input, z) = number::le_i32(input)?;
+        let (input, x) = number::le_i16f16(input)?;
+        let (input, y) = number::le_i16f16(input)?;
+        let (input, z) = number::le_i16f16(input)?;
 
         Ok((
             input,
             Self {
-                x: I8F24::from_bits(x).to_num(),
-                y: I8F24::from_bits(y).to_num(),
-                z: I8F24::from_bits(z).to_num(),
+                x: x.to_num(),
+                y: y.to_num(),
+                z: z.to_num(),
             },
         ))
     }
@@ -55,18 +54,19 @@ impl AssetChunk for ModelVertex {
 }
 
 impl ModelVertex {
+    const UNITS_PER_METER: f32 = 32.0;
+
     fn to_parsed(&self, scale: &Vec3, scale_origin: &Vec3) -> ModelVertexParsed {
         macro_rules! transform {
-            ($coordinate: ident, $origin: expr) => {
-                scale_origin.$coordinate
-                    - scale.$coordinate
-                        * ((self.$coordinate as f32 - $origin) + scale_origin.$coordinate)
+            ($coordinate: ident) => {
+                (scale.$coordinate * self.$coordinate as f32 / -256.0 - scale_origin.$coordinate)
+                    / Self::UNITS_PER_METER
             };
         }
         ModelVertexParsed {
-            x: transform!(x, 128.0),
-            y: transform!(y, 128.0),
-            z: transform!(z, 256.0),
+            x: transform!(x),
+            y: transform!(y),
+            z: transform!(z),
             normal_index: self.light_normal_index,
         }
     }
@@ -80,8 +80,7 @@ pub struct ModelVertexParsed {
 }
 
 pub struct ModelFrame {
-    // TODO(nenikitov): In game those are fixed point values and not integers
-    pub bounding_sphere_radius: i32,
+    pub bounding_sphere_radius: f32,
     pub vertices: Vec<ModelVertexParsed>,
     pub triangle_normal_indexes: Vec<u8>,
 }
@@ -96,7 +95,7 @@ impl ModelFrame {
             let (input, scale) = Vec3::parse(input)?;
             let (input, scale_origin) = Vec3::parse(input)?;
 
-            let (input, bounding_sphere_radius) = number::le_i32(input)?;
+            let (input, bounding_sphere_radius) = number::le_i24f8(input)?;
 
             let (input, vertices) = multi::count!(ModelVertex::parse, vertex_count)(input)?;
             let vertices = vertices
@@ -122,7 +121,7 @@ impl ModelFrame {
             Ok((
                 input,
                 Self {
-                    bounding_sphere_radius,
+                    bounding_sphere_radius: bounding_sphere_radius.to_num(),
                     vertices,
                     triangle_normal_indexes,
                 },
