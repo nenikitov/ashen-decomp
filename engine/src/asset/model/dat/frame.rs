@@ -57,16 +57,16 @@ impl AssetChunk for ModelVertex {
 impl ModelVertex {
     fn to_parsed(&self, scale: &Vec3, scale_origin: &Vec3) -> ModelVertexParsed {
         macro_rules! transform {
-            ($coordinate: ident) => {
+            ($coordinate: ident, $origin: expr) => {
                 scale_origin.$coordinate
                     - scale.$coordinate
-                        * (self.$coordinate as f32 - 128.0 + scale_origin.$coordinate)
+                        * ((self.$coordinate as f32 - $origin) + scale_origin.$coordinate)
             };
         }
         ModelVertexParsed {
-            x: transform!(x),
-            y: transform!(y),
-            z: transform!(z),
+            x: transform!(x, 128.0),
+            y: transform!(y, 128.0),
+            z: transform!(z, 256.0),
             normal_index: self.light_normal_index,
         }
     }
