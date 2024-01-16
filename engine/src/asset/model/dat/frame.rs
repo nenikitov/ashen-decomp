@@ -3,6 +3,7 @@ use fixed::types::I8F24;
 
 // TODO(nenikitov): Should probably be a fancy utility class
 // With generics for data type and dimension
+#[derive(Debug)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -55,10 +56,17 @@ impl AssetChunk for ModelVertex {
 
 impl ModelVertex {
     fn to_parsed(&self, scale: &Vec3, scale_origin: &Vec3) -> ModelVertexParsed {
+        macro_rules! transform {
+            ($coordinate: ident) => {
+                scale_origin.$coordinate
+                    - scale.$coordinate
+                        * (self.$coordinate as f32 - 128.0 + scale_origin.$coordinate)
+            };
+        }
         ModelVertexParsed {
-            x: scale_origin.x - scale.x * (self.x as f32 - scale_origin.x),
-            y: scale_origin.y - scale.y * (self.y as f32 - scale_origin.y),
-            z: scale_origin.z - scale.z * (self.z as f32 - scale_origin.z),
+            x: transform!(x),
+            y: transform!(y),
+            z: transform!(z),
             normal_index: self.light_normal_index,
         }
     }
