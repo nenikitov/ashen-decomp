@@ -57,7 +57,7 @@ impl Asset for Model {
                 )(&input[header.offset_sequences as usize..])?;
                 let sequences = sequences
                     .into_iter()
-                    .map(|s| ModelSequenceParsed::parse(input, s).map(|(_, d)| d))
+                    .map(|s| ModelSequenceParsed::parse(input, &s).map(|(_, d)| d))
                     .collect::<std::result::Result<Vec<_>, _>>()?;
 
                 let (_, frames) = multi::count!(

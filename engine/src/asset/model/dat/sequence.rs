@@ -26,7 +26,7 @@ pub struct ModelSequenceParsed {
 }
 
 impl ModelSequenceParsed {
-    pub fn parse(input: &[u8], header: ModelSequence) -> Result<Self> {
+    pub fn parse<'a>(input: &'a [u8], header: &ModelSequence) -> Result<'a, Self> {
         let (_, frames) = multi::count!(number::le_u32, header.frame_count as usize)(
             &input[header.offset as usize..],
         )?;
