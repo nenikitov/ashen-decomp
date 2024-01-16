@@ -119,12 +119,14 @@ mod tests {
         Ok(())
     }
 
+    // TODO(nenikitov): Move this to `utils::format` module
     pub trait ModelPythonFile {
         fn to_py(&self, palette: &[Color]) -> String;
     }
 
     impl ModelPythonFile for Model {
         fn to_py(&self, palette: &[Color]) -> String {
+            // TODO(nenikitov): Move a common part of the script into a separate `.py` file
             format!(
                 r#"import bpy
 
