@@ -9,6 +9,7 @@ pub mod pack_file;
 pub mod skybox;
 pub mod sound;
 pub mod string_table;
+pub mod texture;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
@@ -18,6 +19,8 @@ pub enum Kind {
     StringTable,
     Skybox,
     Model,
+    TextureInfo,
+    TextureData,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

@@ -63,7 +63,7 @@ impl Asset for Model {
                 )(&input[header.offset_frames as usize..])?;
 
                 Ok((
-                    &[0],
+                    &[],
                     Self {
                         texture,
                         triangles,
