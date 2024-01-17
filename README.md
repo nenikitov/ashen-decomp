@@ -12,7 +12,7 @@ A playable source port of an obscure NGage game Ashen
     cp /path/to/packfile.dat rom/packfile.dat
     ```
 
-### Exctracting files
+### Extracting files
 
 File parsing is in test suite only, for now.
 
