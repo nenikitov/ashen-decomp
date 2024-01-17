@@ -2,7 +2,7 @@ permissions:
   contents: read
 on:
   push:
-    branches: [main, source-port]
+    branches: [main]
   pull_request:
 # Spend CI time only on latest ref: https://github.com/jonhoo/rust-ci-conf/pull/5
 concurrency:
@@ -20,19 +20,40 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Restore cached downloaded game
+        id: cache-ashen
+        uses: actions/cache@v3
+        with:
+          path: rom
+          key: ${{ runner.os }}-ashen
+
+      - name: Download the game
+        if: steps.cache-ashen.outputs.cache-hit != 'true'
+        run: |
+          mkdir "rom"
+          cd "rom"
+          wget "https://archive.org/download/Nokia_N-Gage_Ashen_v1.0.6_Windows_Build/Ashen_v1.0.6_Windows_Build_Files.zip" -O "game.zip"
+          unzip "game.zip" -d "ashen"
+          unzip "ashen/Dawn1.06.zip" -d "ashen/game"
+          cp "ashen/game/Dawn/PackFile.Dat" "packfile.dat"
+          rm -rf "ashen" "ashen.zip"
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-      - name: cargo generate-lockfile
+      - name: Generate lock file
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile
       # https://twitter.com/jonhoo/status/1571290371124260865
-      - name: cargo test --locked
+      - name: Test
         run: cargo test --locked --all-features --all-targets
       # https://github.com/rust-lang/cargo/issues/6669
-      - name: cargo test --doc
+      - name: Doc tests
         run: cargo test --locked --all-features --doc
+      - name: ROM - Deflate
+        run: cargo test --locked -- --ignored parse_rom_packfile
+      - name: ROM - Assets
+        run: cargo test --locked -- --ignored parse_rom_asset
   minimal:
     runs-on: ubuntu-latest
     name: ubuntu / nightly / minimal-versions
