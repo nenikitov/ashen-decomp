@@ -1,5 +1,5 @@
 use super::PackFile;
-use engine::{asset::Asset, directory::Directory};
+use crate::{asset::Asset, directory::Directory};
 use std::collections::HashMap;
 
 macro_rules! insert_asset {
@@ -28,8 +28,9 @@ impl PackFileDirectory {
 
 impl Directory for PackFileDirectory {
     fn get<A: Asset>(&self, id: &str) -> A {
-        let bytes = self.assets.get(id).expect("id was found");
-        A::parse(bytes, Default::default())
+        // let bytes = self.assets.get(id).expect("id was found");
+        // A::parse(bytes, Default::default())
+        todo!()
     }
 
     fn get_all<A: Asset>(&self) -> Vec<A> {

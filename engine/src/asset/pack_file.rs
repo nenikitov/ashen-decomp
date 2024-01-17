@@ -1,5 +1,7 @@
 //! This only works with the last version of Ashen :).
 
+mod directory;
+
 use crate::utils::nom::*;
 use flate2::read::ZlibDecoder;
 use std::io::Read;
