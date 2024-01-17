@@ -1,22 +1,15 @@
 mod dat;
 
-use itertools::Itertools;
-
-use self::dat::triangle::ModelTriangle;
-
-use super::{Asset, Extension, Kind};
-use crate::{
-    asset::{
-        model::dat::{
-            frame::ModelFrame,
-            header::ModelHeader,
-            sequence::{ModelSequence, ModelSequenceParsed},
-        },
-        AssetChunk,
-    },
-    error,
-    utils::nom::*,
+use super::{Asset, AssetChunk, Extension, Kind};
+use crate::{error, utils::nom::*};
+use dat::{
+    frame::ModelFrame,
+    header::ModelHeader,
+    sequence::{ModelSequence, ModelSequenceParsed},
+    triangle::ModelTriangle,
 };
+
+use itertools::Itertools;
 
 pub struct Model {
     pub texture: Vec<Vec<u8>>,
@@ -72,8 +65,8 @@ impl Asset for Model {
                 Ok((
                     &[0],
                     Self {
-                        triangles,
                         texture,
+                        triangles,
                         sequences,
                         frames,
                     },

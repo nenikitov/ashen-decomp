@@ -12,6 +12,7 @@ macro_rules! re_export {
     };
 }
 
+/// Re-exports all `nom::number` items.
 pub mod number {
     pub use nom::number::complete::*;
 
