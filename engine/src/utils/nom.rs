@@ -54,7 +54,7 @@ pub mod multi {
     /// If the macro is called with a single parameter (the nom parser), then an
     /// array with a inferred `N` (count) would be returned e.g:
     ///
-    /// ```ignore
+    /// ```no_run
     /// use engine::utils::nom::{Result, multi, number};
     ///
     /// fn parse_u32s<const COUNT: usize>(input: &[u8]) -> Result<[u32; COUNT]> {

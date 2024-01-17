@@ -19,11 +19,13 @@ pub struct Model {
 }
 
 impl Asset for Model {
+    type Context = ();
+
     fn kind() -> super::Kind {
         Kind::Model
     }
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
+    fn parse(input: &[u8], extension: Extension, _: Self::Context) -> Result<Self> {
         match extension {
             Extension::Dat => {
                 let (_, header) = ModelHeader::parse(input)?;
@@ -99,9 +101,9 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, model) = Model::parse(&MODEL_DATA, Extension::Dat)?;
+        let (_, model) = Model::parse(&MODEL_DATA, Extension::Dat, ())?;
         let palette = {
-            let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat)?;
+            let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat, ())?;
             color_map.shades[15]
         };
 

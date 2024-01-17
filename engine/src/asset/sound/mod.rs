@@ -43,11 +43,13 @@ impl SoundAssetCollection {
 }
 
 impl Asset for SoundAssetCollection {
+    type Context = ();
+
     fn kind() -> Kind {
         Kind::SoundCollection
     }
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
+    fn parse(input: &[u8], extension: Extension, _: Self::Context) -> Result<Self> {
         match extension {
             Extension::Dat => {
                 let (_, header) = SoundAssetHeader::parse(input)?;
@@ -86,7 +88,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, asset) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
+        let (_, asset) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat, ())?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 

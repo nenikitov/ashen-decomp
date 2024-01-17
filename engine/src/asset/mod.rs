@@ -34,6 +34,8 @@ pub trait Asset
 where
     Self: Sized,
 {
+    type Context;
+
     // TODO(Unavailable): Replace `kind()` with:
     //
     // ```
@@ -55,7 +57,7 @@ where
     /// # Errors
     ///
     /// If the `input` is invalid for the provided `extension`.
-    fn parse(input: &[u8], extension: Extension) -> Result<Self>;
+    fn parse(input: &[u8], extension: Extension, context: Self::Context) -> Result<Self>;
 }
 
 pub(crate) trait AssetChunk
