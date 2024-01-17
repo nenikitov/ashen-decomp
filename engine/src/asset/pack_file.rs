@@ -198,7 +198,7 @@ mod tests {
     fn parse_rom_packfile() -> eyre::Result<()> {
         let (_, pack_file) = PackFile::new(&ROM_DATA)?;
 
-        let mut output_dir = PathBuf::from(workspace_file_path!(DEFLATED_PATH));
+        let output_dir = PathBuf::from(workspace_file_path!(DEFLATED_PATH));
 
         pack_file
             .entries

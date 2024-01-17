@@ -12,10 +12,35 @@ macro_rules! re_export {
     };
 }
 
+/// Re-exports all `nom::number` items.
+pub mod number {
+    pub use nom::number::complete::*;
+
+    use super::Result;
+    use nom::number;
+    use paste::paste;
+
+    macro_rules! parser_for_fixed {
+        ($type: ty, $bits: expr) => {
+            paste! {
+                pub fn [<le_$type:lower>](input: &[u8]) -> Result<$type> {
+                    let (input, value) = number::complete::[<le_i$bits>](input)?;
+                    Ok((input, $type::from_bits(value)))
+                }
+            }
+        };
+    }
+
+    use fixed::types::{I16F16, I24F8, I8F24};
+
+    parser_for_fixed!(I8F24, 32);
+    parser_for_fixed!(I16F16, 32);
+    parser_for_fixed!(I24F8, 32);
+}
+
 re_export!(bits);
 re_export!(bytes);
 re_export!(character);
-re_export!(number);
 
 /// Re-exports all `nom::multi` items.
 pub mod multi {

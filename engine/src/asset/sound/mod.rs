@@ -10,7 +10,7 @@ use crate::{
     asset::sound::dat::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
-    error::{self},
+    error,
     utils::nom::*,
 };
 
@@ -78,7 +78,7 @@ impl Asset for SoundAssetCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{format::WaveFile, test::*};
+    use crate::utils::{format::*, test::*};
     use std::{cell::LazyCell, path::PathBuf};
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
@@ -88,7 +88,7 @@ mod tests {
     fn parse_rom_asset() -> eyre::Result<()> {
         let (_, asset) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
 
-        let mut output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
+        let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 
         asset.songs.iter().enumerate().try_for_each(|(i, song)| {
             let file = output_dir.join(format!("{i:0>2X}.wav"));
@@ -101,7 +101,7 @@ mod tests {
             )
         })?;
 
-        let mut output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
+        let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
 
         asset
             .effects

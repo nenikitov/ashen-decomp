@@ -1,6 +1,6 @@
 use super::{Asset, AssetChunk, Extension, Kind};
 use crate::{error, utils::nom::*};
-use std::mem;
+use std::{mem, ops::Deref};
 
 const COLORS_COUNT: usize = 256;
 const SHADES_COUNT: usize = 32;
@@ -158,5 +158,21 @@ mod tests {
         )?;
 
         Ok(())
+    }
+}
+
+pub trait PaletteTexture {
+    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>>;
+}
+// impl for any 2D array like data structure.
+impl<Outer: ?Sized, Inner> PaletteTexture for Outer
+where
+    Outer: Deref<Target = [Inner]>,
+    Inner: AsRef<[u8]>,
+{
+    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>> {
+        self.iter()
+            .map(|c| c.as_ref().iter().map(|c| palette[*c as usize]).collect())
+            .collect()
     }
 }
