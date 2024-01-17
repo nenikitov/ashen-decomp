@@ -11,11 +11,13 @@ pub struct Skybox {
 }
 
 impl Asset for Skybox {
+    type Context = ();
+
     fn kind() -> Kind {
         Kind::Skybox
     }
 
-    fn parse(input: &[u8], extension: Extension) -> crate::utils::nom::Result<Self> {
+    fn parse(input: &[u8], extension: Extension, _: Self::Context) -> crate::utils::nom::Result<Self> {
         match extension {
             Extension::Dat => {
                 let (input, width) = number::le_u32(input)?;
@@ -55,7 +57,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, skybox) = Skybox::parse(&SKYBOX_DATA, Extension::Dat)?;
+        let (_, skybox) = Skybox::parse(&SKYBOX_DATA, Extension::Dat, ())?;
 
         output_file(
             parsed_file_path!("skyboxes/level-1.ppm"),

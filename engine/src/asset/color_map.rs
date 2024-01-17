@@ -49,11 +49,13 @@ pub struct ColorMap {
 }
 
 impl Asset for ColorMap {
+    type Context = ();
+
     fn kind() -> Kind {
         Kind::ColorMap
     }
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
+    fn parse(input: &[u8], extension: Extension, _: Self::Context) -> Result<Self> {
         fn colors(input: &[u8]) -> Result<[Color; COLORS_COUNT]> {
             multi::count!(Color::parse)(input)
         }
@@ -150,7 +152,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat)?;
+        let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat, ())?;
 
         output_file(
             parsed_file_path!("color-map/monsters.ppm"),

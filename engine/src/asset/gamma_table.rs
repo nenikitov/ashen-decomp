@@ -12,11 +12,13 @@ pub struct GammaTable {
 }
 
 impl Asset for GammaTable {
+    type Context = ();
+
     fn kind() -> Kind {
         Kind::GammaTable
     }
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
+    fn parse(input: &[u8], extension: Extension, _: Self::Context) -> Result<Self> {
         match extension {
             Extension::Dat => {
                 error::ensure_bytes_length(
@@ -60,7 +62,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, gamma_table) = GammaTable::parse(&GAMMA_TABLE_DATA, Extension::Dat)?;
+        let (_, gamma_table) = GammaTable::parse(&GAMMA_TABLE_DATA, Extension::Dat, ())?;
 
         let gamma_table = gamma_table
             .lookups
