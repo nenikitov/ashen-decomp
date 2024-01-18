@@ -1,4 +1,7 @@
-use crate::{asset::{AssetChunk, AssetChunkWithContext}, utils::nom::*};
+use crate::{
+    asset::{AssetChunk, AssetChunkWithContext},
+    utils::nom::*,
+};
 
 // TODO(nenikitov): Should probably be a fancy utility class
 // With generics for data type and dimension
@@ -27,61 +30,50 @@ impl AssetChunk for Vec3 {
 }
 
 pub struct ModelVertex {
-    pub x: u8,
-    pub y: u8,
-    pub z: u8,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
     // TODO(nenikitov): For now, no clue what this is for
-    pub light_normal_index: u8,
-}
-
-impl AssetChunk for ModelVertex {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, x) = number::le_u8(input)?;
-        let (input, y) = number::le_u8(input)?;
-        let (input, z) = number::le_u8(input)?;
-        let (input, light_normal_index) = number::le_u8(input)?;
-
-        Ok((
-            input,
-            Self {
-                x,
-                y,
-                z,
-                light_normal_index,
-            },
-        ))
-    }
+    pub normal_index: u8,
 }
 
 impl ModelVertex {
     const UNITS_PER_METER: f32 = 32.0;
+}
 
-    fn to_parsed(&self, scale: &Vec3, scale_origin: &Vec3) -> ModelVertexParsed {
+impl AssetChunkWithContext for ModelVertex {
+    type Context<'a> = (&'a Vec3, &'a Vec3);
+
+    fn parse((scale, scale_origin): Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
         macro_rules! transform {
             ($coordinate: ident) => {
-                (scale.$coordinate * self.$coordinate as f32 / -256.0 - scale_origin.$coordinate)
+                (scale.$coordinate * $coordinate as f32 / -256.0 - scale_origin.$coordinate)
                     / Self::UNITS_PER_METER
             };
         }
-        ModelVertexParsed {
-            x: transform!(x),
-            y: transform!(y),
-            z: transform!(z),
-            normal_index: self.light_normal_index,
+
+        move |input| {
+            let (input, x) = number::le_u8(input)?;
+            let (input, y) = number::le_u8(input)?;
+            let (input, z) = number::le_u8(input)?;
+            let (input, normal_index) = number::le_u8(input)?;
+
+            Ok((
+                input,
+                Self {
+                    x: transform!(x),
+                    y: transform!(y),
+                    z: transform!(z),
+                    normal_index,
+                },
+            ))
         }
     }
 }
 
-pub struct ModelVertexParsed {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub normal_index: u8,
-}
-
 pub struct ModelFrame {
     pub bounding_sphere_radius: f32,
-    pub vertices: Vec<ModelVertexParsed>,
+    pub vertices: Vec<ModelVertex>,
     pub triangle_normal_indexes: Vec<u8>,
 }
 
@@ -97,11 +89,8 @@ impl ModelFrame {
 
             let (input, bounding_sphere_radius) = number::le_i24f8(input)?;
 
-            let (input, vertices) = multi::count!(ModelVertex::parse, vertex_count)(input)?;
-            let vertices = vertices
-                .into_iter()
-                .map(|v| v.to_parsed(&scale, &scale_origin))
-                .collect();
+            let (input, vertices) =
+                multi::count!(ModelVertex::parse((&scale, &scale_origin)), vertex_count)(input)?;
 
             let (input, triangle_normal_indexes) =
                 multi::count!(number::le_u8, triangle_count)(input)?;

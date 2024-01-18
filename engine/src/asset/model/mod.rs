@@ -75,7 +75,7 @@ impl Asset for Model {
 #[cfg(test)]
 mod tests {
     use super::{
-        dat::{frame::ModelVertexParsed, triangle::ModelPoint},
+        dat::{frame::ModelVertex, triangle::ModelPoint},
         *,
     };
     use crate::{
@@ -237,7 +237,7 @@ object.select_set(True)
         }
     }
 
-    impl Display for ModelVertexParsed {
+    impl Display for ModelVertex {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
