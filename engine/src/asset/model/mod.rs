@@ -1,12 +1,9 @@
 mod dat;
 
-use super::{Asset, AssetChunk, Extension, Kind};
+use super::{Asset, AssetChunk, AssetChunkWithContext, Extension, Kind};
 use crate::{error, utils::nom::*};
 use dat::{
-    frame::ModelFrame,
-    header::ModelHeader,
-    sequence::{ModelSequence, ModelSequenceParsed},
-    triangle::ModelTriangle,
+    frame::ModelFrame, header::ModelHeader, sequence::ModelSequence, triangle::ModelTriangle,
 };
 
 use itertools::Itertools;
@@ -14,7 +11,7 @@ use itertools::Itertools;
 pub struct Model {
     pub texture: Vec<Vec<u8>>,
     pub triangles: Vec<ModelTriangle>,
-    pub sequences: Vec<ModelSequenceParsed>,
+    pub sequences: Vec<ModelSequence>,
     pub frames: Vec<ModelFrame>,
 }
 
@@ -47,13 +44,9 @@ impl Asset for Model {
                     .collect();
 
                 let (_, sequences) = multi::count!(
-                    ModelSequence::parse,
+                    ModelSequence::parse(&input),
                     header.sequence_count as usize
                 )(&input[header.offset_sequences as usize..])?;
-                let sequences = sequences
-                    .into_iter()
-                    .map(|s| ModelSequenceParsed::parse(input, &s).map(|(_, d)| d))
-                    .collect::<std::result::Result<Vec<_>, _>>()?;
 
                 let (_, frames) = multi::count!(
                     ModelFrame::parse(
@@ -274,7 +267,7 @@ object.select_set(True)
         }
     }
 
-    impl Display for ModelSequenceParsed {
+    impl Display for ModelSequence {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,

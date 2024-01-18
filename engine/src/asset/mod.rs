@@ -66,3 +66,12 @@ where
 {
     fn parse(input: &[u8]) -> Result<Self>;
 }
+
+pub(crate) trait AssetChunkWithContext
+where
+    Self: Sized,
+{
+    type Context<'a>;
+
+    fn parse(context: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self>;
+}
