@@ -1,5 +1,7 @@
 mod dat;
 
+use self::dat::{frame::ModelSpecs, triangle::TextureDimensions};
+
 use super::{Asset, AssetChunk, AssetChunkWithContext, Extension, Kind};
 use crate::{error, utils::nom::*};
 use dat::{
@@ -28,7 +30,10 @@ impl Asset for Model {
                 let (_, header) = ModelHeader::parse(input)?;
 
                 let (_, triangles) = multi::count!(
-                    ModelTriangle::parse(header.texture_width, header.texture_height),
+                    ModelTriangle::parse(TextureDimensions {
+                        width: header.texture_width,
+                        height: header.texture_height
+                    }),
                     header.triangle_count as usize
                 )(&input[header.offset_triangles as usize..])?;
 
@@ -49,11 +54,11 @@ impl Asset for Model {
                 )(&input[header.offset_sequences as usize..])?;
 
                 let (_, frames) = multi::count!(
-                    ModelFrame::parse(
-                        header.vertex_count as usize,
-                        header.triangle_count as usize,
-                        header.frame_size as usize
-                    ),
+                    ModelFrame::parse(&ModelSpecs {
+                        vertex_count: header.vertex_count,
+                        triangle_count: header.triangle_count,
+                        frame_size: header.frame_size
+                    }),
                     header.frame_count as usize
                 )(&input[header.offset_frames as usize..])?;
 

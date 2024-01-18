@@ -1,5 +1,5 @@
 use crate::{
-    asset::{sound::dat::t_instrument::TSampleParsed, AssetChunk},
+    asset::{AssetChunk, AssetChunkWithContext},
     utils::nom::*,
 };
 
@@ -11,7 +11,7 @@ use super::{
 
 pub struct TEffect {
     instrument: TInstrument,
-    sample: TSampleParsed,
+    sample: TSample,
 }
 
 // It should be separated
@@ -29,15 +29,8 @@ impl AssetChunk for TEffect {
 
         let (_, instrument) = TInstrument::parse(&input[pointers.instrument as usize..])?;
 
-        let sample = {
-            let data = uncompress(&input[pointers.sample_data as usize..]);
-            let (_, sample) = TSample::parse(&input[pointers.sample as usize..])?;
-
-            TSampleParsed::parse(
-                &sample,
-                &data[sample.sample as usize..sample.loop_end as usize],
-            )
-        };
+        let sample = uncompress(&input[pointers.sample_data as usize..]);
+        let (_, sample) = TSample::parse(&sample)(&input[pointers.sample as usize..])?;
 
         Ok((&[], Self { instrument, sample }))
     }

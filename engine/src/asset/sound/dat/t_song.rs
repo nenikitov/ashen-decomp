@@ -1,5 +1,5 @@
 use crate::{
-    asset::{sound::dat::mixer::Mixer, AssetChunk},
+    asset::{sound::dat::mixer::Mixer, AssetChunk, AssetChunkWithContext},
     utils::nom::*,
 };
 use itertools::Itertools;
@@ -15,7 +15,7 @@ pub struct TSong {
     /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
     patterns: Vec<Vec<Vec<Option<TPattern>>>>,
     instruments: Vec<TInstrument>,
-    samples: Vec<TSampleParsed>,
+    samples: Vec<TSample>,
 }
 
 impl TSong {
@@ -104,22 +104,10 @@ impl AssetChunk for TSong {
             &input[pointers.instruments as usize..],
         )?;
 
-        let samples: Vec<_> = {
-            let data = uncompress(&input[pointers.sample_data as usize..]);
-
-            multi::count!(TSample::parse, header.sample_count as usize)(
-                &input[pointers.samples as usize..],
-            )?
-            .1
-            .into_iter()
-            .map(|sample| {
-                TSampleParsed::parse(
-                    &sample,
-                    &data[sample.sample as usize..sample.loop_end as usize],
-                )
-            })
-            .collect()
-        };
+        let samples = uncompress(&input[pointers.sample_data as usize..]);
+        let (_, samples) = multi::count!(TSample::parse(&samples), header.sample_count as usize)(
+            &input[pointers.samples as usize..],
+        )?;
 
         Ok((
             input,
