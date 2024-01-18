@@ -1,13 +1,13 @@
 use crate::{asset::AssetChunk, utils::nom::*};
 
 pub struct TextureOffset {
-    width: u16,
-    height: u16,
-    offset: u32,
-    size_compressed: u32,
-    size_decompressed: u32,
-    animation_frames: u32,
-    next_animation_texture_id: u32,
+    pub width: u16,
+    pub height: u16,
+    pub offset: u32,
+    pub size_compressed: u32,
+    pub size_decompressed: u32,
+    pub animation_frames: u32,
+    pub next_animation_texture_id: u32,
 }
 
 impl AssetChunk for TextureOffset {
