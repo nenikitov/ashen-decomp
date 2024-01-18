@@ -8,7 +8,7 @@ use crate::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
     },
     error,
-    utils::{nom::*, compression::decompress},
+    utils::{compression::decompress, nom::*},
 };
 
 pub struct SoundAssetCollection {
