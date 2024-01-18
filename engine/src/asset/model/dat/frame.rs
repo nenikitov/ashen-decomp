@@ -1,4 +1,4 @@
-use crate::{asset::AssetChunk, utils::nom::*};
+use crate::{asset::{AssetChunk, AssetChunkWithContext}, utils::nom::*};
 
 // TODO(nenikitov): Should probably be a fancy utility class
 // With generics for data type and dimension
