@@ -41,13 +41,19 @@ impl ModelVertex {
     const UNITS_PER_METER: f32 = 32.0;
 }
 
-impl AssetChunkWithContext for ModelVertex {
-    type Context<'a> = (&'a Vec3, &'a Vec3);
+pub(crate) struct VertexTransform<'a> {
+    scale: &'a Vec3,
+    origin: &'a Vec3,
+}
 
-    fn parse((scale, scale_origin): Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
+impl AssetChunkWithContext for ModelVertex {
+    type Context<'a> = &'a VertexTransform<'a>;
+
+    fn parse(transform: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
         macro_rules! transform {
             ($coordinate: ident) => {
-                (scale.$coordinate * $coordinate as f32 / -256.0 - scale_origin.$coordinate)
+                (transform.scale.$coordinate * $coordinate as f32 / -256.0
+                    - transform.origin.$coordinate)
                     / Self::UNITS_PER_METER
             };
         }
@@ -77,23 +83,32 @@ pub struct ModelFrame {
     pub triangle_normal_indexes: Vec<u8>,
 }
 
-impl ModelFrame {
-    pub fn parse(
-        vertex_count: usize,
-        triangle_count: usize,
-        frame_size: usize,
-    ) -> impl Fn(&[u8]) -> Result<Self> {
+pub struct ModelSpecs {
+    pub vertex_count: u32,
+    pub triangle_count: u32,
+    pub frame_size: u32,
+}
+
+impl AssetChunkWithContext for ModelFrame {
+    type Context<'a> = &'a ModelSpecs;
+
+    fn parse(model_specs: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
         move |input| {
             let (input, scale) = Vec3::parse(input)?;
-            let (input, scale_origin) = Vec3::parse(input)?;
+            let (input, origin) = Vec3::parse(input)?;
 
             let (input, bounding_sphere_radius) = number::le_i24f8(input)?;
 
-            let (input, vertices) =
-                multi::count!(ModelVertex::parse((&scale, &scale_origin)), vertex_count)(input)?;
+            let (input, vertices) = multi::count!(
+                ModelVertex::parse(&VertexTransform {
+                    scale: &scale,
+                    origin: &origin
+                }),
+                model_specs.vertex_count as usize
+            )(input)?;
 
             let (input, triangle_normal_indexes) =
-                multi::count!(number::le_u8, triangle_count)(input)?;
+                multi::count!(number::le_u8, model_specs.triangle_count as usize)(input)?;
 
             // This ugly formula calculates the padding after the frame data until next frame data
             // ```
@@ -104,8 +119,12 @@ impl ModelFrame {
             //    - sizeof(vertices)                // sizeof(ModelVertex) * vertex_count
             //    - sizeof(triangle_normalindexes)  // sizeof(u8) triangle_count
             // ```
-            let (input, _) =
-                bytes::take(frame_size - 28 - 4 * vertex_count - triangle_count)(input)?;
+            let (input, _) = bytes::take(
+                model_specs.frame_size
+                    - 28
+                    - 4 * model_specs.vertex_count
+                    - model_specs.triangle_count,
+            )(input)?;
 
             Ok((
                 input,

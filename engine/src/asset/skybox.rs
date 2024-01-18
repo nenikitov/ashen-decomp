@@ -17,7 +17,11 @@ impl Asset for Skybox {
         Kind::Skybox
     }
 
-    fn parse(input: &[u8], extension: Extension, _: Self::Context) -> crate::utils::nom::Result<Self> {
+    fn parse(
+        input: &[u8],
+        extension: Extension,
+        _: Self::Context,
+    ) -> crate::utils::nom::Result<Self> {
         match extension {
             Extension::Dat => {
                 let (input, width) = number::le_u32(input)?;
