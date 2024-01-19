@@ -206,6 +206,8 @@ File parsing is in test suite only, for now.
     - There is a pool with fish enemies, which I don't remember seeing in the game
 - Test level for doors
     - Collision by itself works with other level geometry, geometry by itself also works, but not together
+- Textures for clip brushes
+    - Monster Clip GR!!
 
 ## Resources
 
