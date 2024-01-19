@@ -54,7 +54,7 @@ impl Asset for Model {
                 )(&input[header.offset_sequences as usize..])?;
 
                 let (_, frames) = multi::count!(
-                    ModelFrame::parse(&ModelSpecs {
+                    ModelFrame::parse(ModelSpecs {
                         vertex_count: header.vertex_count,
                         triangle_count: header.triangle_count,
                         frame_size: header.frame_size

@@ -39,6 +39,11 @@ impl AssetChunkWithContext for ModelTriangle {
 
     fn parse(texture_dimensions: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
         move |input| {
+            // multi::count!(ModelPoint::parse(&texture_dimensions))(input)
+            //     .map(|(input, points)| (input, Self { points }))
+            //
+            // Is the same to:
+
             let (input, points) = multi::count!(ModelPoint::parse(&texture_dimensions))(input)?;
 
             Ok((input, Self { points }))

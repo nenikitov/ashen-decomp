@@ -41,13 +41,13 @@ impl ModelVertex {
     const UNITS_PER_METER: f32 = 32.0;
 }
 
-pub(crate) struct VertexTransform<'a> {
-    scale: &'a Vec3,
-    origin: &'a Vec3,
+pub(crate) struct VertexTransform {
+    scale: Vec3,
+    origin: Vec3,
 }
 
 impl AssetChunkWithContext for ModelVertex {
-    type Context<'a> = &'a VertexTransform<'a>;
+    type Context<'a> = VertexTransform;
 
     fn parse(transform: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
         macro_rules! transform {
@@ -90,7 +90,7 @@ pub struct ModelSpecs {
 }
 
 impl AssetChunkWithContext for ModelFrame {
-    type Context<'a> = &'a ModelSpecs;
+    type Context<'a> = ModelSpecs;
 
     fn parse(model_specs: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
         move |input| {
@@ -100,10 +100,25 @@ impl AssetChunkWithContext for ModelFrame {
             let (input, bounding_sphere_radius) = number::le_i24f8(input)?;
 
             let (input, vertices) = multi::count!(
-                ModelVertex::parse(&VertexTransform {
-                    scale: &scale,
-                    origin: &origin
-                }),
+                // move |input| {
+                //     let (input, x) = number::le_u8(input)?;
+                //     let (input, y) = number::le_u8(input)?;
+                //     let (input, z) = number::le_u8(input)?;
+                //     let (input, normal_index) = number::le_u8(input)?;
+                //
+                //     Ok((
+                //         input,
+                //         ModelVertex {
+                //             x: transform!(x),
+                //             y: transform!(y),
+                //             z: transform!(z),
+                //             normal_index,
+                //         },
+                //     ))
+                // },
+                //
+                // Is the same to:
+                ModelVertex::parse(VertexTransform { scale, origin }),
                 model_specs.vertex_count as usize
             )(input)?;
 
