@@ -33,33 +33,18 @@ impl AssetChunkWithContext for Texture {
     }
 }
 
-pub struct TextureContext<'a> {
-    pub full_data: &'a [u8],
-    pub offset: TextureOffset,
-}
-
 impl AssetChunkWithContext for MippedTexture {
-    type Context<'a> = TextureContext<'a>;
+    type Context<'a> = &'a TextureOffset;
 
     fn parse(context: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
-        let texture_data = decompress(
-            &context.full_data[context.offset.offset as usize..]
-                [..context.offset.size_compressed as usize],
-        );
         move |input| {
-            macro_rules! mip {
-                ($mip: literal) => {{
-                    Texture::parse((
-                        context.offset.width / 2u16.pow($mip),
-                        context.offset.height / 2u16.pow($mip))
-                    )(&texture_data)
-                }};
-            }
+            let input =
+                decompress(&input[context.offset as usize..][..context.size_compressed as usize]);
 
-            let (input, mip_1) = mip!(0)?;
-            let (input, mip_2) = mip!(1)?;
-            let (input, mip_3) = mip!(2)?;
-            let (input, mip_4) = mip!(3)?;
+            let (input, mip_1) = Texture::parse((context.width, context.height))(&input)?;
+            let (input, mip_2) = Texture::parse((context.width / 2, context.height / 2))(&input)?;
+            let (input, mip_3) = Texture::parse((context.width / 4, context.height / 4))(&input)?;
+            let (input, mip_4) = Texture::parse((context.width / 8, context.height / 8))(&input)?;
 
             Ok((
                 &[],

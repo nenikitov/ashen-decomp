@@ -1,7 +1,5 @@
 mod dat;
 
-use self::dat::texture::TextureContext;
-
 use super::{Asset, AssetChunk, AssetChunkWithContext, Extension, Kind};
 
 use crate::{error, utils::nom::*};
@@ -46,13 +44,7 @@ impl Asset for TextureData {
         let textures = offsets
             .offsets
             .into_iter()
-            .map(|o| {
-                MippedTexture::parse(TextureContext {
-                    full_data: input,
-                    offset: o,
-                })(&input)
-                .map(|(_, d)| d)
-            })
+            .map(|o| MippedTexture::parse(&o)(&input).map(|(_, d)| d))
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok((&[], Self { textures }))
