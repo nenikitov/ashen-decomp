@@ -84,7 +84,7 @@ mod tests {
     };
 
     const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
-    const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0E.dat");
+    const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0E-deflated.dat");
 
     #[test]
     #[ignore = "uses Ashen ROM files"]

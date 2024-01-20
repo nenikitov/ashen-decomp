@@ -1,4 +1,4 @@
-use std::{fs, io, path::Path};
+use std::{env, fs, io, path::Path};
 
 pub const PARSED_PATH: &'static str = "output/parsed/";
 pub const DEFLATED_PATH: &'static str = "output/deflated/";
@@ -29,6 +29,16 @@ macro_rules! deflated_file {
     };
 }
 
+pub fn should_skip_write() -> bool {
+    match env::var("SKIP_TEST_WRITE")
+        .map(|value| value.to_lowercase())
+        .as_deref()
+    {
+        Ok("true") | Ok("1") => true,
+        _ => false,
+    }
+}
+
 /// Writes to a file creating the directory automatically.
 pub fn output_file<P, C>(path: P, contents: C) -> io::Result<()>
 where
@@ -36,9 +46,13 @@ where
     C: AsRef<[u8]>,
 {
     fn inner(path: &Path, contents: &[u8]) -> io::Result<()> {
-        let parent = path.parent().ok_or(io::ErrorKind::InvalidFilename)?;
-        fs::create_dir_all(parent)?;
-        fs::write(path, contents)
+        if !should_skip_write() {
+            let parent = path.parent().ok_or(io::ErrorKind::InvalidFilename)?;
+            fs::create_dir_all(parent)?;
+            fs::write(path, contents)
+        } else {
+            Ok(())
+        }
     }
 
     inner(path.as_ref(), contents.as_ref())

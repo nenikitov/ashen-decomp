@@ -32,7 +32,7 @@ mod tests {
     use crate::utils::test::*;
     use std::cell::LazyCell;
 
-    const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98.dat");
+    const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98-deflated.dat");
 
     #[test]
     #[ignore = "uses Ashen ROM files"]

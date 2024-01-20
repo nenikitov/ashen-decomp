@@ -1,33 +1,14 @@
 mod dat;
 
 use super::{extension::Pack, AssetChunk, AssetParser};
+
 use crate::{
     asset::sound::dat::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_effect::TEffect,
         t_song::TSong,
     },
-    utils::nom::*,
+    utils::{compression::decompress, nom::*},
 };
-use flate2::read::ZlibDecoder;
-use std::io::Read;
-
-// TODO(nenikitov): Move to utils
-// TODO(nenikitov): Return `Result`
-fn deflate(input: &[u8]) -> Vec<u8> {
-    if let [b'Z', b'L', s1, s2, s3, bytes @ ..] = input {
-        let size = u32::from_le_bytes([*s1, *s2, *s3, 0]);
-
-        let mut decoder = ZlibDecoder::new(bytes);
-        let mut data = Vec::with_capacity(size as usize);
-        decoder
-            .read_to_end(&mut data)
-            .expect("Data should be a valid zlib stream");
-
-        data
-    } else {
-        input.to_vec()
-    }
-}
 
 pub struct SoundAssetCollection {
     songs: Vec<TSong>,
@@ -48,7 +29,7 @@ impl AssetParser<Pack> for SoundAssetCollection {
             let songs = songs
                 .infos
                 .into_iter()
-                .map(|s| deflate(&input[s]))
+                .map(|s| decompress(&input[s]))
                 .map(|s| TSong::parse(s.as_slice()).map(|(_, d)| d))
                 .collect::<std::result::Result<Vec<_>, _>>()?;
 
@@ -56,7 +37,7 @@ impl AssetParser<Pack> for SoundAssetCollection {
             let effects = effects
                 .infos
                 .into_iter()
-                .map(|s| deflate(&input[s]))
+                .map(|s| decompress(&input[s]))
                 .map(|s| TEffect::parse(s.as_slice()).map(|(_, d)| d))
                 .collect::<std::result::Result<Vec<_>, _>>()?;
 

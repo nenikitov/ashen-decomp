@@ -21,8 +21,10 @@ File parsing is in test suite only, for now.
         ```sh
         cargo test --release -- --ignored parse_rom_packfile
         ```
-    - This will split and deflate game files into `output/deflated/` directory
-    - Files are named with the address as they appear in the [asset table](#file-structure)
+    - This will split and deflate game files into `output/deflated/` directory.
+    - Files are named with the address as they appear in the [asset table](#file-structure).
+    - Files that begin with decompression signature are automatically decompressed and named with `-deflated` suffix.
+        This automatic decompression doesn't work well for collection assets such as textures.
 - Parse resources (make sure to unpack first)
     1. Run parsing tests
         ```sh
