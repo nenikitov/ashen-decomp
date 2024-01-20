@@ -1,4 +1,4 @@
-use crate::{asset::Extension, utils::nom::Input};
+use crate::utils::nom::Input;
 use nom::error::ErrorKind as NomErrorKind;
 use std::num::NonZeroUsize;
 
@@ -26,13 +26,16 @@ pub struct ParseError {
 
 impl ParseError {
     /// Creates a new `ParseError` with a kind of `UnsupportedExtension`.
-    pub(crate) fn unsupported_extension<B>(bytes: B, unsupported: Extension) -> Self
+    pub(crate) fn unsupported_extension<B, I>(bytes: B, unsupported: I) -> Self
     where
+        I: Into<String>,
         B: AsRef<[u8]>,
     {
         Self {
             bytes: bytes.as_ref().to_vec().into_boxed_slice(),
-            kind: ErrorKind::UnsupportedExtension { unsupported },
+            kind: ErrorKind::UnsupportedExtension {
+                unsupported: Into::into(unsupported),
+            },
             custom: None,
         }
     }
@@ -53,7 +56,7 @@ impl ParseError {
 pub enum ErrorKind {
     /// The requested extension is not supported.
     UnsupportedExtension {
-        unsupported: Extension,
+        unsupported: String,
         /* TODO(Unavailable): supported: Box<[Extension]> */
     },
     /// Not enough bytes where provided to parse the `Asset`.

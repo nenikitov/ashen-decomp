@@ -1,4 +1,4 @@
-use super::{Asset, AssetChunk, Extension, Kind};
+use super::{extension::Pack, AssetChunk, AssetParser};
 use crate::{error, utils::nom::*};
 use std::{mem, ops::Deref};
 
@@ -15,6 +15,7 @@ pub struct Color {
 
 impl Color {
     pub fn from_12_bit(color: u16) -> Self {
+        // TODO(nenikitov): return result.
         assert!(color <= 0xFFF, "12 bit color is smaller than 0xFFF");
 
         let r = (color & 0xF00) >> 8;
@@ -36,8 +37,7 @@ impl Color {
 impl AssetChunk for Color {
     fn parse(input: &[u8]) -> Result<Self> {
         let (input, color) = number::le_u32(input)?;
-        let color = Self::from_12_bit(color as u16);
-        Ok((input, color))
+        Ok((input, Self::from_12_bit(color as u16)))
     }
 }
 
@@ -48,40 +48,30 @@ pub struct ColorMap {
     pub shades: Box<[[Color; COLORS_COUNT]; SHADES_COUNT]>,
 }
 
-impl Asset for ColorMap {
-    type Context = ();
+impl AssetParser<Pack> for ColorMap {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            error::ensure_bytes_length(
+                input,
+                mem::size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
+                "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
+            )?;
 
-    fn kind() -> Kind {
-        Kind::ColorMap
-    }
+            let (input, colors) = multi::count!(
+                |input| -> Result<[Color; COLORS_COUNT]> { multi::count!(Color::parse)(input) },
+                SHADES_COUNT
+            )(input)?;
 
-    fn parse(input: &[u8], extension: Extension, _: Self::Context) -> Result<Self> {
-        fn colors(input: &[u8]) -> Result<[Color; COLORS_COUNT]> {
-            multi::count!(Color::parse)(input)
-        }
+            let colors = {
+                let colors = colors.into_boxed_slice();
+                // Ensure the original box is not dropped.
+                let mut colors = mem::ManuallyDrop::new(colors);
+                // SAFETY: [_] and [_; N] has the same memory layout as long
+                // as the slice contains exactly N elements.
+                unsafe { Box::from_raw(colors.as_mut_ptr().cast()) }
+            };
 
-        match extension {
-            Extension::Dat => {
-                error::ensure_bytes_length(
-                    input,
-                    mem::size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
-                    "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
-                )?;
-
-                let (input, colors) = multi::count!(colors, SHADES_COUNT)(input)?;
-
-                let colors = {
-                    let colors = colors.into_boxed_slice();
-                    // Ensure the original box is not dropped.
-                    let mut colors = mem::ManuallyDrop::new(colors);
-                    // SAFETY: [_] and [_; N] has the same memory layout as long
-                    // as the slice contains exactly N elements.
-                    unsafe { Box::from_raw(colors.as_mut_ptr().cast()) }
-                };
-
-                Ok((input, Self { shades: colors }))
-            }
-            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
+            Ok((input, Self { shades: colors }))
         }
     }
 }
@@ -91,7 +81,10 @@ mod tests {
     use std::cell::LazyCell;
 
     use super::*;
-    use crate::utils::{format::*, test::*};
+    use crate::{
+        asset::extension::Pack,
+        utils::{format::*, test::*},
+    };
 
     #[test]
     fn shade_works() -> eyre::Result<()> {
@@ -152,7 +145,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat, ())?;
+        let (_, color_map) = <ColorMap as AssetParser<Pack>>::parser(())(&COLOR_MAP_DATA)?;
 
         output_file(
             parsed_file_path!("color-map/monsters.ppm"),
@@ -166,6 +159,7 @@ mod tests {
 pub trait PaletteTexture {
     fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>>;
 }
+
 // impl for any 2D array like data structure.
 impl<Outer: ?Sized, Inner> PaletteTexture for Outer
 where
