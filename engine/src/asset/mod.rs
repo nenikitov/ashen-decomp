@@ -1,16 +1,14 @@
-use crate::utils::nom::Result;
-use crate::{error::ParseError, utils::nom::FnParser};
-use extension::*;
-
-mod pack_info;
-
 pub mod color_map;
 pub mod gamma_table;
 pub mod model;
 pub mod pack_file;
+mod pack_info;
 pub mod skybox;
 pub mod sound;
 pub mod string_table;
+
+use crate::{error::ParseError, utils::nom::FnParser};
+use extension::*;
 
 /// Definition for all available extensions that the engine can parse.
 pub mod extension {
@@ -51,7 +49,7 @@ pub mod extension {
 
     impl_extension!(
         /// Wildcard
-        Any => "*"
+        Wildcard => "*"
     );
 
     impl_extension!(
@@ -85,7 +83,7 @@ where
     type Context<'ctx> = ();
 
     /// Generates a new parser with the provided context.
-    fn parser(ctx: Self::Context<'_>) -> impl FnParser<Self::Output>;
+    fn parser(context: Self::Context<'_>) -> impl FnParser<Self::Output>;
 }
 
 // For the moment we only have implementaions of `AssetParser` where `Ext = Dat`
@@ -94,34 +92,16 @@ where
 //
 // However, this is gonna break coherence once we start adding `Custom` exts.
 // Hopefully `negative_impls` will become stable before 2030 :).
-impl<T> AssetParser<Any> for T
+impl<T> AssetParser<Wildcard> for T
 where
     T: AssetParser<Pack, Output = T, Context<'static> = ()>,
 {
     type Context<'ctx> = &'ctx str;
 
-    fn parser(ctx: Self::Context<'_>) -> impl FnParser<Self::Output> {
-        move |input| match ctx {
+    fn parser(context: Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| match context {
             "pack" => <Self as AssetParser<Pack>>::parser(())(input),
-            _ => Err(ParseError::unsupported_extension(input, ctx).into()),
+            _ => Err(ParseError::unsupported_extension(input, context).into()),
         }
     }
-}
-
-// TODO(nenikitov): Remove these, use AssetParser.
-
-pub(crate) trait AssetChunk
-where
-    Self: Sized,
-{
-    fn parse(input: &[u8]) -> Result<Self>;
-}
-
-pub(crate) trait AssetChunkWithContext
-where
-    Self: Sized,
-{
-    type Context<'a>;
-
-    fn parse(context: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self>;
 }

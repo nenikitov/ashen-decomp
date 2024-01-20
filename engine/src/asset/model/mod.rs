@@ -1,12 +1,11 @@
 mod dat;
 
-use super::{extension::Pack, AssetChunk, AssetChunkWithContext, AssetParser};
+use super::{extension::*, AssetParser};
 use crate::utils::nom::*;
 use dat::{
     frame::ModelFrame, frame::ModelSpecs, header::ModelHeader, sequence::ModelSequence,
     triangle::ModelTriangle, triangle::TextureDimensions,
 };
-
 use itertools::Itertools;
 
 pub struct Model {
@@ -19,10 +18,10 @@ pub struct Model {
 impl AssetParser<Pack> for Model {
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
-            let (_, header) = ModelHeader::parse(input)?;
+            let (_, header) = ModelHeader::parser(())(input)?;
 
             let (_, triangles) = multi::count!(
-                ModelTriangle::parse(TextureDimensions {
+                ModelTriangle::parser(TextureDimensions {
                     width: header.texture_width,
                     height: header.texture_height
                 }),
@@ -41,12 +40,12 @@ impl AssetParser<Pack> for Model {
                 .collect();
 
             let (_, sequences) = multi::count!(
-                ModelSequence::parse(&input),
+                ModelSequence::parser(input),
                 header.sequence_count as usize
             )(&input[header.offset_sequences as usize..])?;
 
             let (_, frames) = multi::count!(
-                ModelFrame::parse(ModelSpecs {
+                ModelFrame::parser(ModelSpecs {
                     vertex_count: header.vertex_count,
                     triangle_count: header.triangle_count,
                     frame_size: header.frame_size

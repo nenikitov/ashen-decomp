@@ -5,7 +5,6 @@
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
     clippy::wildcard_imports,
-
     // TODO(Unavailable): Consider reactivating these.
     clippy::cast_lossless,
     clippy::cast_possible_truncation,

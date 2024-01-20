@@ -1,5 +1,5 @@
 use crate::{
-    asset::{AssetChunk, AssetChunkWithContext},
+    asset::{extension::*, AssetParser},
     utils::nom::*,
 };
 
@@ -29,57 +29,59 @@ pub struct TInstrument {
     pub samples: Box<[u8; 96]>,
 }
 
-impl AssetChunk for TInstrument {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, flags) = number::le_u8(input)?;
+impl AssetParser<Wildcard> for TInstrument {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, flags) = number::le_u8(input)?;
 
-        let (input, _) = bytes::take(1usize)(input)?;
+            let (input, _) = bytes::take(1usize)(input)?;
 
-        let (input, volume_begin) = number::le_u16(input)?;
-        let (input, volume_end) = number::le_u16(input)?;
-        let (input, volume_sustain) = number::le_u16(input)?;
-        let (input, volume_envelope_border) = number::le_u16(input)?;
-        let (input, volume_envelope) = multi::count!(number::le_u8)(input)?;
+            let (input, volume_begin) = number::le_u16(input)?;
+            let (input, volume_end) = number::le_u16(input)?;
+            let (input, volume_sustain) = number::le_u16(input)?;
+            let (input, volume_envelope_border) = number::le_u16(input)?;
+            let (input, volume_envelope) = multi::count!(number::le_u8)(input)?;
 
-        let (input, pan_begin) = number::le_u16(input)?;
-        let (input, pan_end) = number::le_u16(input)?;
-        let (input, pan_sustain) = number::le_u16(input)?;
-        let (input, pan_envelope_border) = number::le_u16(input)?;
-        let (input, pan_envelope) = multi::count!(number::le_u8)(input)?;
+            let (input, pan_begin) = number::le_u16(input)?;
+            let (input, pan_end) = number::le_u16(input)?;
+            let (input, pan_sustain) = number::le_u16(input)?;
+            let (input, pan_envelope_border) = number::le_u16(input)?;
+            let (input, pan_envelope) = multi::count!(number::le_u8)(input)?;
 
-        let (input, _) = bytes::take(1usize)(input)?;
+            let (input, _) = bytes::take(1usize)(input)?;
 
-        let (input, vibrato_depth) = number::le_u8(input)?;
-        let (input, vibrato_speed) = number::le_u8(input)?;
-        let (input, vibrato_sweep) = number::le_u8(input)?;
+            let (input, vibrato_depth) = number::le_u8(input)?;
+            let (input, vibrato_speed) = number::le_u8(input)?;
+            let (input, vibrato_sweep) = number::le_u8(input)?;
 
-        let (input, fadeout) = number::le_u32(input)?;
-        let (input, vibrato_table) = number::le_u32(input)?;
+            let (input, fadeout) = number::le_u32(input)?;
+            let (input, vibrato_table) = number::le_u32(input)?;
 
-        let (input, samples) = multi::count!(number::le_u8)(input)?;
+            let (input, samples) = multi::count!(number::le_u8)(input)?;
 
-        Ok((
-            input,
-            Self {
-                flags,
-                volume_begin,
-                volume_end,
-                volume_sustain,
-                volume_envelope_border,
-                volume_envelope: Box::new(volume_envelope),
-                pan_begin,
-                pan_end,
-                pan_sustain,
-                pan_envelope_border,
-                pan_envelope: Box::new(pan_envelope),
-                vibrato_depth,
-                vibrato_speed,
-                vibrato_sweep,
-                fadeout,
-                vibrato_table,
-                samples: Box::new(samples),
-            },
-        ))
+            Ok((
+                input,
+                Self {
+                    flags,
+                    volume_begin,
+                    volume_end,
+                    volume_sustain,
+                    volume_envelope_border,
+                    volume_envelope: Box::new(volume_envelope),
+                    pan_begin,
+                    pan_end,
+                    pan_sustain,
+                    pan_envelope_border,
+                    pan_envelope: Box::new(pan_envelope),
+                    vibrato_depth,
+                    vibrato_speed,
+                    vibrato_sweep,
+                    fadeout,
+                    vibrato_table,
+                    samples: Box::new(samples),
+                },
+            ))
+        }
     }
 }
 
@@ -94,10 +96,10 @@ pub struct TSample {
     pub data: Vec<i16>,
 }
 
-impl AssetChunkWithContext for TSample {
-    type Context<'a> = &'a [i16];
+impl AssetParser<Wildcard> for TSample {
+    type Context<'ctx> = &'ctx [i16];
 
-    fn parse(sample_data: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
+    fn parser(sample_data: Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
             let (input, volume) = number::le_u8(input)?;

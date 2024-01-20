@@ -1,4 +1,4 @@
-use super::{extension::Pack, AssetChunk, AssetParser};
+use super::{extension::*, AssetParser};
 use crate::{error, utils::nom::*};
 use std::{mem, ops::Deref};
 
@@ -34,14 +34,16 @@ impl Color {
     }
 }
 
-impl AssetChunk for Color {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, color) = number::le_u32(input)?;
-        Ok((input, Self::from_12_bit(color as u16)))
+impl AssetParser<Wildcard> for Color {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, color) = number::le_u32(input)?;
+            Ok((input, Self::from_12_bit(color as u16)))
+        }
     }
 }
 
-// TODO(Unavailable): derive
+// TODO(Unavailable): derive ???
 pub struct ColorMap {
     // TODO(nenikitov): This probably shouldn't be `pub` and should have an
     // accessor that will hide the "ugly" internal 2D-array structure.
@@ -58,7 +60,9 @@ impl AssetParser<Pack> for ColorMap {
             )?;
 
             let (input, colors) = multi::count!(
-                |input| -> Result<[Color; COLORS_COUNT]> { multi::count!(Color::parse)(input) },
+                |input| -> Result<[Color; COLORS_COUNT]> {
+                    multi::count!(Color::parser(()))(input)
+                },
                 SHADES_COUNT
             )(input)?;
 
@@ -78,18 +82,14 @@ impl AssetParser<Pack> for ColorMap {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::LazyCell;
-
     use super::*;
-    use crate::{
-        asset::extension::Pack,
-        utils::{format::*, test::*},
-    };
+    use crate::utils::{format::*, test::*};
+    use std::cell::LazyCell;
 
     #[test]
     fn shade_works() -> eyre::Result<()> {
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x100))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x100))?.1,
             Color {
                 r: 0x11,
                 g: 0,
@@ -97,7 +97,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x011))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x011))?.1,
             Color {
                 r: 0,
                 g: 0x11,
@@ -105,7 +105,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x001))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x001))?.1,
             Color {
                 r: 0,
                 g: 0,
@@ -113,7 +113,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x220))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x220))?.1,
             Color {
                 r: 0x22,
                 g: 0x22,
@@ -121,7 +121,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x022))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x022))?.1,
             Color {
                 r: 0,
                 g: 0x22,
@@ -129,7 +129,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x333))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x333))?.1,
             Color {
                 r: 0x33,
                 g: 0x33,

@@ -1,7 +1,6 @@
 mod dat;
 
-use super::{extension::Pack, AssetChunk, AssetParser};
-
+use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_effect::TEffect,
@@ -23,22 +22,22 @@ impl SoundAssetCollection {
 impl AssetParser<Pack> for SoundAssetCollection {
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
-            let (_, header) = SoundAssetHeader::parse(input)?;
+            let (_, header) = SoundAssetHeader::parser(())(input)?;
 
-            let (_, songs) = SoundChunkHeader::parse(&input[header.songs])?;
+            let (_, songs) = SoundChunkHeader::parser(())(&input[header.songs])?;
             let songs = songs
                 .infos
                 .into_iter()
                 .map(|s| decompress(&input[s]))
-                .map(|s| TSong::parse(s.as_slice()).map(|(_, d)| d))
+                .map(|s| TSong::parser(())(s.as_slice()).map(|(_, d)| d))
                 .collect::<std::result::Result<Vec<_>, _>>()?;
 
-            let (_, effects) = SoundChunkHeader::parse(&input[header.effects])?;
+            let (_, effects) = SoundChunkHeader::parser(())(&input[header.effects])?;
             let effects = effects
                 .infos
                 .into_iter()
                 .map(|s| decompress(&input[s]))
-                .map(|s| TEffect::parse(s.as_slice()).map(|(_, d)| d))
+                .map(|s| TEffect::parser(())(s.as_slice()).map(|(_, d)| d))
                 .collect::<std::result::Result<Vec<_>, _>>()?;
 
             Ok((&[], SoundAssetCollection { songs, effects }))

@@ -1,5 +1,5 @@
 use crate::{
-    asset::{pack_info::PackInfo, AssetChunk},
+    asset::{extension::*, pack_info::PackInfo, AssetParser},
     utils::nom::*,
 };
 
@@ -14,23 +14,25 @@ impl SoundAssetHeader {
     const HEADER: &'static str = "TSND";
 }
 
-impl AssetChunk for SoundAssetHeader {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, _) = bytes::tag(Self::HEADER)(input)?;
+impl AssetParser<Wildcard> for SoundAssetHeader {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, _) = bytes::tag(Self::HEADER)(input)?;
 
-        let (input, songs) = PackInfo::parse(input)?;
-        let (input, effects) = PackInfo::parse(input)?;
-        let (input, emitters) = PackInfo::parse(input)?;
-        let (input, maps) = PackInfo::parse(input)?;
+            let (input, songs) = PackInfo::parser(())(input)?;
+            let (input, effects) = PackInfo::parser(())(input)?;
+            let (input, emitters) = PackInfo::parser(())(input)?;
+            let (input, maps) = PackInfo::parser(())(input)?;
 
-        Ok((
-            input,
-            Self {
-                songs,
-                effects,
-                emitters,
-                maps,
-            },
-        ))
+            Ok((
+                input,
+                Self {
+                    songs,
+                    effects,
+                    emitters,
+                    maps,
+                },
+            ))
+        }
     }
 }

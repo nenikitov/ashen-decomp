@@ -1,6 +1,5 @@
-use std::io::Read;
-
 use flate2::bufread::ZlibDecoder;
+use std::io::Read;
 
 // TODO(nenikitov): Return `Result`
 pub fn decompress(bytes: &[u8]) -> Vec<u8> {

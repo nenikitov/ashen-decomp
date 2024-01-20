@@ -1,4 +1,7 @@
-use crate::{asset::AssetChunk, utils::nom::*};
+use crate::{
+    asset::{extension::*, AssetParser},
+    utils::nom::*,
+};
 
 pub struct ModelHeader {
     pub triangle_count: u32,
@@ -15,37 +18,39 @@ pub struct ModelHeader {
     pub locator_nodes: [u8; 16],
 }
 
-impl AssetChunk for ModelHeader {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, triangle_count) = number::le_u32(input)?;
-        let (input, vertex_count) = number::le_u32(input)?;
-        let (input, texture_width) = number::le_u32(input)?;
-        let (input, texture_height) = number::le_u32(input)?;
-        let (input, frame_count) = number::le_u32(input)?;
-        let (input, frame_size) = number::le_u32(input)?;
-        let (input, sequence_count) = number::le_u32(input)?;
-        let (input, offset_texture) = number::le_u32(input)?;
-        let (input, offset_triangles) = number::le_u32(input)?;
-        let (input, offset_frames) = number::le_u32(input)?;
-        let (input, offset_sequences) = number::le_u32(input)?;
-        let (input, locator_nodes) = multi::count!(number::le_u8)(input)?;
+impl AssetParser<Wildcard> for ModelHeader {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, triangle_count) = number::le_u32(input)?;
+            let (input, vertex_count) = number::le_u32(input)?;
+            let (input, texture_width) = number::le_u32(input)?;
+            let (input, texture_height) = number::le_u32(input)?;
+            let (input, frame_count) = number::le_u32(input)?;
+            let (input, frame_size) = number::le_u32(input)?;
+            let (input, sequence_count) = number::le_u32(input)?;
+            let (input, offset_texture) = number::le_u32(input)?;
+            let (input, offset_triangles) = number::le_u32(input)?;
+            let (input, offset_frames) = number::le_u32(input)?;
+            let (input, offset_sequences) = number::le_u32(input)?;
+            let (input, locator_nodes) = multi::count!(number::le_u8)(input)?;
 
-        Ok((
-            input,
-            Self {
-                triangle_count,
-                vertex_count,
-                texture_width,
-                texture_height,
-                frame_count,
-                frame_size,
-                sequence_count,
-                offset_texture,
-                offset_triangles,
-                offset_frames,
-                offset_sequences,
-                locator_nodes,
-            },
-        ))
+            Ok((
+                input,
+                Self {
+                    triangle_count,
+                    vertex_count,
+                    texture_width,
+                    texture_height,
+                    frame_count,
+                    frame_size,
+                    sequence_count,
+                    offset_texture,
+                    offset_triangles,
+                    offset_frames,
+                    offset_sequences,
+                    locator_nodes,
+                },
+            ))
+        }
     }
 }

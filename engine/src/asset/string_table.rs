@@ -1,4 +1,4 @@
-use super::{extension::Pack, AssetParser};
+use super::{extension::*, AssetParser};
 use crate::utils::nom::*;
 
 pub struct StringTable {
@@ -15,7 +15,7 @@ fn utf_16_string(input: &[u8]) -> Result<String> {
 }
 
 impl AssetParser<Pack> for StringTable {
-    fn parser(ctx: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, count) = number::le_u32(input)?;
             // TODO(Unavailable): Find out what the "catholic" characters are.

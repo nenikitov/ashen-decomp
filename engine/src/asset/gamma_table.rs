@@ -1,4 +1,4 @@
-use super::{extension::Pack, AssetParser};
+use super::{extension::*, AssetParser};
 use crate::{error, utils::nom::*};
 use std::mem;
 

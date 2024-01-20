@@ -1,5 +1,5 @@
 use crate::{
-    asset::{AssetChunk, AssetChunkWithContext},
+    asset::{extension::*, AssetParser},
     utils::nom::*,
 };
 
@@ -12,20 +12,22 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-impl AssetChunk for Vec3 {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, x) = number::le_i16f16(input)?;
-        let (input, y) = number::le_i16f16(input)?;
-        let (input, z) = number::le_i16f16(input)?;
+impl AssetParser<Wildcard> for Vec3 {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, x) = number::le_i16f16(input)?;
+            let (input, y) = number::le_i16f16(input)?;
+            let (input, z) = number::le_i16f16(input)?;
 
-        Ok((
-            input,
-            Self {
-                x: x.to_num(),
-                y: y.to_num(),
-                z: z.to_num(),
-            },
-        ))
+            Ok((
+                input,
+                Self {
+                    x: x.to_num(),
+                    y: y.to_num(),
+                    z: z.to_num(),
+                },
+            ))
+        }
     }
 }
 
@@ -41,15 +43,15 @@ impl ModelVertex {
     const UNITS_PER_METER: f32 = 32.0;
 }
 
-pub(crate) struct VertexTransform {
+pub struct VertexTransform {
     scale: Vec3,
     origin: Vec3,
 }
 
-impl AssetChunkWithContext for ModelVertex {
-    type Context<'a> = VertexTransform;
+impl AssetParser<Wildcard> for ModelVertex {
+    type Context<'ctx> = VertexTransform;
 
-    fn parse(transform: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
+    fn parser(transform: Self::Context<'_>) -> impl FnParser<Self::Output> {
         macro_rules! transform {
             ($coordinate: ident) => {
                 (transform.scale.$coordinate * $coordinate as f32 / -256.0
@@ -89,36 +91,18 @@ pub struct ModelSpecs {
     pub frame_size: u32,
 }
 
-impl AssetChunkWithContext for ModelFrame {
-    type Context<'a> = ModelSpecs;
+impl AssetParser<Wildcard> for ModelFrame {
+    type Context<'ctx> = ModelSpecs;
 
-    fn parse(model_specs: Self::Context<'_>) -> impl Fn(&[u8]) -> Result<Self> {
+    fn parser(model_specs: Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
-            let (input, scale) = Vec3::parse(input)?;
-            let (input, origin) = Vec3::parse(input)?;
+            let (input, scale) = Vec3::parser(())(input)?;
+            let (input, origin) = Vec3::parser(())(input)?;
 
             let (input, bounding_sphere_radius) = number::le_i24f8(input)?;
 
             let (input, vertices) = multi::count!(
-                // move |input| {
-                //     let (input, x) = number::le_u8(input)?;
-                //     let (input, y) = number::le_u8(input)?;
-                //     let (input, z) = number::le_u8(input)?;
-                //     let (input, normal_index) = number::le_u8(input)?;
-                //
-                //     Ok((
-                //         input,
-                //         ModelVertex {
-                //             x: transform!(x),
-                //             y: transform!(y),
-                //             z: transform!(z),
-                //             normal_index,
-                //         },
-                //     ))
-                // },
-                //
-                // Is the same to:
-                ModelVertex::parse(VertexTransform { scale, origin }),
+                ModelVertex::parser(VertexTransform { scale, origin }),
                 model_specs.vertex_count as usize
             )(input)?;
 

@@ -1,12 +1,11 @@
-use crate::{
-    asset::{AssetChunk, AssetChunkWithContext},
-    utils::nom::*,
-};
-
 use super::{
     mixer::Mixer,
     t_instrument::{TInstrument, TSample},
     uncompress,
+};
+use crate::{
+    asset::{extension::*, AssetParser},
+    utils::nom::*,
 };
 
 pub struct TEffect {
@@ -23,16 +22,18 @@ impl TEffect {
     }
 }
 
-impl AssetChunk for TEffect {
-    fn parse(input: &[u8]) -> crate::utils::nom::Result<Self> {
-        let (_, pointers) = TEffectPointers::parse(input)?;
+impl AssetParser<Wildcard> for TEffect {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (_, pointers) = TEffectPointers::parser(())(input)?;
 
-        let (_, instrument) = TInstrument::parse(&input[pointers.instrument as usize..])?;
+            let (_, instrument) = TInstrument::parser(())(&input[pointers.instrument as usize..])?;
 
-        let sample = uncompress(&input[pointers.sample_data as usize..]);
-        let (_, sample) = TSample::parse(&sample)(&input[pointers.sample as usize..])?;
+            let sample = uncompress(&input[pointers.sample_data as usize..]);
+            let (_, sample) = TSample::parser(&sample)(&input[pointers.sample as usize..])?;
 
-        Ok((&[], Self { instrument, sample }))
+            Ok((&[], Self { instrument, sample }))
+        }
     }
 }
 
@@ -43,19 +44,21 @@ struct TEffectPointers {
     sample_data: u32,
 }
 
-impl AssetChunk for TEffectPointers {
-    fn parse(input: &[u8]) -> crate::utils::nom::Result<Self> {
-        let (input, instrument) = number::le_u32(input)?;
-        let (input, sample) = number::le_u32(input)?;
-        let (input, sample_data) = number::le_u32(input)?;
+impl AssetParser<Wildcard> for TEffectPointers {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, instrument) = number::le_u32(input)?;
+            let (input, sample) = number::le_u32(input)?;
+            let (input, sample_data) = number::le_u32(input)?;
 
-        Ok((
-            input,
-            Self {
-                instrument,
-                sample,
-                sample_data,
-            },
-        ))
+            Ok((
+                input,
+                Self {
+                    instrument,
+                    sample,
+                    sample_data,
+                },
+            ))
+        }
     }
 }

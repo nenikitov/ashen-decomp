@@ -1,4 +1,4 @@
-use super::{extension::Pack, AssetParser};
+use super::{extension::*, AssetParser};
 use crate::{asset::color_map::Color, utils::nom::*};
 use itertools::Itertools;
 
