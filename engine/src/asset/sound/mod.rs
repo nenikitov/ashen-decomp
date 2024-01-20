@@ -1,13 +1,11 @@
 mod dat;
 
-use self::dat::t_effect::TEffect;
-
-use super::{Asset, AssetChunk, Extension, Kind};
+use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
-        asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_song::TSong,
+        asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_effect::TEffect,
+        t_song::TSong,
     },
-    error,
     utils::{compression::decompress, nom::*},
 };
 
@@ -21,35 +19,28 @@ impl SoundAssetCollection {
     const CHANNEL_COUNT: usize = 1;
 }
 
-impl Asset for SoundAssetCollection {
-    fn kind() -> Kind {
-        Kind::SoundCollection
-    }
+impl AssetParser<Pack> for SoundAssetCollection {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (_, header) = SoundAssetHeader::parser(())(input)?;
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
-        match extension {
-            Extension::Dat => {
-                let (_, header) = SoundAssetHeader::parse(input)?;
+            let (_, songs) = SoundChunkHeader::parser(())(&input[header.songs])?;
+            let songs = songs
+                .infos
+                .into_iter()
+                .map(|s| decompress(&input[s]))
+                .map(|s| TSong::parser(())(s.as_slice()).map(|(_, d)| d))
+                .collect::<std::result::Result<Vec<_>, _>>()?;
 
-                let (_, songs) = SoundChunkHeader::parse(&input[header.songs])?;
-                let songs = songs
-                    .infos
-                    .into_iter()
-                    .map(|s| decompress(&input[s]))
-                    .map(|s| TSong::parse(s.as_slice()).map(|(_, d)| d))
-                    .collect::<std::result::Result<Vec<_>, _>>()?;
+            let (_, effects) = SoundChunkHeader::parser(())(&input[header.effects])?;
+            let effects = effects
+                .infos
+                .into_iter()
+                .map(|s| decompress(&input[s]))
+                .map(|s| TEffect::parser(())(s.as_slice()).map(|(_, d)| d))
+                .collect::<std::result::Result<Vec<_>, _>>()?;
 
-                let (_, effects) = SoundChunkHeader::parse(&input[header.effects])?;
-                let effects = effects
-                    .infos
-                    .into_iter()
-                    .map(|s| decompress(&input[s]))
-                    .map(|s| TEffect::parse(s.as_slice()).map(|(_, d)| d))
-                    .collect::<std::result::Result<Vec<_>, _>>()?;
-
-                Ok((&[], SoundAssetCollection { songs, effects }))
-            }
-            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
+            Ok((&[], SoundAssetCollection { songs, effects }))
         }
     }
 }
@@ -65,7 +56,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, asset) = SoundAssetCollection::parse(&SOUND_DATA, Extension::Dat)?;
+        let (_, asset) = <SoundAssetCollection as AssetParser<Pack>>::parser(())(&SOUND_DATA)?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 

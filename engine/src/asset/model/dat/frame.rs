@@ -1,4 +1,7 @@
-use crate::{asset::AssetChunk, utils::nom::*};
+use crate::{
+    asset::{extension::*, AssetParser},
+    utils::nom::*,
+};
 
 // TODO(nenikitov): Should probably be a fancy utility class
 // With generics for data type and dimension
@@ -9,102 +12,102 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-impl AssetChunk for Vec3 {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, x) = number::le_i16f16(input)?;
-        let (input, y) = number::le_i16f16(input)?;
-        let (input, z) = number::le_i16f16(input)?;
+impl AssetParser<Wildcard> for Vec3 {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, x) = number::le_i16f16(input)?;
+            let (input, y) = number::le_i16f16(input)?;
+            let (input, z) = number::le_i16f16(input)?;
 
-        Ok((
-            input,
-            Self {
-                x: x.to_num(),
-                y: y.to_num(),
-                z: z.to_num(),
-            },
-        ))
+            Ok((
+                input,
+                Self {
+                    x: x.to_num(),
+                    y: y.to_num(),
+                    z: z.to_num(),
+                },
+            ))
+        }
     }
 }
 
 pub struct ModelVertex {
-    pub x: u8,
-    pub y: u8,
-    pub z: u8,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
     // TODO(nenikitov): For now, no clue what this is for
-    pub light_normal_index: u8,
-}
-
-impl AssetChunk for ModelVertex {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, x) = number::le_u8(input)?;
-        let (input, y) = number::le_u8(input)?;
-        let (input, z) = number::le_u8(input)?;
-        let (input, light_normal_index) = number::le_u8(input)?;
-
-        Ok((
-            input,
-            Self {
-                x,
-                y,
-                z,
-                light_normal_index,
-            },
-        ))
-    }
+    pub normal_index: u8,
 }
 
 impl ModelVertex {
     const UNITS_PER_METER: f32 = 32.0;
+}
 
-    fn to_parsed(&self, scale: &Vec3, scale_origin: &Vec3) -> ModelVertexParsed {
+pub struct VertexTransform {
+    scale: Vec3,
+    origin: Vec3,
+}
+
+impl AssetParser<Wildcard> for ModelVertex {
+    type Context<'ctx> = VertexTransform;
+
+    fn parser(transform: Self::Context<'_>) -> impl FnParser<Self::Output> {
         macro_rules! transform {
             ($coordinate: ident) => {
-                (scale.$coordinate * self.$coordinate as f32 / -256.0 - scale_origin.$coordinate)
+                (transform.scale.$coordinate * $coordinate as f32 / -256.0
+                    - transform.origin.$coordinate)
                     / Self::UNITS_PER_METER
             };
         }
-        ModelVertexParsed {
-            x: transform!(x),
-            y: transform!(y),
-            z: transform!(z),
-            normal_index: self.light_normal_index,
+
+        move |input| {
+            let (input, x) = number::le_u8(input)?;
+            let (input, y) = number::le_u8(input)?;
+            let (input, z) = number::le_u8(input)?;
+            let (input, normal_index) = number::le_u8(input)?;
+
+            Ok((
+                input,
+                Self {
+                    x: transform!(x),
+                    y: transform!(y),
+                    z: transform!(z),
+                    normal_index,
+                },
+            ))
         }
     }
 }
 
-pub struct ModelVertexParsed {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub normal_index: u8,
-}
-
 pub struct ModelFrame {
     pub bounding_sphere_radius: f32,
-    pub vertices: Vec<ModelVertexParsed>,
+    pub vertices: Vec<ModelVertex>,
     pub triangle_normal_indexes: Vec<u8>,
 }
 
-impl ModelFrame {
-    pub fn parse(
-        vertex_count: usize,
-        triangle_count: usize,
-        frame_size: usize,
-    ) -> impl Fn(&[u8]) -> Result<Self> {
+pub struct ModelSpecs {
+    pub vertex_count: u32,
+    pub triangle_count: u32,
+    pub frame_size: u32,
+}
+
+impl AssetParser<Wildcard> for ModelFrame {
+    type Context<'ctx> = ModelSpecs;
+
+    fn parser(model_specs: Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
-            let (input, scale) = Vec3::parse(input)?;
-            let (input, scale_origin) = Vec3::parse(input)?;
+            let (input, scale) = Vec3::parser(())(input)?;
+            let (input, origin) = Vec3::parser(())(input)?;
 
             let (input, bounding_sphere_radius) = number::le_i24f8(input)?;
 
-            let (input, vertices) = multi::count!(ModelVertex::parse, vertex_count)(input)?;
-            let vertices = vertices
-                .into_iter()
-                .map(|v| v.to_parsed(&scale, &scale_origin))
-                .collect();
+            let (input, vertices) = multi::count!(
+                ModelVertex::parser(VertexTransform { scale, origin }),
+                model_specs.vertex_count as usize
+            )(input)?;
 
             let (input, triangle_normal_indexes) =
-                multi::count!(number::le_u8, triangle_count)(input)?;
+                multi::count!(number::le_u8, model_specs.triangle_count as usize)(input)?;
 
             // This ugly formula calculates the padding after the frame data until next frame data
             // ```
@@ -115,8 +118,12 @@ impl ModelFrame {
             //    - sizeof(vertices)                // sizeof(ModelVertex) * vertex_count
             //    - sizeof(triangle_normalindexes)  // sizeof(u8) triangle_count
             // ```
-            let (input, _) =
-                bytes::take(frame_size - 28 - 4 * vertex_count - triangle_count)(input)?;
+            let (input, _) = bytes::take(
+                model_specs.frame_size
+                    - 28
+                    - 4 * model_specs.vertex_count
+                    - model_specs.triangle_count,
+            )(input)?;
 
             Ok((
                 input,

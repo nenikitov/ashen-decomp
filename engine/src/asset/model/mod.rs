@@ -1,78 +1,67 @@
 mod dat;
 
-use super::{Asset, AssetChunk, Extension, Kind};
-use crate::{error, utils::nom::*};
+use super::{extension::*, AssetParser};
+use crate::utils::nom::*;
 use dat::{
-    frame::ModelFrame,
-    header::ModelHeader,
-    sequence::{ModelSequence, ModelSequenceParsed},
-    triangle::ModelTriangle,
+    frame::ModelFrame, frame::ModelSpecs, header::ModelHeader, sequence::ModelSequence,
+    triangle::ModelTriangle, triangle::TextureDimensions,
 };
-
 use itertools::Itertools;
 
 pub struct Model {
     pub texture: Vec<Vec<u8>>,
     pub triangles: Vec<ModelTriangle>,
-    pub sequences: Vec<ModelSequenceParsed>,
+    pub sequences: Vec<ModelSequence>,
     pub frames: Vec<ModelFrame>,
 }
 
-impl Asset for Model {
-    fn kind() -> super::Kind {
-        Kind::Model
-    }
+impl AssetParser<Pack> for Model {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (_, header) = ModelHeader::parser(())(input)?;
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
-        match extension {
-            Extension::Dat => {
-                let (_, header) = ModelHeader::parse(input)?;
+            let (_, triangles) = multi::count!(
+                ModelTriangle::parser(TextureDimensions {
+                    width: header.texture_width,
+                    height: header.texture_height
+                }),
+                header.triangle_count as usize
+            )(&input[header.offset_triangles as usize..])?;
 
-                let (_, triangles) = multi::count!(
-                    ModelTriangle::parse(header.texture_width, header.texture_height),
-                    header.triangle_count as usize
-                )(&input[header.offset_triangles as usize..])?;
+            let (_, texture) = multi::count!(
+                number::le_u8,
+                (header.texture_width * header.texture_height) as usize
+            )(&input[header.offset_texture as usize..])?;
+            let texture = texture
+                .into_iter()
+                .chunks(header.texture_width as usize)
+                .into_iter()
+                .map(Iterator::collect)
+                .collect();
 
-                let (_, texture) = multi::count!(
-                    number::le_u8,
-                    (header.texture_width * header.texture_height) as usize
-                )(&input[header.offset_texture as usize..])?;
-                let texture = texture
-                    .into_iter()
-                    .chunks(header.texture_width as usize)
-                    .into_iter()
-                    .map(Iterator::collect)
-                    .collect();
+            let (_, sequences) = multi::count!(
+                ModelSequence::parser(input),
+                header.sequence_count as usize
+            )(&input[header.offset_sequences as usize..])?;
 
-                let (_, sequences) = multi::count!(
-                    ModelSequence::parse,
-                    header.sequence_count as usize
-                )(&input[header.offset_sequences as usize..])?;
-                let sequences = sequences
-                    .into_iter()
-                    .map(|s| ModelSequenceParsed::parse(input, &s).map(|(_, d)| d))
-                    .collect::<std::result::Result<Vec<_>, _>>()?;
+            let (_, frames) = multi::count!(
+                ModelFrame::parser(ModelSpecs {
+                    vertex_count: header.vertex_count,
+                    triangle_count: header.triangle_count,
+                    frame_size: header.frame_size
+                }),
+                header.frame_count as usize
+            )(&input[header.offset_frames as usize..])?;
 
-                let (_, frames) = multi::count!(
-                    ModelFrame::parse(
-                        header.vertex_count as usize,
-                        header.triangle_count as usize,
-                        header.frame_size as usize
-                    ),
-                    header.frame_count as usize
-                )(&input[header.offset_frames as usize..])?;
-
-                Ok((
-                    &[0],
-                    Self {
-                        texture,
-                        triangles,
-                        sequences,
-                        frames,
-                    },
-                ))
-            }
-            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
+            Ok((
+                &[],
+                Self {
+                    texture,
+                    triangles,
+                    sequences,
+                    frames,
+                },
+            ))
         }
     }
 }
@@ -80,7 +69,7 @@ impl Asset for Model {
 #[cfg(test)]
 mod tests {
     use super::{
-        dat::{frame::ModelVertexParsed, triangle::ModelPoint},
+        dat::{frame::ModelVertex, triangle::ModelPoint},
         *,
     };
     use crate::{
@@ -99,9 +88,9 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, model) = Model::parse(&MODEL_DATA, Extension::Dat)?;
+        let (_, model) = <Model as AssetParser<Pack>>::parser(())(&MODEL_DATA)?;
         let palette = {
-            let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat)?;
+            let (_, color_map) = <ColorMap as AssetParser<Pack>>::parser(())(&COLOR_MAP_DATA)?;
             color_map.shades[15]
         };
 
@@ -242,7 +231,7 @@ object.select_set(True)
         }
     }
 
-    impl Display for ModelVertexParsed {
+    impl Display for ModelVertex {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
@@ -272,7 +261,7 @@ object.select_set(True)
         }
     }
 
-    impl Display for ModelSequenceParsed {
+    impl Display for ModelSequence {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,

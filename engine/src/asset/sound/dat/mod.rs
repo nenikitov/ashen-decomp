@@ -1,6 +1,5 @@
-use std::io::Cursor;
-
 use lewton::inside_ogg::OggStreamReader;
+use std::io::Cursor;
 
 pub mod asset_header;
 pub mod chunk_header;

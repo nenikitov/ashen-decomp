@@ -55,7 +55,7 @@ pub mod multi {
     /// array with a inferred `N` (count) would be returned e.g:
     ///
     /// ```ignore
-    /// use engine::utils::nom::{Result, multi, number};
+    /// use crate::utils::nom::{Result, multi, number};
     ///
     /// fn parse_u32s<const COUNT: usize>(input: &[u8]) -> Result<[u32; COUNT]> {
     ///     // N is infered by the function return type ([u32; COUNT]).
@@ -138,3 +138,6 @@ impl<'a, T, O> Parser<'a, O> for T where T: nom::Parser<Input<'a>, O, crate::err
 
 /// Holds the result of parsing functions.
 pub type Result<'a, O> = nom::IResult<Input<'a>, O, crate::error::ParseError>;
+
+// DOCS(Unavailable):
+pub trait FnParser<T> = Fn(Input) -> Result<T>;

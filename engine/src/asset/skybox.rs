@@ -1,5 +1,5 @@
-use super::{Asset, Extension, Kind};
-use crate::{asset::color_map::Color, error, utils::nom::*};
+use super::{extension::*, AssetParser};
+use crate::{asset::color_map::Color, utils::nom::*};
 use itertools::Itertools;
 
 const COLOR_COUNT: usize = 256;
@@ -10,33 +10,25 @@ pub struct Skybox {
     pub texture: Vec<Vec<u8>>,
 }
 
-impl Asset for Skybox {
-    fn kind() -> Kind {
-        Kind::Skybox
-    }
+impl AssetParser<Pack> for Skybox {
+    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+        move |input| {
+            let (input, width) = number::le_u32(input)?;
 
-    fn parse(input: &[u8], extension: Extension) -> crate::utils::nom::Result<Self> {
-        match extension {
-            Extension::Dat => {
-                let (input, width) = number::le_u32(input)?;
+            let (input, height) = number::le_u32(input)?;
 
-                let (input, height) = number::le_u32(input)?;
+            let (input, palette) = multi::count!(number::le_u16, 256)(input)?;
+            let palette: Vec<_> = palette.into_iter().map(Color::from_12_bit).collect();
 
-                let (input, palette) = multi::count!(number::le_u16, 256)(input)?;
-                let palette: Vec<_> = palette.into_iter().map(Color::from_12_bit).collect();
+            let (input, texture) = multi::count!(number::le_u8, (width * height) as usize)(input)?;
+            let texture = texture
+                .into_iter()
+                .chunks(width as usize)
+                .into_iter()
+                .map(Iterator::collect)
+                .collect();
 
-                let (input, texture) =
-                    multi::count!(number::le_u8, (width * height) as usize)(input)?;
-                let texture = texture
-                    .into_iter()
-                    .chunks(width as usize)
-                    .into_iter()
-                    .map(Iterator::collect)
-                    .collect();
-
-                Ok((&[], Self { palette, texture }))
-            }
-            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
+            Ok((&[], Self { palette, texture }))
         }
     }
 }
@@ -55,7 +47,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, skybox) = Skybox::parse(&SKYBOX_DATA, Extension::Dat)?;
+        let (_, skybox) = <Skybox as AssetParser<Pack>>::parser(())(&SKYBOX_DATA)?;
 
         output_file(
             parsed_file_path!("skyboxes/level-1.ppm"),
