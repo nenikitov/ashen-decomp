@@ -1,6 +1,7 @@
-# Ashen source port
+# Ashen reverse engineering
 
-A playable source port of an obscure NGage game Ashen
+Reverse engineering of an N-Gage game [Ashen](https://en.wikipedia.org/wiki/Ashen_(2004_video_game))
+- Can extract game resources
 
 ## Usage
 
@@ -31,13 +32,67 @@ File parsing is in test suite only, for now.
         cargo test --release -- --ignored parse_rom_asset
         ```
     - This will parse select few game files into `output/parsed/` directory
+    - Directions on how to opened parsed files are available [here](#file-formats-and-extraction)
+
+## Roadmap
+
+### File formats and extraction
+
+- [x] Gamma table
+    - **Purpose**
+        - Look up table for brightness when changing gamma in settings
+    - **Output format**
+        - PPM image
+- [x] Color map
+    - **Purpose**
+        - Look up table for 12-bit RGB colors, because textures are stored in 256 indexed color format
+        - There is also ghost version for when you use Ghost Vision Goggles in game
+        - There are unique color maps for monsters, pick-ups (and some other models), UI sprites, and levels
+    - **Output format**
+        - PPM image
+- [x] Model
+    - **Purpose**
+        - Texture, geometry, and model data
+    - **TO DO**
+        - Figure out what to do with pre-calculated face and vertex normals
+    - **Output format**
+        - Blender Python script that can be executed with
+            ```sh
+            blender -P /path/to/script.py
+            ```
+        - Automatically sets up Cycles material and animations as shape keys in dope sheet's shape key editor
+- [x] Sky
+    - **Purpose**
+        - Color map and skybox texture
+    - **Output format**
+        - PPM image
+- [ ] Skins
+- [ ] Level geometry
+- [ ] Level collision
+- [ ] Level waypoints
+- [ ] Sprite
+- [x] Texture
+    - **Purpose**
+        - Texture info - offsets, texture dimensions
+        - Texture data - color indeces
+    - **TO DO**
+        - Re-integrate output
+    - **Output format**
+        - PPM image
+- [x] String table
+    - **Purpose**
+        - Printable strings in UI
+    - **TO DO**
+        - Figure out weird non-text characters (probably for controlling in-game events)
+    - **Output format**
+        - Plain text
 
 ## File structure
 
 > [!IMPORTANT]
 >
 > I use the packfile that comes with Ashen 1.06.
-> Your packfile may have different offsets to files, I didn't test with different versions.
+> Your packfile may have different order, I didn't test with different versions.
 
 | Address (HEX) | Asset                           |
 |---------------|---------------------------------|
