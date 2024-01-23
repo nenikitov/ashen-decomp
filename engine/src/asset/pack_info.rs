@@ -9,6 +9,10 @@ pub struct PackInfo {
 }
 
 impl AssetParser<Wildcard> for PackInfo {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, offset) = number::le_u32(input)?;

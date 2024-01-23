@@ -30,6 +30,10 @@ pub struct TInstrument {
 }
 
 impl AssetParser<Wildcard> for TInstrument {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
@@ -97,6 +101,8 @@ pub struct TSample {
 }
 
 impl AssetParser<Wildcard> for TSample {
+    type Output = Self;
+
     type Context<'ctx> = &'ctx [i16];
 
     fn parser(sample_data: Self::Context<'_>) -> impl FnParser<Self::Output> {

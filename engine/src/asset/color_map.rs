@@ -35,6 +35,10 @@ impl Color {
 }
 
 impl AssetParser<Wildcard> for Color {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, color) = number::le_u32(input)?;
@@ -51,6 +55,10 @@ pub struct ColorMap {
 }
 
 impl AssetParser<Pack> for ColorMap {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             error::ensure_bytes_length(

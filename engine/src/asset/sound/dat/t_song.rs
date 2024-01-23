@@ -56,6 +56,10 @@ impl TSong {
 }
 
 impl AssetParser<Wildcard> for TSong {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (header, pointers) = {
@@ -140,6 +144,10 @@ struct TSongHeader {
 }
 
 impl AssetParser<Wildcard> for TSongHeader {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, song_length) = number::le_u8(input)?;
@@ -180,6 +188,10 @@ struct TSongPointers {
 }
 
 impl AssetParser<Wildcard> for TSongPointers {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, orders) = number::le_u32(input)?;
@@ -217,6 +229,10 @@ struct TPattern {
 }
 
 impl AssetParser<Wildcard> for TPattern {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
@@ -242,6 +258,10 @@ impl AssetParser<Wildcard> for TPattern {
 }
 
 impl AssetParser<Wildcard> for Option<TPattern> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (after_flags, flags) = number::le_u8(input)?;

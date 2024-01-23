@@ -15,6 +15,8 @@ pub struct TextureDimensions {
 }
 
 impl AssetParser<Wildcard> for ModelPoint {
+    type Output = Self;
+
     type Context<'ctx> = &'ctx TextureDimensions;
 
     fn parser(texture_dimensions: Self::Context<'_>) -> impl FnParser<Self::Output> {
@@ -38,6 +40,8 @@ pub struct ModelTriangle {
 }
 
 impl AssetParser<Wildcard> for ModelTriangle {
+    type Output = Self;
+
     type Context<'ctx> = TextureDimensions;
 
     fn parser(texture_dimensions: Self::Context<'_>) -> impl FnParser<Self::Output> {

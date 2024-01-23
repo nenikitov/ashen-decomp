@@ -11,6 +11,10 @@ pub struct Skybox {
 }
 
 impl AssetParser<Pack> for Skybox {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, width) = number::le_u32(input)?;

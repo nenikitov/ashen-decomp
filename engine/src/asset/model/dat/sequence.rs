@@ -8,6 +8,8 @@ pub struct ModelSequence {
 }
 
 impl AssetParser<Wildcard> for ModelSequence {
+    type Output = Self;
+
     type Context<'ctx> = &'ctx [u8];
 
     fn parser(full_input: Self::Context<'_>) -> impl FnParser<Self::Output> {

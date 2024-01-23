@@ -23,6 +23,10 @@ impl TEffect {
 }
 
 impl AssetParser<Wildcard> for TEffect {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (_, pointers) = TEffectPointers::parser(())(input)?;
@@ -45,6 +49,10 @@ struct TEffectPointers {
 }
 
 impl AssetParser<Wildcard> for TEffectPointers {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, instrument) = number::le_u32(input)?;

@@ -19,6 +19,10 @@ pub struct ModelHeader {
 }
 
 impl AssetParser<Wildcard> for ModelHeader {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, triangle_count) = number::le_u32(input)?;

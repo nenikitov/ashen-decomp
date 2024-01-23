@@ -16,6 +16,10 @@ pub struct Model {
 }
 
 impl AssetParser<Pack> for Model {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (_, header) = ModelHeader::parser(())(input)?;

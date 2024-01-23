@@ -15,6 +15,10 @@ fn utf_16_string(input: &[u8]) -> Result<String> {
 }
 
 impl AssetParser<Pack> for StringTable {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, count) = number::le_u32(input)?;

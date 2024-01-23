@@ -8,6 +8,10 @@ pub struct SoundChunkHeader {
 }
 
 impl AssetParser<Wildcard> for SoundChunkHeader {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
     fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
         move |input| {
             let (input, count) = number::le_u32(input)?;
