@@ -19,7 +19,7 @@ impl AssetParser<Wildcard> for ModelPoint {
 
     type Context<'ctx> = &'ctx TextureDimensions;
 
-    fn parser(texture_dimensions: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(texture_dimensions: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, vertex_index) = number::le_u16(input)?;
 
@@ -44,7 +44,7 @@ impl AssetParser<Wildcard> for ModelTriangle {
 
     type Context<'ctx> = TextureDimensions;
 
-    fn parser(texture_dimensions: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(texture_dimensions: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, points) = multi::count!(ModelPoint::parser(&texture_dimensions))(input)?;
 

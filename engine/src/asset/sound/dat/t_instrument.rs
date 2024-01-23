@@ -34,7 +34,7 @@ impl AssetParser<Wildcard> for TInstrument {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
 
@@ -105,7 +105,7 @@ impl AssetParser<Wildcard> for TSample {
 
     type Context<'ctx> = &'ctx [i16];
 
-    fn parser(sample_data: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(sample_data: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
             let (input, volume) = number::le_u8(input)?;

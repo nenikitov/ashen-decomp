@@ -12,7 +12,7 @@ impl AssetParser<Wildcard> for ModelSequence {
 
     type Context<'ctx> = &'ctx [u8];
 
-    fn parser(full_input: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(full_input: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, frame_count) = number::le_u32(input)?;
             let (input, offset) = number::le_u32(input)?;

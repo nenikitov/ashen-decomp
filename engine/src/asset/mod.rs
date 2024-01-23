@@ -7,7 +7,7 @@ pub mod skybox;
 pub mod sound;
 pub mod string_table;
 
-use crate::utils::nom::*;
+use crate::utils::nom::{Input, Result};
 
 /// Definition for all available extensions that the engine can parse.
 pub mod extension {
@@ -74,5 +74,5 @@ where
     type Context<'ctx>;
 
     /// Generates a new parser with the provided context.
-    fn parser(context: Self::Context<'_>) -> impl FnParser<Self::Output>;
+    fn parser(context: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output>;
 }

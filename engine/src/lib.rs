@@ -18,7 +18,6 @@
     let_chains,
     lazy_cell,
     io_error_more,
-    trait_alias,
 )]
 
 pub mod asset;

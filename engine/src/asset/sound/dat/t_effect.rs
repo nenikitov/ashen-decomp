@@ -27,7 +27,7 @@ impl AssetParser<Wildcard> for TEffect {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (_, pointers) = TEffectPointers::parser(())(input)?;
 
@@ -53,7 +53,7 @@ impl AssetParser<Wildcard> for TEffectPointers {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, instrument) = number::le_u32(input)?;
             let (input, sample) = number::le_u32(input)?;

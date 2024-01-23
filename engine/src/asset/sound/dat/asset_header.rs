@@ -19,7 +19,7 @@ impl AssetParser<Wildcard> for SoundAssetHeader {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, _) = bytes::tag(Self::HEADER)(input)?;
 

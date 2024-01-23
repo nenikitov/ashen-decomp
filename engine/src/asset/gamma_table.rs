@@ -16,7 +16,7 @@ impl AssetParser<Pack> for GammaTable {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             error::ensure_bytes_length(
                 input,

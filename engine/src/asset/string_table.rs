@@ -19,7 +19,7 @@ impl AssetParser<Pack> for StringTable {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, count) = number::le_u32(input)?;
             // TODO(Unavailable): Find out what the "catholic" characters are.

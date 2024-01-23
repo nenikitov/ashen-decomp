@@ -25,7 +25,7 @@ impl AssetParser<Pack> for SoundAssetCollection {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (_, header) = SoundAssetHeader::parser(())(input)?;
 

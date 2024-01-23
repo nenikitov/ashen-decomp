@@ -15,7 +15,7 @@ impl AssetParser<Pack> for Skybox {
 
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, width) = number::le_u32(input)?;
 

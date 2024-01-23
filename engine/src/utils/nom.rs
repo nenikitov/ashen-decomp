@@ -138,6 +138,3 @@ impl<'a, T, O> Parser<'a, O> for T where T: nom::Parser<Input<'a>, O, crate::err
 
 /// Holds the result of parsing functions.
 pub type Result<'a, O> = nom::IResult<Input<'a>, O, crate::error::ParseError>;
-
-// DOCS(Unavailable):
-pub trait FnParser<T> = Fn(Input) -> Result<T>;
