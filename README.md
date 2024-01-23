@@ -42,14 +42,14 @@ File parsing is in test suite only, for now.
     - **Purpose**
         - Look up table for brightness when changing gamma in settings
     - **Output format**
-        - PPM image
+        - PNG image
 - [x] Color map
     - **Purpose**
         - Look up table for 12-bit RGB colors, because textures are stored in 256 indexed color format
         - There is also ghost version for when you use Ghost Vision Goggles in game
         - There are unique color maps for monsters, pick-ups (and some other models), UI sprites, and levels
     - **Output format**
-        - PPM image
+        - PNG image
 - [x] Model
     - **Purpose**
         - Texture, geometry, and model data
@@ -65,7 +65,7 @@ File parsing is in test suite only, for now.
     - **Purpose**
         - Color map and skybox texture
     - **Output format**
-        - PPM image
+        - PNG image
 - [ ] Skins
 - [ ] Level geometry
 - [ ] Level collision
@@ -78,7 +78,7 @@ File parsing is in test suite only, for now.
     - **TO DO**
         - Re-integrate output
     - **Output format**
-        - PPM image
+        - PNG image
 - [x] Music and sound effects
     - **Purpose**
         - Sound effects
