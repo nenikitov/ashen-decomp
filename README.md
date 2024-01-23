@@ -79,6 +79,16 @@ File parsing is in test suite only, for now.
         - Re-integrate output
     - **Output format**
         - PPM image
+- [x] Music and sound effects
+    - **Purpose**
+        - Sound effects
+        - Music
+    - **TO DO**
+        - Improve mixer with pitch, pan, and other sound effects
+        - Support sustained instruments
+        - Set correct tempo
+    - **Output format**
+        - WAV audio file
 - [x] String table
     - **Purpose**
         - Printable strings in UI
