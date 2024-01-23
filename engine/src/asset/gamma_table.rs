@@ -72,7 +72,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        output_file(parsed_file_path!("gamma-table.ppm"), gamma_table.to_ppm())?;
+        output_file(parsed_file_path!("gamma-table.png"), gamma_table.to_png())?;
 
         Ok(())
     }

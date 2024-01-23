@@ -50,8 +50,8 @@ mod tests {
         let (_, skybox) = <Skybox as AssetParser<Pack>>::parser(())(&SKYBOX_DATA)?;
 
         output_file(
-            parsed_file_path!("skyboxes/level-1.ppm"),
-            skybox.texture.with_palette(&skybox.palette).to_ppm(),
+            parsed_file_path!("skyboxes/level-1.png"),
+            skybox.texture.with_palette(&skybox.palette).to_png(),
         )?;
 
         Ok(())
