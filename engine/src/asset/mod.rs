@@ -63,7 +63,7 @@ where
 {
     /// The final value that would be returned by [`parser`].
     ///
-    /// _Most_ of the time this would be equal to `Self`. See [`Self::Output`]
+    /// _Most_ of the time this would be equal to `Self`.
     ///
     /// A hypothetical `TextureCollection` would return `Vec<Texture>` as its output.
     ///
