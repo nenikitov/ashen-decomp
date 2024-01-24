@@ -13,7 +13,11 @@ pub struct Vec3 {
 }
 
 impl AssetParser<Wildcard> for Vec3 {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, x) = number::le_i16f16(input)?;
             let (input, y) = number::le_i16f16(input)?;
@@ -49,9 +53,11 @@ pub struct VertexTransform {
 }
 
 impl AssetParser<Wildcard> for ModelVertex {
+    type Output = Self;
+
     type Context<'ctx> = VertexTransform;
 
-    fn parser(transform: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(transform: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         macro_rules! transform {
             ($coordinate: ident) => {
                 (transform.scale.$coordinate * $coordinate as f32 / -256.0
@@ -92,9 +98,11 @@ pub struct ModelSpecs {
 }
 
 impl AssetParser<Wildcard> for ModelFrame {
+    type Output = Self;
+
     type Context<'ctx> = ModelSpecs;
 
-    fn parser(model_specs: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(model_specs: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, scale) = Vec3::parser(())(input)?;
             let (input, origin) = Vec3::parser(())(input)?;

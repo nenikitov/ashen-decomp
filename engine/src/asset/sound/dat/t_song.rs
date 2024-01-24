@@ -56,7 +56,11 @@ impl TSong {
 }
 
 impl AssetParser<Wildcard> for TSong {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (header, pointers) = {
                 let (input, header) = TSongHeader::parser(())(input)?;
@@ -140,7 +144,11 @@ struct TSongHeader {
 }
 
 impl AssetParser<Wildcard> for TSongHeader {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, song_length) = number::le_u8(input)?;
             let (input, restart_order) = number::le_u8(input)?;
@@ -180,7 +188,11 @@ struct TSongPointers {
 }
 
 impl AssetParser<Wildcard> for TSongPointers {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, orders) = number::le_u32(input)?;
             let (input, patterns) = number::le_u32(input)?;
@@ -217,7 +229,11 @@ struct TPattern {
 }
 
 impl AssetParser<Wildcard> for TPattern {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
             let (input, note) = number::le_u8(input)?;
@@ -242,7 +258,11 @@ impl AssetParser<Wildcard> for TPattern {
 }
 
 impl AssetParser<Wildcard> for Option<TPattern> {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (after_flags, flags) = number::le_u8(input)?;
             if (flags & 0x20) != 0 {

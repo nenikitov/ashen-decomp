@@ -20,7 +20,12 @@ impl SoundAssetCollection {
 }
 
 impl AssetParser<Pack> for SoundAssetCollection {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    // TODO(nenikitov): Make it output vecs somehow to follow collection convention
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (_, header) = SoundAssetHeader::parser(())(input)?;
 
