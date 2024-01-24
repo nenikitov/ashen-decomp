@@ -17,6 +17,7 @@ thiserror = "1.0.56"
 
 [dev-dependencies]
 eyre = "0.6.8"
+image = "0.24.8"
 
 [features]
 loom = ["dep:loom"]

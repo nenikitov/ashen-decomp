@@ -148,8 +148,8 @@ mod tests {
         let (_, color_map) = <ColorMap as AssetParser<Pack>>::parser(())(&COLOR_MAP_DATA)?;
 
         output_file(
-            parsed_file_path!("color-map/monsters.ppm"),
-            color_map.shades.as_slice().to_ppm(),
+            parsed_file_path!("color-map/monsters.png"),
+            color_map.shades.as_slice().to_png(),
         )?;
 
         Ok(())
