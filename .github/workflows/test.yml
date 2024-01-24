@@ -58,17 +58,17 @@ jobs:
           SKIP_TEST_WRITE: true
   minimal:
     runs-on: ubuntu-latest
-    name: ubuntu / nightly / minimal-versions
+    name: ubuntu / nightly / direct-minimal-versions
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install nightly for -Zminimal-versions
+      - name: Install nightly for -Z direct-minimal-versions
         uses: dtolnay/rust-toolchain@nightly
       - name: rustup default nightly
         run: rustup default nightly
-      - name: cargo update -Zminimal-versions
-        run: cargo update -Zminimal-versions
+      - name: cargo update -Z direct-minimal-versions
+        run: cargo update -Z direct-minimal-versions
       - name: cargo test
         run: cargo test --locked --all-features --all-targets
   os-check:
