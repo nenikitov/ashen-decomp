@@ -76,7 +76,7 @@ File parsing is in test suite only, for now.
         - Texture info - offsets, texture dimensions
         - Texture data - color indeces
     - **TO DO**
-        - Re-integrate output
+        - Figure out what to do with animated textures
     - **Output format**
         - PNG image
 - [x] Music and sound effects
