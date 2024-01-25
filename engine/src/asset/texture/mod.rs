@@ -15,7 +15,11 @@ pub struct TextureOffset {
 }
 
 impl AssetParser<Wildcard> for TextureOffset {
-    fn parser((): Self::Context<'_>) -> impl FnParser<Self::Output> {
+    type Context<'ctx> = ();
+
+    type Output = Self;
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, width) = number::le_u16(input)?;
             let (input, height) = number::le_u16(input)?;
@@ -70,9 +74,11 @@ impl Div<u16> for &TextureSize {
 }
 
 impl AssetParser<Wildcard> for Texture {
+    type Output = Self;
+
     type Context<'ctx> = &'ctx TextureSize;
 
-    fn parser(size: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         let width = size.width as usize;
         let height = size.height as usize;
 
@@ -96,9 +102,11 @@ pub struct MippedTexture {
 }
 
 impl AssetParser<Wildcard> for MippedTexture {
+    type Output = Self;
+
     type Context<'ctx> = TextureSize;
 
-    fn parser(size: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, mip_1) = Texture::parser(&size)(&input)?;
             let (input, mip_2) = Texture::parser(&(&size / 2))(&input)?;
@@ -118,13 +126,11 @@ impl AssetParser<Wildcard> for MippedTexture {
 pub struct TextureOffsetCollection {}
 
 impl AssetParser<Pack> for TextureOffsetCollection {
-    type Item = TextureOffset;
-
     type Output = Vec<TextureOffset>;
 
     type Context<'ctx> = ();
 
-    fn parser(context: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (_, offsets) = multi::many0(TextureOffset::parser(()))(input)?;
 
@@ -136,13 +142,11 @@ impl AssetParser<Pack> for TextureOffsetCollection {
 pub struct MippedTextureCollection {}
 
 impl AssetParser<Pack> for MippedTextureCollection {
-    type Item = MippedTexture;
-
     type Output = Vec<MippedTexture>;
 
     type Context<'ctx> = &'ctx [TextureOffset];
 
-    fn parser(offsets: Self::Context<'_>) -> impl FnParser<Self::Output> {
+    fn parser(offsets: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let textures = offsets
                 .iter()
@@ -189,11 +193,11 @@ mod tests {
 
         textures.iter().enumerate().try_for_each(|(i, texture)| {
             texture.mips.iter().enumerate().try_for_each(|(m, mip)| {
-                let file = output_dir.join(format!("{i:0>3X}-{m}.ppm"));
+                let file = output_dir.join(format!("{i:0>3X}-{m}.png"));
 
                 output_file(
                     file,
-                    mip.colors.with_palette(&color_map.shades[15]).to_ppm(),
+                    mip.colors.with_palette(&color_map.shades[15]).to_png(),
                 )
             })
         });
