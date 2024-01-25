@@ -75,10 +75,9 @@ File parsing is in test suite only, for now.
     - **Purpose**
         - Texture info - offsets, texture dimensions
         - Texture data - color indeces
-    - **TO DO**
-        - Figure out what to do with animated textures
     - **Output format**
         - PNG image
+        - GIF image for animated textures
 - [x] Music and sound effects
     - **Purpose**
         - Sound effects

@@ -84,7 +84,7 @@ impl AssetParser<Pack> for MippedTextureCollection {
 mod tests {
     use super::*;
     use crate::{
-        asset::color_map::{Color, ColorMap, PaletteTexture},
+        asset::color_map::{ColorMap, PaletteTexture},
         utils::{format::*, test::*},
     };
     use std::{cell::LazyCell, path::PathBuf};
@@ -97,6 +97,7 @@ mod tests {
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
         let (_, color_map) = <ColorMap as AssetParser<Pack>>::parser(())(&COLOR_MAP_DATA)?;
+        let color_map = &color_map.shades[15];
         let (_, offsets) =
             <TextureOffsetCollection as AssetParser<Pack>>::parser(())(&TEXTURE_INFO_DATA)?;
         let (_, textures) =
@@ -114,11 +115,7 @@ mod tests {
                 TextureAnimationKind::Static(TextureMipKind::Mipped(t)) => {
                     t.mips.iter().enumerate().try_for_each(|(m, mip)| {
                         let file = &output_dir.join(format!("{i:0>3X}-mip-{m}.png"));
-
-                        output_file(
-                            file,
-                            mip.colors.with_palette(&color_map.shades[15]).to_png(),
-                        )
+                        output_file(file, mip.colors.with_palette(color_map).to_png())
                     })
                 }
                 TextureAnimationKind::Animated(t) => {
@@ -139,7 +136,7 @@ mod tests {
                                 data.push(vec![]);
                             }
 
-                            data[m].push(mip.colors.with_palette(&color_map.shades[15]))
+                            data[m].push(mip.colors.with_palette(color_map))
                         }
                     }
 
