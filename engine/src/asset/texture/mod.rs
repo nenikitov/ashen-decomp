@@ -64,7 +64,7 @@ impl AssetParser<Pack> for MippedTextureCollection {
                         let mut frames = Vec::with_capacity(o.animation_frames as usize);
                         let mut next = (t, *o);
 
-                        for i in 1..o.animation_frames {
+                        for i in 0..o.animation_frames {
                             frames.push(TextureMipKind::Mipped(next.0.clone()));
                             let (t, o) = &textures[next.1.next_animation_texture_id as usize];
                             next = (t, o);
@@ -84,7 +84,7 @@ impl AssetParser<Pack> for MippedTextureCollection {
 mod tests {
     use super::*;
     use crate::{
-        asset::color_map::{ColorMap, PaletteTexture},
+        asset::color_map::{Color, ColorMap, PaletteTexture},
         utils::{format::*, test::*},
     };
     use std::{cell::LazyCell, path::PathBuf};
@@ -104,17 +104,6 @@ mod tests {
 
         let output_dir = PathBuf::from(parsed_file_path!("textures/"));
 
-        let output_mipped = |name: String, t: &MippedTexture| {
-            t.mips.iter().enumerate().try_for_each(|(m, mip)| {
-                let file = &output_dir.join(format!("{name}-mip-{m}.png"));
-
-                output_file(
-                    file,
-                    mip.colors.with_palette(&color_map.shades[15]).to_png(),
-                )
-            })
-        };
-
         textures
             .iter()
             .enumerate()
@@ -123,16 +112,40 @@ mod tests {
                     unreachable!("World textures are always mipped")
                 }
                 TextureAnimationKind::Static(TextureMipKind::Mipped(t)) => {
-                    output_mipped(format!("{i:0>3X}"), t)
+                    t.mips.iter().enumerate().try_for_each(|(m, mip)| {
+                        let file = &output_dir.join(format!("{i:0>3X}-mip-{m}.png"));
+
+                        output_file(
+                            file,
+                            mip.colors.with_palette(&color_map.shades[15]).to_png(),
+                        )
+                    })
                 }
                 TextureAnimationKind::Animated(t) => {
-                    t.iter().enumerate().try_for_each(|(i_f, t)| match t {
-                        TextureMipKind::NonMipped(_) => {
-                            unreachable!("World textures are always mipped")
+                    let frames: Vec<_> = t
+                        .iter()
+                        .map(|t| match t {
+                            TextureMipKind::NonMipped(_) => {
+                                unreachable!("World textures are always mipped")
+                            }
+                            TextureMipKind::Mipped(t) => t,
+                        })
+                        .collect();
+
+                    let mut data = vec![];
+                    for (f, frame) in frames.iter().enumerate() {
+                        for (m, mip) in frame.mips.iter().enumerate() {
+                            if data.len() <= m {
+                                data.push(vec![]);
+                            }
+
+                            data[m].push(mip.colors.with_palette(&color_map.shades[15]))
                         }
-                        TextureMipKind::Mipped(t) => {
-                            output_mipped(format!("{i:0>3X}-frame-{i_f}"), t)
-                        }
+                    }
+
+                    data.iter().enumerate().try_for_each(|(m, mip)| {
+                        let file = &output_dir.join(format!("{i:0>3X}-mip-{m}.gif"));
+                        output_file(file, mip.to_gif())
                     })
                 }
             });
