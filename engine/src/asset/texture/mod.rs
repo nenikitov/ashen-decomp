@@ -1,8 +1,20 @@
 mod dat;
 
+use self::dat::texture::Texture;
+
 use super::{extension::*, AssetParser};
 use crate::utils::{compression::decompress, nom::*};
 use dat::{offset::TextureOffset, size::TextureSize, texture::MippedTexture};
+
+pub enum TextureMipKind {
+    NonMipped(Texture),
+    Mipped(MippedTexture),
+}
+
+pub enum TextureAnimationKind {
+    Static(TextureMipKind),
+    Animated(Vec<TextureMipKind>),
+}
 
 pub struct TextureOffsetCollection;
 
@@ -23,7 +35,7 @@ impl AssetParser<Pack> for TextureOffsetCollection {
 pub struct MippedTextureCollection;
 
 impl AssetParser<Pack> for MippedTextureCollection {
-    type Output = Vec<MippedTexture>;
+    type Output = Vec<TextureAnimationKind>;
 
     type Context<'ctx> = &'ctx [TextureOffset];
 
@@ -39,9 +51,29 @@ impl AssetParser<Pack> for MippedTextureCollection {
                         width: o.width,
                         height: o.height,
                     })(&input)
-                    .map(|(_, d)| d)
+                    .map(|(_, d)| (d, o))
                 })
                 .collect::<std::result::Result<Vec<_>, _>>()?;
+
+            let textures = textures
+                .iter()
+                .map(|(t, o)| {
+                    if o.animation_frames == 0 {
+                        TextureAnimationKind::Static(TextureMipKind::Mipped(t.clone()))
+                    } else {
+                        let mut frames = Vec::with_capacity(o.animation_frames as usize);
+                        let mut next = (t, *o);
+
+                        for i in 1..o.animation_frames {
+                            frames.push(TextureMipKind::Mipped(next.0.clone()));
+                            let (t, o) = &textures[next.1.next_animation_texture_id as usize];
+                            next = (t, o);
+                        }
+
+                        TextureAnimationKind::Animated(frames)
+                    }
+                })
+                .collect::<Vec<_>>();
 
             Ok((&[], textures))
         }
@@ -72,16 +104,38 @@ mod tests {
 
         let output_dir = PathBuf::from(parsed_file_path!("textures/"));
 
-        textures.iter().enumerate().try_for_each(|(i, texture)| {
-            texture.mips.iter().enumerate().try_for_each(|(m, mip)| {
-                let file = output_dir.join(format!("{i:0>3X}-{m}.png"));
+        let output_mipped = |name: String, t: &MippedTexture| {
+            t.mips.iter().enumerate().try_for_each(|(m, mip)| {
+                let file = &output_dir.join(format!("{name}-mip-{m}.png"));
 
                 output_file(
                     file,
                     mip.colors.with_palette(&color_map.shades[15]).to_png(),
                 )
             })
-        });
+        };
+
+        textures
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, texture)| match texture {
+                TextureAnimationKind::Static(TextureMipKind::NonMipped(_)) => {
+                    unreachable!("World textures are always mipped")
+                }
+                TextureAnimationKind::Static(TextureMipKind::Mipped(t)) => {
+                    output_mipped(format!("{i:0>3X}"), t)
+                }
+                TextureAnimationKind::Animated(t) => {
+                    t.iter().enumerate().try_for_each(|(i_f, t)| match t {
+                        TextureMipKind::NonMipped(_) => {
+                            unreachable!("World textures are always mipped")
+                        }
+                        TextureMipKind::Mipped(t) => {
+                            output_mipped(format!("{i:0>3X}-frame-{i_f}"), t)
+                        }
+                    })
+                }
+            });
 
         Ok(())
     }

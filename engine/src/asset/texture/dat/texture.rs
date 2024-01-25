@@ -5,6 +5,7 @@ use crate::{
 };
 use itertools::Itertools;
 
+#[derive(Clone)]
 pub struct Texture {
     pub colors: Vec<Vec<u8>>,
 }
@@ -33,6 +34,7 @@ impl AssetParser<Wildcard> for Texture {
     }
 }
 
+#[derive(Clone)]
 pub struct MippedTexture {
     pub mips: [Texture; 4],
 }
