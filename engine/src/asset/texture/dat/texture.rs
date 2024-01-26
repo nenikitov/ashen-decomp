@@ -21,15 +21,12 @@ impl AssetParser<Wildcard> for Texture {
     type Context<'ctx> = TextureSize;
 
     fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
-        let width = size.width as usize;
-        let height = size.height as usize;
-
         move |input| {
-            let (input, colors) = multi::count!(number::le_u8, width * height)(input)?;
+            let (input, colors) = multi::count!(number::le_u8, size.width * size.height)(input)?;
 
             let colors = colors
                 .into_iter()
-                .chunks(width)
+                .chunks(size.width)
                 .into_iter()
                 .map(Iterator::collect)
                 .collect();
