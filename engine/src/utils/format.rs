@@ -1,6 +1,12 @@
 use crate::asset::color_map::Color;
-use image::{ImageOutputFormat, RgbImage};
-use std::{io::Cursor, ops::Deref};
+use image::{
+    codecs::{
+        gif::{GifEncoder, Repeat},
+        png::PngEncoder,
+    },
+    Frame, ImageEncoder, RgbaImage,
+};
+use std::ops::Deref;
 
 pub trait PngFile {
     fn to_png(&self) -> Vec<u8>;
@@ -16,23 +22,74 @@ where
         let width = self[0].as_ref().len() as u32;
         let height = self.len() as u32;
 
-        let data: Vec<u8> = self
-            .iter()
-            .flat_map(|slice| {
-                slice
-                    .as_ref()
+        let mut data = vec![];
+        let mut encoder = PngEncoder::new(&mut data);
+
+        encoder
+            .write_image(
+                &self
                     .iter()
-                    .flat_map(|color| [color.r, color.g, color.b])
-            })
-            .collect();
+                    .flat_map(|slice| {
+                        slice
+                            .as_ref()
+                            .iter()
+                            .flat_map(|color| [color.r, color.g, color.b])
+                    })
+                    .collect::<Vec<_>>(),
+                width,
+                height,
+                image::ColorType::Rgb8,
+            )
+            .expect("Generated image data must be valid");
 
-        let mut image =
-            RgbImage::from_vec(width, height, data).expect("Generated image data must be valid");
+        data
+    }
+}
 
-        let mut data = Cursor::new(vec![]);
-        image.write_to(&mut data, ImageOutputFormat::Png);
+pub trait GifFile {
+    fn to_gif(&self) -> Vec<u8>;
+}
 
-        data.into_inner()
+impl<Outer: ?Sized, Inner1, Inner2> GifFile for Outer
+where
+    Outer: Deref<Target = [Inner1]>,
+    Inner1: Deref<Target = [Inner2]>,
+    Inner2: AsRef<[Color]>,
+{
+    fn to_gif(&self) -> Vec<u8> {
+        let width = self[0][0].as_ref().len() as u32;
+        let height = self[0].len() as u32;
+
+        let mut data = vec![];
+        let mut encoder = GifEncoder::new_with_speed(&mut data, 10);
+
+        encoder
+            .encode_frames(self.iter().map(|f| {
+                Frame::new(
+                    RgbaImage::from_vec(
+                        width,
+                        height,
+                        f.iter()
+                            .flat_map(|slice| {
+                                slice
+                                    .as_ref()
+                                    .iter()
+                                    .flat_map(|color| [color.r, color.g, color.b, 255])
+                            })
+                            .collect(),
+                    )
+                    .expect("Generated image data must be valid"),
+                )
+            }))
+            .expect("Generated image frames must be valid");
+
+        encoder
+            .set_repeat(Repeat::Infinite)
+            .expect("Generated image frames must loop");
+
+        drop(encoder);
+
+        data
     }
 }
 
