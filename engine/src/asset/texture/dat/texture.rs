@@ -46,10 +46,10 @@ impl AssetParser<Wildcard> for MippedTexture {
 
     fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
-            let (input, mip_1) = Texture::parser(&size)(&input)?;
-            let (input, mip_2) = Texture::parser(&(&size / 2))(&input)?;
-            let (input, mip_3) = Texture::parser(&(&size / 4))(&input)?;
-            let (input, mip_4) = Texture::parser(&(&size / 8))(&input)?;
+            let (input, mip_1) = Texture::parser(&size)(input)?;
+            let (input, mip_2) = Texture::parser(&(size / 2))(input)?;
+            let (input, mip_3) = Texture::parser(&(size / 4))(input)?;
+            let (input, mip_4) = Texture::parser(&(size / 8))(input)?;
 
             Ok((
                 &[],

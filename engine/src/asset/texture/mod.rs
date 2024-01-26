@@ -57,18 +57,20 @@ impl AssetParser<Pack> for MippedTextureCollection {
 
             let textures = textures
                 .iter()
-                .map(|(t, o)| {
-                    if o.animation_frames == 0 {
-                        TextureAnimationKind::Static(TextureMipKind::Mipped(t.clone()))
+                .cloned()
+                .map(|(texture, offset)| {
+                    if offset.animation_frames == 0 {
+                        TextureAnimationKind::Static(TextureMipKind::Mipped(texture))
                     } else {
-                        let mut frames = Vec::with_capacity(o.animation_frames as usize);
-                        let mut next = (t, *o);
+                        let mut frames = Vec::with_capacity(offset.animation_frames as usize);
 
-                        for i in 0..o.animation_frames {
-                            frames.push(TextureMipKind::Mipped(next.0.clone()));
-                            let (t, o) = &textures[next.1.next_animation_texture_id as usize];
-                            next = (t, o);
-                        }
+                        (0..offset.animation_frames).fold(
+                            (texture, offset),
+                            |(texture, offset), _| {
+                                frames.push(TextureMipKind::Mipped(texture));
+                                textures[offset.next_animation_texture_id as usize].clone()
+                            },
+                        );
 
                         TextureAnimationKind::Animated(frames)
                     }
@@ -119,18 +121,15 @@ mod tests {
                     })
                 }
                 TextureAnimationKind::Animated(t) => {
-                    let frames: Vec<_> = t
-                        .iter()
-                        .map(|t| match t {
-                            TextureMipKind::NonMipped(_) => {
-                                unreachable!("World textures are always mipped")
-                            }
-                            TextureMipKind::Mipped(t) => t,
-                        })
-                        .collect();
+                    let frames = t.iter().map(|t| match t {
+                        TextureMipKind::NonMipped(_) => {
+                            unreachable!("World textures are always mipped")
+                        }
+                        TextureMipKind::Mipped(t) => t,
+                    });
 
                     let mut data = vec![];
-                    for (f, frame) in frames.iter().enumerate() {
+                    for (f, frame) in frames.enumerate() {
                         for (m, mip) in frame.mips.iter().enumerate() {
                             if data.len() <= m {
                                 data.push(vec![]);

@@ -23,10 +23,10 @@ where
         let height = self.len() as u32;
 
         let mut data = vec![];
-        {
-            let mut encoder = PngEncoder::new(&mut data);
+        let mut encoder = PngEncoder::new(&mut data);
 
-            encoder.write_image(
+        encoder
+            .write_image(
                 &self
                     .iter()
                     .flat_map(|slice| {
@@ -39,8 +39,8 @@ where
                 width,
                 height,
                 image::ColorType::Rgb8,
-            );
-        }
+            )
+            .expect("Generated image data must be valid");
 
         data
     }
@@ -61,31 +61,34 @@ where
         let height = self[0].len() as u32;
 
         let mut data = vec![];
-        {
-            let mut encoder = GifEncoder::new_with_speed(&mut data, 10);
+        let mut encoder = GifEncoder::new_with_speed(&mut data, 10);
 
-            encoder
-                .encode_frames(self.iter().map(|f| {
-                    Frame::new(
-                        RgbaImage::from_vec(
-                            width,
-                            height,
-                            f.iter()
-                                .flat_map(|slice| {
-                                    slice
-                                        .as_ref()
-                                        .iter()
-                                        .flat_map(|color| [color.r, color.g, color.b, 255])
-                                })
-                                .collect(),
-                        )
-                        .expect("Generated image data must be valid"),
+        encoder
+            .encode_frames(self.iter().map(|f| {
+                Frame::new(
+                    RgbaImage::from_vec(
+                        width,
+                        height,
+                        f.iter()
+                            .flat_map(|slice| {
+                                slice
+                                    .as_ref()
+                                    .iter()
+                                    .flat_map(|color| [color.r, color.g, color.b, 255])
+                            })
+                            .collect(),
                     )
-                }))
-                .expect("Generated image frames must be valid");
+                    .expect("Generated image data must be valid"),
+                )
+            }))
+            .expect("Generated image frames must be valid");
 
-            encoder.set_repeat(Repeat::Infinite);
-        }
+        encoder
+            .set_repeat(Repeat::Infinite)
+            .expect("Generated image frames must loop");
+
+        drop(encoder);
+
         data
     }
 }

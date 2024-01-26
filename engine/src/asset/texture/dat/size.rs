@@ -1,5 +1,6 @@
 use std::ops::Div;
 
+#[derive(Clone, Copy)]
 pub struct TextureSize {
     pub width: u16,
     pub height: u16,
