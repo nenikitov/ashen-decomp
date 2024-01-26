@@ -1,15 +1,18 @@
 mod dat;
 
-use super::{extension::*, AssetParser};
+use super::{
+    extension::*,
+    texture::dat::{size::TextureSize, texture::Texture},
+    AssetParser,
+};
 use crate::utils::nom::*;
 use dat::{
     frame::ModelFrame, frame::ModelSpecs, header::ModelHeader, sequence::ModelSequence,
     triangle::ModelTriangle, triangle::TextureDimensions,
 };
-use itertools::Itertools;
 
 pub struct Model {
-    pub texture: Vec<Vec<u8>>,
+    pub texture: Texture,
     pub triangles: Vec<ModelTriangle>,
     pub sequences: Vec<ModelSequence>,
     pub frames: Vec<ModelFrame>,
@@ -32,16 +35,10 @@ impl AssetParser<Pack> for Model {
                 header.triangle_count as usize
             )(&input[header.offset_triangles as usize..])?;
 
-            let (_, texture) = multi::count!(
-                number::le_u8,
-                (header.texture_width * header.texture_height) as usize
-            )(&input[header.offset_texture as usize..])?;
-            let texture = texture
-                .into_iter()
-                .chunks(header.texture_width as usize)
-                .into_iter()
-                .map(Iterator::collect)
-                .collect();
+            let (_, texture) = Texture::parser(TextureSize {
+                width: header.texture_width as usize,
+                height: header.texture_height as usize,
+            })(&input[header.offset_texture as usize..])?;
 
             let (_, sequences) = multi::count!(
                 ModelSequence::parser(input),
@@ -80,6 +77,7 @@ mod tests {
         asset::color_map::{Color, ColorMap, PaletteTexture},
         utils::test::*,
     };
+    use itertools::Itertools;
     use std::{
         cell::LazyCell,
         fmt::{Display, Formatter},
@@ -195,8 +193,8 @@ bpy.context.collection.objects.link(object)
 bpy.context.view_layer.objects.active = object
 object.select_set(True)
             "#,
-                self.texture[0].len(),
-                self.texture.len(),
+                self.texture.width(),
+                self.texture.height(),
                 self.texture
                     .with_palette(&palette)
                     .into_iter()

@@ -1,6 +1,10 @@
 use super::size::TextureSize;
 use crate::{
-    asset::{extension::*, AssetParser},
+    asset::{
+        color_map::{Color, PaletteTexture},
+        extension::*,
+        AssetParser,
+    },
     utils::nom::*,
 };
 use itertools::Itertools;
@@ -13,7 +17,7 @@ pub struct Texture {
 impl AssetParser<Wildcard> for Texture {
     type Output = Self;
 
-    type Context<'ctx> = &'ctx TextureSize;
+    type Context<'ctx> = TextureSize;
 
     fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         let width = size.width as usize;
@@ -34,6 +38,16 @@ impl AssetParser<Wildcard> for Texture {
     }
 }
 
+impl Texture {
+    pub fn width(&self) -> usize {
+        self.colors[0].len()
+    }
+
+    pub fn height(&self) -> usize {
+        self.colors.len()
+    }
+}
+
 #[derive(Clone)]
 pub struct MippedTexture {
     pub mips: [Texture; 4],
@@ -46,10 +60,10 @@ impl AssetParser<Wildcard> for MippedTexture {
 
     fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
-            let (input, mip_1) = Texture::parser(&size)(input)?;
-            let (input, mip_2) = Texture::parser(&(size / 2))(input)?;
-            let (input, mip_3) = Texture::parser(&(size / 4))(input)?;
-            let (input, mip_4) = Texture::parser(&(size / 8))(input)?;
+            let (input, mip_1) = Texture::parser(size)(input)?;
+            let (input, mip_2) = Texture::parser(size / 2)(input)?;
+            let (input, mip_3) = Texture::parser(size / 4)(input)?;
+            let (input, mip_4) = Texture::parser(size / 8)(input)?;
 
             Ok((
                 &[],
@@ -58,5 +72,11 @@ impl AssetParser<Wildcard> for MippedTexture {
                 },
             ))
         }
+    }
+}
+
+impl PaletteTexture for Texture {
+    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>> {
+        self.colors.with_palette(palette)
     }
 }

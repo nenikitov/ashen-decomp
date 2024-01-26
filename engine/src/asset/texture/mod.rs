@@ -1,4 +1,4 @@
-mod dat;
+pub(crate) mod dat;
 
 use self::dat::texture::Texture;
 
@@ -48,8 +48,8 @@ impl AssetParser<Pack> for MippedTextureCollection {
                     let input = decompress(input);
 
                     MippedTexture::parser(TextureSize {
-                        width: o.width,
-                        height: o.height,
+                        width: o.width as usize,
+                        height: o.height as usize,
                     })(&input)
                     .map(|(_, d)| (d, o))
                 })
