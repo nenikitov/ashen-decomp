@@ -1,13 +1,15 @@
-use super::{extension::*, AssetParser};
+use super::{
+    extension::*,
+    texture::dat::{size::TextureSize, texture::Texture},
+    AssetParser,
+};
 use crate::{asset::color_map::Color, utils::nom::*};
-use itertools::Itertools;
 
 const COLOR_COUNT: usize = 256;
 
-#[derive(Debug)]
 pub struct Skybox {
     pub palette: Vec<Color>,
-    pub texture: Vec<Vec<u8>>,
+    pub texture: Texture,
 }
 
 impl AssetParser<Pack> for Skybox {
@@ -24,13 +26,10 @@ impl AssetParser<Pack> for Skybox {
             let (input, palette) = multi::count!(number::le_u16, 256)(input)?;
             let palette: Vec<_> = palette.into_iter().map(Color::from_12_bit).collect();
 
-            let (input, texture) = multi::count!(number::le_u8, (width * height) as usize)(input)?;
-            let texture = texture
-                .into_iter()
-                .chunks(width as usize)
-                .into_iter()
-                .map(Iterator::collect)
-                .collect();
+            let (_, texture) = Texture::parser(TextureSize {
+                width: width as usize,
+                height: height as usize,
+            })(input)?;
 
             Ok((&[], Self { palette, texture }))
         }

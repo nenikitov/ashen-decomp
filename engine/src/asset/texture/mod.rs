@@ -1,7 +1,8 @@
-mod dat;
+// TODO(nenikitov): When textures are moved to a separate public module later,
+// this `pub(crate)` could be deleted
+pub(crate) mod dat;
 
 use self::dat::texture::Texture;
-
 use super::{extension::*, AssetParser};
 use crate::utils::{compression::decompress, nom::*};
 use dat::{offset::TextureOffset, size::TextureSize, texture::MippedTexture};
@@ -48,8 +49,8 @@ impl AssetParser<Pack> for MippedTextureCollection {
                     let input = decompress(input);
 
                     MippedTexture::parser(TextureSize {
-                        width: o.width,
-                        height: o.height,
+                        width: o.width as usize,
+                        height: o.height as usize,
                     })(&input)
                     .map(|(_, d)| (d, o))
                 })
