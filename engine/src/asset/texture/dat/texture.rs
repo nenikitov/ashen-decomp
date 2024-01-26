@@ -9,6 +9,7 @@ use crate::{
 };
 use itertools::Itertools;
 
+// TODO(nenikitov): Move this to a separate public module later
 #[derive(Clone)]
 pub struct Texture {
     pub colors: Vec<Vec<u8>>,
