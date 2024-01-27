@@ -9,19 +9,29 @@ use crate::{
     utils::{compression::decompress, nom::*},
 };
 
-pub struct SoundAssetCollection {
-    songs: Vec<TSong>,
-    effects: Vec<TEffect>,
+pub enum Sound {
+    Song(TSong),
+    Effect(TEffect),
 }
 
-impl SoundAssetCollection {
-    const SAMPLE_RATE: usize = 16000;
-    const CHANNEL_COUNT: usize = 1;
+impl Sound {
+    pub fn mix(&self) -> Vec<i16> {
+        match self {
+            Sound::Song(sound) => sound.mix(),
+            Sound::Effect(effect) => effect.mix(),
+        }
+    }
 }
 
-impl AssetParser<Pack> for SoundAssetCollection {
-    // TODO(nenikitov): Make it output vecs somehow to follow collection convention
-    type Output = Self;
+pub struct SoundCollection;
+
+impl SoundCollection {
+    pub const SAMPLE_RATE: usize = 16000;
+    pub const CHANNEL_COUNT: usize = 1;
+}
+
+impl AssetParser<Pack> for SoundCollection {
+    type Output = Vec<Sound>;
 
     type Context<'ctx> = ();
 
@@ -35,7 +45,7 @@ impl AssetParser<Pack> for SoundAssetCollection {
                 .into_iter()
                 .map(|s| decompress(&input[s]))
                 .map(|s| TSong::parser(())(s.as_slice()).map(|(_, d)| d))
-                .collect::<std::result::Result<Vec<_>, _>>()?;
+                .map(|s| s.map(Sound::Song));
 
             let (_, effects) = SoundChunkHeader::parser(())(&input[header.effects])?;
             let effects = effects
@@ -43,9 +53,13 @@ impl AssetParser<Pack> for SoundAssetCollection {
                 .into_iter()
                 .map(|s| decompress(&input[s]))
                 .map(|s| TEffect::parser(())(s.as_slice()).map(|(_, d)| d))
+                .map(|s| s.map(Sound::Effect));
+
+            let sounds = songs
+                .chain(effects)
                 .collect::<std::result::Result<Vec<_>, _>>()?;
 
-            Ok((&[], SoundAssetCollection { songs, effects }))
+            Ok((&[], sounds))
         }
     }
 }
@@ -61,35 +75,36 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, asset) = <SoundAssetCollection as AssetParser<Pack>>::parser(())(&SOUND_DATA)?;
+        let (_, sounds) = <SoundCollection as AssetParser<Pack>>::parser(())(&SOUND_DATA)?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 
-        asset.songs.iter().enumerate().try_for_each(|(i, song)| {
-            let file = output_dir.join(format!("{i:0>2X}.wav"));
-            output_file(
-                file,
-                song.mix().to_wave(
-                    SoundAssetCollection::SAMPLE_RATE,
-                    SoundAssetCollection::CHANNEL_COUNT,
-                ),
-            )
-        })?;
+        sounds
+            .iter()
+            .filter(|s| matches!(s, Sound::Song(_)))
+            .enumerate()
+            .try_for_each(|(i, song)| {
+                let file = output_dir.join(format!("{i:0>2X}.wav"));
+                output_file(
+                    file,
+                    song.mix()
+                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
+                )
+            })?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
 
-        asset
-            .effects
+        sounds
             .iter()
+            .filter(|s| matches!(s, Sound::Effect(_)))
             .enumerate()
             .try_for_each(|(i, effect)| {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
                 output_file(
                     file,
-                    effect.mix().to_wave(
-                        SoundAssetCollection::SAMPLE_RATE,
-                        SoundAssetCollection::CHANNEL_COUNT,
-                    ),
+                    effect
+                        .mix()
+                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
                 )
             })?;
 
