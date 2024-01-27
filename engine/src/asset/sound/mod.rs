@@ -45,7 +45,7 @@ impl AssetParser<Pack> for SoundCollection {
                 .into_iter()
                 .map(|s| decompress(&input[s]))
                 .map(|s| TSong::parser(())(s.as_slice()).map(|(_, d)| d))
-                .map(|s| s.map(|s| Sound::Song(s)));
+                .map(|s| s.map(Sound::Song));
 
             let (_, effects) = SoundChunkHeader::parser(())(&input[header.effects])?;
             let effects = effects
@@ -53,7 +53,7 @@ impl AssetParser<Pack> for SoundCollection {
                 .into_iter()
                 .map(|s| decompress(&input[s]))
                 .map(|s| TEffect::parser(())(s.as_slice()).map(|(_, d)| d))
-                .map(|s| s.map(|s| Sound::Effect(s)));
+                .map(|s| s.map(Sound::Effect));
 
             let sounds = songs
                 .chain(effects)
