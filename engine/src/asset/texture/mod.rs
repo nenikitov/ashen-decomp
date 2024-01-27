@@ -1,11 +1,9 @@
-// TODO(nenikitov): When textures are moved to a separate public module later,
-// this `pub(crate)` could be deleted
-pub(crate) mod dat;
+mod dat;
 
-use self::dat::texture::Texture;
 use super::{extension::*, AssetParser};
 use crate::utils::{compression::decompress, nom::*};
-use dat::{offset::TextureOffset, size::TextureSize, texture::MippedTexture};
+use dat::{offset::TextureOffset, texture::MippedTexture};
+pub use dat::{size::TextureSize, texture::Texture};
 
 pub enum TextureMipKind {
     NonMipped(Texture),

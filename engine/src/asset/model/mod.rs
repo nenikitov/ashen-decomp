@@ -2,7 +2,7 @@ mod dat;
 
 use super::{
     extension::*,
-    texture::dat::{size::TextureSize, texture::Texture},
+    texture::{Texture, TextureSize},
     AssetParser,
 };
 use crate::utils::nom::*;
