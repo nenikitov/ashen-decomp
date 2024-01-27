@@ -1,4 +1,4 @@
-use super::{Asset, Extension, Kind};
+use super::{extension::*, AssetParser};
 use crate::{error, utils::nom::*};
 use std::mem;
 
@@ -11,37 +11,36 @@ pub struct GammaTable {
     pub lookups: Box<[[u8; ROWS_COUNT]; COLS_COUNT]>,
 }
 
-impl Asset for GammaTable {
-    fn kind() -> Kind {
-        Kind::GammaTable
-    }
+impl AssetParser<Pack> for GammaTable {
+    type Output = Self;
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
-        match extension {
-            Extension::Dat => {
-                error::ensure_bytes_length(
-                    input,
-                    GAMMA_TABLE_LENGTH,
-                    "Incorrect `GammaTable` format (256x101 array of u8s)",
-                )?;
+    type Context<'ctx> = ();
 
-                // Technically this can't never fail.
-                let (input, bytes) = bytes::take(GAMMA_TABLE_LENGTH)(input)?;
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            error::ensure_bytes_length(
+                input,
+                GAMMA_TABLE_LENGTH,
+                "Incorrect `GammaTable` format (256x101 array of u8s)",
+            )?;
 
-                // SAFETY: bytes::take() should return exactly `ROWS_COUNT * COLS_COUNT`
-                // bytes; also slices and arrays are guaranteed to have the same memory
-                // layout.
-                let lookups =
-                    unsafe { mem::transmute_copy::<_, &[[u8; ROWS_COUNT]; COLS_COUNT]>(&bytes) };
+            // Technically this can't never fail.
+            let (input, bytes) = bytes::take(GAMMA_TABLE_LENGTH)(input)?;
 
-                Ok((
-                    input,
-                    Self {
-                        lookups: Box::new(*lookups),
-                    },
-                ))
-            }
-            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
+            // SAFETY(Unavailable): Dont transmute references!!!!!!!
+            //
+            // SAFETY: bytes::take() should return exactly `ROWS_COUNT * COLS_COUNT`
+            // bytes; also slices and arrays are guaranteed to have the same memory
+            // layout.
+            let lookups =
+                unsafe { mem::transmute_copy::<_, &[[u8; ROWS_COUNT]; COLS_COUNT]>(&bytes) };
+
+            Ok((
+                input,
+                Self {
+                    lookups: Box::new(*lookups),
+                },
+            ))
         }
     }
 }
@@ -60,7 +59,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, gamma_table) = GammaTable::parse(&GAMMA_TABLE_DATA, Extension::Dat)?;
+        let (_, gamma_table) = <GammaTable as AssetParser<Pack>>::parser(())(&GAMMA_TABLE_DATA)?;
 
         let gamma_table = gamma_table
             .lookups
@@ -77,7 +76,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        output_file(parsed_file_path!("gamma-table.ppm"), gamma_table.to_ppm())?;
+        output_file(parsed_file_path!("gamma-table.png"), gamma_table.to_png())?;
 
         Ok(())
     }

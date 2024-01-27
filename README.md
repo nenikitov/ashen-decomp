@@ -1,72 +1,107 @@
-# Ashen source port
+# Ashen reverse engineering
 
-A playable source port of an obscure NGage game Ashen
+Reverse engineering of an N-Gage game [Ashen](https://en.wikipedia.org/wiki/Ashen_(2004_video_game))
+- Can extract game resources
 
-## How to run?
+## Usage
 
-- Place the ROM
+### Setup
+
+1. Place the ROM
     ```sh
-    mkdir ./rom/
-    cp /path/to/packfile.dat ./rom/packfile.dat
+    mkdir rom/
+    cp /path/to/packfile.dat rom/packfile.dat
     ```
-- Parse files (output will be in `output/parsed/`)
-    ```sh
-    cargo test --release -- --ignored parse_rom_packfile
-    cargo test --release -- --ignored parse_rom_asset
-    ```
+
+### Extracting files
+
+File parsing is in test suite only, for now.
+
+- Unpack game resources
+    1. Run deflate test
+        ```sh
+        cargo test --release -- --ignored parse_rom_packfile
+        ```
+    - This will split and deflate game files into `output/deflated/` directory.
+    - Files are named with the address as they appear in the [asset table](#file-structure).
+    - Files that begin with decompression signature are automatically decompressed and named with `-deflated` suffix.
+        This automatic decompression doesn't work well for collection assets such as textures.
+- Parse resources (make sure to unpack first)
+    1. Run parsing tests
+        ```sh
+        cargo test --release -- --ignored parse_rom_asset
+        ```
+    - This will parse select few game files into `output/parsed/` directory
+    - Directions on how to opened parsed files are available [here](#file-formats-and-extraction)
+
+## Roadmap
+
+### File formats and extraction
+
+- [x] Gamma table
+    - **Purpose**
+        - Look up table for brightness when changing gamma in settings
+    - **Output format**
+        - PNG image
+- [x] Color map
+    - **Purpose**
+        - Look up table for 12-bit RGB colors, because textures are stored in 256 indexed color format
+        - There is also ghost version for when you use Ghost Vision Goggles in game
+        - There are unique color maps for monsters, pick-ups (and some other models), UI sprites, and levels
+    - **Output format**
+        - PNG image
+- [x] Model
+    - **Purpose**
+        - Texture, geometry, and model data
+    - **TO DO**
+        - Figure out what to do with pre-calculated face and vertex normals
+    - **Output format**
+        - Blender Python script that can be executed with
+            ```sh
+            blender -P /path/to/script.py
+            ```
+        - Automatically sets up Cycles material and animations as shape keys in dope sheet's shape key editor
+- [x] Sky
+    - **Purpose**
+        - Color map and skybox texture
+    - **Output format**
+        - PNG image
+- [ ] Skins
+- [ ] Level geometry
+- [ ] Level collision
+- [ ] Level waypoints
+- [ ] Sprite
+- [x] Texture
+    - **Purpose**
+        - Texture info - offsets, texture dimensions
+        - Texture data - color indeces
+    - **Output format**
+        - PNG image
+        - GIF image for animated textures
+- [x] Music and sound effects
+    - **Purpose**
+        - Sound effects
+        - Music
+    - **TO DO**
+        - Improve mixer with pitch, pan, and other sound effects
+        - Support sustained instruments
+        - Set correct tempo
+    - **Output format**
+        - WAV audio file
+- [x] String table
+    - **Purpose**
+        - Printable strings in UI
+    - **TO DO**
+        - Figure out weird non-text characters (probably for controlling in-game events)
+    - **Output format**
+        - Plain text
 
 ## File structure
 
-### Overview
-
-- File is composed out of 3 parts
-    - Header
-    - File declarations
-    - Data
-- Some data is compressed using `zlib` algorithm, some isn't
-- All data is stored in Little-endian
-
-### Header
-
-| Size (bytes) | Purpose          |
-| ------------ | ---------------- |
-| `4`          | Signature `PMAN` |
-| `4`          | Number of files  |
-| `56`         | Copyright        |
-
-### File declarations
-
-- This structure is repeated for every file in the packfile
-
-| Size (bytes) | Purpose                        |
-| ------------ | ------------------------------ |
-| `4`          | Padding? Always `00 00 00 00`  |
-| `4`          | Offset of the file in packfile |
-| `4`          | Size of the file               |
-| `4`          | Padding? Always `00 00 00 00`  |
-
-### Data
-
-- If data is compressed using zlib
-
-| Size (bytes) | Purpose                |
-| ------------ | ---------------------- |
-| `2`          | Signature `ZL`         |
-| `3`          | Size when uncompressed |
-| `*`          | Zlib stream            |
-
-- If data is not compressed, just data stream
-
-### Known file declarations
-
-**⚠️ WARNING ⚠️**
-
-I use the packfile that comes with Ashen 1.06.
-Your packfile may have different offsets to files, I didn't test with different versions.
-
-Notes:
-- **⚠️** - Unknown file
-- **🔎** - Unseen content
+> [!IMPORTANT]
+>
+> I use the packfile that comes with Ashen 1.06.
+> Your packfile may have different order, I didn't test with different versions.
 
 | Address (HEX) | Asset                           |
 |---------------|---------------------------------|
@@ -229,56 +264,15 @@ Notes:
 | `9C`          | stringtable german              |
 | `9D`          | stringtable spanish             |
 
-### Known file formats
-
-### Text bank
-
-- Starts with `9B 01 00 00`
-- The rest is encoded in UTF16
-- All text chunks are separated with `\r\r`
-- There are weird characters like `20 20` which are probably to control in-game scripts
-
-### Color palette
-
-- Is a collection of 4 byte integers
-- Every integer is the 12-bit color
-- If transformed into 256x32 image, shows colored arcs similar to the Quake color palette
-
-### Entity
-
-- Groups texture, model, and possibly animation data together
-- Textures are stored as 8 bit integers that are indeces of the color on the color palette
-
-### Music
-
-- Another collection of Zlib files concatinated together
-- Music is probably stored as OGG, instruments separate from composition
-- **TODO** Document this better
-- Segments -> files
-- 1st segment - OST
-    - 7
-    - 1
-    - 8
-    - 3
-    - 5
-    - 4
-    - 2
-    - 7
-    - victory
-    - concept
-    - death
-    - load
-    - main menu
-
 ## Discoveries
 
 - Test level for enemies
     - There is a pool with fish enemies, which I don't remember seeing in the game
-- Test level ???
+- Test level for doors
     - Collision by itself works with other level geometry, geometry by itself also works, but not together
 
 ## Resources
 
 - [Post by HoRRoR](http://www.emu-land.net/forum/index.php?topic=49753.0)
 - [Debug Windows build with symbols](https://archive.org/details/Nokia_N-Gage_Ashen_v1.0.6_Windows_Build)
-
+- [Manual](https://ia804704.us.archive.org/25/items/n-gage-user-manuals/User%20Manual%20Ashen.pdf)

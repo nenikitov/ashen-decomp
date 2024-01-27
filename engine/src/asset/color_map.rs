@@ -1,6 +1,6 @@
-use super::{Asset, AssetChunk, Extension, Kind};
+use super::{extension::*, AssetParser};
 use crate::{error, utils::nom::*};
-use std::mem;
+use std::{mem, ops::Deref};
 
 const COLORS_COUNT: usize = 256;
 const SHADES_COUNT: usize = 32;
@@ -15,6 +15,7 @@ pub struct Color {
 
 impl Color {
     pub fn from_12_bit(color: u16) -> Self {
+        // TODO(nenikitov): return result.
         assert!(color <= 0xFFF, "12 bit color is smaller than 0xFFF");
 
         let r = (color & 0xF00) >> 8;
@@ -33,68 +34,70 @@ impl Color {
     }
 }
 
-impl AssetChunk for Color {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, color) = number::le_u32(input)?;
-        let color = Self::from_12_bit(color as u16);
-        Ok((input, color))
+impl AssetParser<Wildcard> for Color {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, color) = number::le_u32(input)?;
+            Ok((input, Self::from_12_bit(color as u16)))
+        }
     }
 }
 
-// TODO(Unavailable): derive
+// TODO(Unavailable): derive ???
 pub struct ColorMap {
     // TODO(nenikitov): This probably shouldn't be `pub` and should have an
     // accessor that will hide the "ugly" internal 2D-array structure.
     pub shades: Box<[[Color; COLORS_COUNT]; SHADES_COUNT]>,
 }
 
-impl Asset for ColorMap {
-    fn kind() -> Kind {
-        Kind::ColorMap
-    }
+impl AssetParser<Pack> for ColorMap {
+    type Output = Self;
 
-    fn parse(input: &[u8], extension: Extension) -> Result<Self> {
-        fn colors(input: &[u8]) -> Result<[Color; COLORS_COUNT]> {
-            multi::count!(Color::parse)(input)
-        }
+    type Context<'ctx> = ();
 
-        match extension {
-            Extension::Dat => {
-                error::ensure_bytes_length(
-                    input,
-                    mem::size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
-                    "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
-                )?;
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            error::ensure_bytes_length(
+                input,
+                mem::size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
+                "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
+            )?;
 
-                let (input, colors) = multi::count!(colors, SHADES_COUNT)(input)?;
+            let (input, colors) = multi::count!(
+                |input| -> Result<[Color; COLORS_COUNT]> {
+                    multi::count!(Color::parser(()))(input)
+                },
+                SHADES_COUNT
+            )(input)?;
 
-                let colors = {
-                    let colors = colors.into_boxed_slice();
-                    // Ensure the original box is not dropped.
-                    let mut colors = mem::ManuallyDrop::new(colors);
-                    // SAFETY: [_] and [_; N] has the same memory layout as long
-                    // as the slice contains exactly N elements.
-                    unsafe { Box::from_raw(colors.as_mut_ptr().cast()) }
-                };
+            let colors = {
+                let colors = colors.into_boxed_slice();
+                // Ensure the original box is not dropped.
+                let mut colors = mem::ManuallyDrop::new(colors);
+                // SAFETY: [_] and [_; N] has the same memory layout as long
+                // as the slice contains exactly N elements.
+                unsafe { Box::from_raw(colors.as_mut_ptr().cast()) }
+            };
 
-                Ok((input, Self { shades: colors }))
-            }
-            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
+            Ok((input, Self { shades: colors }))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::cell::LazyCell;
-
     use super::*;
     use crate::utils::{format::*, test::*};
+    use std::cell::LazyCell;
 
     #[test]
     fn shade_works() -> eyre::Result<()> {
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x100))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x100))?.1,
             Color {
                 r: 0x11,
                 g: 0,
@@ -102,7 +105,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x011))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x011))?.1,
             Color {
                 r: 0,
                 g: 0x11,
@@ -110,7 +113,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x001))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x001))?.1,
             Color {
                 r: 0,
                 g: 0,
@@ -118,7 +121,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x220))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x220))?.1,
             Color {
                 r: 0x22,
                 g: 0x22,
@@ -126,7 +129,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x022))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x022))?.1,
             Color {
                 r: 0,
                 g: 0x22,
@@ -134,7 +137,7 @@ mod tests {
             },
         );
         assert_eq!(
-            Color::parse(&u32::to_le_bytes(0x333))?.1,
+            Color::parser(())(&u32::to_le_bytes(0x333))?.1,
             Color {
                 r: 0x33,
                 g: 0x33,
@@ -150,13 +153,30 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = ColorMap::parse(&COLOR_MAP_DATA, Extension::Dat)?;
+        let (_, color_map) = <ColorMap as AssetParser<Pack>>::parser(())(&COLOR_MAP_DATA)?;
 
         output_file(
-            parsed_file_path!("color-map/monsters.ppm"),
-            color_map.shades.as_slice().to_ppm(),
+            parsed_file_path!("color-map/monsters.png"),
+            color_map.shades.as_slice().to_png(),
         )?;
 
         Ok(())
+    }
+}
+
+pub trait PaletteTexture {
+    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>>;
+}
+
+// impl for any 2D array like data structure.
+impl<Outer: ?Sized, Inner> PaletteTexture for Outer
+where
+    Outer: Deref<Target = [Inner]>,
+    Inner: AsRef<[u8]>,
+{
+    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>> {
+        self.iter()
+            .map(|c| c.as_ref().iter().map(|c| palette[*c as usize]).collect())
+            .collect()
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    asset::{pack_info::PackInfo, AssetChunk},
+    asset::{extension::*, pack_info::PackInfo, AssetParser},
     utils::nom::*,
 };
 
@@ -7,11 +7,17 @@ pub struct SoundChunkHeader {
     pub infos: Vec<PackInfo>,
 }
 
-impl AssetChunk for SoundChunkHeader {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, count) = number::le_u32(input)?;
-        let (input, infos) = multi::count!(PackInfo::parse, count as usize)(input)?;
+impl AssetParser<Wildcard> for SoundChunkHeader {
+    type Output = Self;
 
-        Ok((input, Self { infos }))
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, count) = number::le_u32(input)?;
+            let (input, infos) = multi::count!(PackInfo::parser(()), count as usize)(input)?;
+
+            Ok((input, Self { infos }))
+        }
     }
 }

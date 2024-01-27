@@ -3,8 +3,6 @@
 mod directory;
 
 use crate::utils::nom::*;
-use flate2::read::ZlibDecoder;
-use std::io::Read;
 
 #[derive(Debug, PartialEq)]
 struct EntryHeader {
@@ -76,22 +74,10 @@ impl PackFile {
     ) -> Result<'a, Vec<EntryData>> {
         fn entry(input: &[u8], entry_header: &EntryHeader) -> EntryData {
             let bytes = &input[entry_header.offset as usize..][..entry_header.size as usize];
-            let bytes = if let [b'Z', b'L', s1, s2, s3, bytes @ ..] = bytes {
-                let size = u32::from_le_bytes([*s1, *s2, *s3, 0]);
 
-                let mut decoder = ZlibDecoder::new(bytes);
-                let mut data = Vec::with_capacity(size as usize);
-                decoder
-                    .read_to_end(&mut data)
-                    .expect("Data should be a valid zlib stream");
-                // TODO(nenikitov): Check if `data.len() == size`
-
-                data
-            } else {
-                bytes.to_vec()
-            };
-
-            EntryData { bytes }
+            EntryData {
+                bytes: bytes.to_vec(),
+            }
         }
 
         let entries = entry_headers.iter().map(|h| entry(input, h)).collect();
@@ -102,11 +88,9 @@ impl PackFile {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, path::PathBuf};
-
-    use crate::utils::test::*;
-
     use super::*;
+    use crate::utils::{compression::decompress, test::*};
+    use std::{cell::LazyCell, io, path::PathBuf};
 
     #[test]
     fn header_works() -> eyre::Result<()> {
@@ -162,16 +146,13 @@ mod tests {
                 // File 1
                 b'A', b's', b'h', b'e', b'n',
                 // File 2
-                b'Z', b'L', // Asset Zlib signature
-                0x06, 0x00, 0x00, // Stream size
-                0x78, 0xDA, // Actual Zlib signature
-                0x73, 0x2C, 0xCE, 0x48, 0xCD, 0xE3, 0x02, 0x00, 0x07, 0x80, 0x01, 0xFA,
+                b'Z', b'L',
             ],
             &[
                 EntryHeader { offset: 0, size: 5 },
                 EntryHeader {
                     offset: 5,
-                    size: 19,
+                    size: 2,
                 },
             ],
         )?;
@@ -183,7 +164,7 @@ mod tests {
                     bytes: b"Ashen".to_vec(),
                 },
                 EntryData {
-                    bytes: b"Ashen\n".to_vec(),
+                    bytes: b"ZL".to_vec(),
                 }
             ]
         );
@@ -200,15 +181,26 @@ mod tests {
     fn parse_rom_packfile() -> eyre::Result<()> {
         let (_, pack_file) = PackFile::new(&ROM_DATA)?;
 
-        let mut output_dir = PathBuf::from(workspace_file_path!(DEFLATED_PATH));
+        let output_dir = PathBuf::from(workspace_file_path!(DEFLATED_PATH));
 
         pack_file
             .entries
             .iter()
             .enumerate()
-            .try_for_each(|(i, entry)| {
-                let file = output_dir.join(format!("{i:0>2X}.dat"));
-                output_file(file, &entry.bytes)
+            .try_for_each(|(i, entry)| -> io::Result<()> {
+                let compressed = &entry.bytes;
+                let decompressed = &decompress(&entry.bytes);
+
+                output_file(output_dir.join(format!("{i:0>2X}.dat")), &entry.bytes)?;
+
+                if compressed != decompressed {
+                    output_file(
+                        output_dir.join(format!("{i:0>2X}-deflated.dat")),
+                        &decompress(&entry.bytes),
+                    )?;
+                }
+
+                Ok(())
             })?;
 
         Ok(())

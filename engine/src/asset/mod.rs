@@ -1,61 +1,79 @@
-use crate::utils::nom::Result;
-
-mod pack_info;
-
 pub mod color_map;
 pub mod gamma_table;
+pub mod model;
 pub mod pack_file;
+mod pack_info;
 pub mod skybox;
 pub mod sound;
 pub mod string_table;
+pub mod texture;
 
-#[derive(Clone, Copy, Debug)]
-pub enum Kind {
-    GammaTable,
-    ColorMap,
-    SoundCollection,
-    StringTable,
-    Skybox,
+use crate::utils::nom::{Input, Result};
+
+/// Definition for all available extensions that the engine can parse.
+pub mod extension {
+    #[sealed::sealed]
+    pub trait Extension: AsRef<str> + for<'str> TryFrom<&'str str> {}
+
+    #[derive(Debug, thiserror::Error)]
+    #[error("The provided extension is invalid '{}'", self.0)]
+    pub struct ExtensionMismatchError(String);
+
+    macro_rules! impl_extension {
+        ($(#[$docs:meta])+ $name:ident => $ext:literal) => {
+            $(#[$docs])+
+            pub struct $name;
+
+            impl AsRef<str> for $name {
+                fn as_ref(&self) -> &str {
+                    $ext
+                }
+            }
+
+            impl TryFrom<&str> for $name {
+                type Error = ExtensionMismatchError;
+
+                fn try_from(value: &str) -> Result<Self, Self::Error> {
+                    if value == $ext {
+                        Ok(Self)
+                    } else {
+                        Err(ExtensionMismatchError(value.to_owned()))
+                    }
+                }
+            }
+
+            #[sealed::sealed]
+            impl Extension for $name {}
+        };
+    }
+
+    impl_extension!(
+        /// Wildcard
+        Wildcard => "*"
+    );
+
+    impl_extension!(
+        /// Extension that implies that the asset comes from ashen's files (packfile).
+        Pack => "pack"
+    );
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub enum Extension {
-    #[default]
-    Dat,
-    Custom(String),
-}
-
-pub trait Asset
+pub trait AssetParser<Ext>
 where
     Self: Sized,
 {
-    // TODO(Unavailable): Replace `kind()` with:
-    //
-    // ```
-    // // rename to id?
-    // fn kind() -> std::any::TypeId {
-    //     std::any::TypeId::of::<Self>()
-    // }
-    // ```
-    //
-    // the only disadvantage is that `Self` also needs to be `'static` which
-    // prevents us for implementing `Asset` for `&`-ed types. Right now is not
-    // clear that we might need that, so I would hold this changes until then.
-
-    /// Returns this Asset's kind.
-    fn kind() -> Kind;
-
-    /// Tries to parse this `Asset`'s kind.
+    /// The final value that would be returned by [`parser`].
     ///
-    /// # Errors
+    /// _Most_ of the time this would be equal to `Self`.
     ///
-    /// If the `input` is invalid for the provided `extension`.
-    fn parse(input: &[u8], extension: Extension) -> Result<Self>;
-}
+    /// A hypothetical `TextureCollection` would return `Vec<Texture>` as its output.
+    ///
+    /// [`parser`]: Self::parser
+    type Output;
 
-pub(crate) trait AssetChunk
-where
-    Self: Sized,
-{
-    fn parse(input: &[u8]) -> Result<Self>;
+    /// Extra information passed down to the parser.
+    type Context<'ctx>;
+
+    /// Generates a new parser with the provided context.
+    fn parser(context: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output>;
 }

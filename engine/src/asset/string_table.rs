@@ -1,5 +1,5 @@
-use super::{Asset, Extension, Kind};
-use crate::{error, utils::nom::*};
+use super::{extension::*, AssetParser};
+use crate::utils::nom::*;
 
 pub struct StringTable {
     table: Vec<String>,
@@ -14,21 +14,18 @@ fn utf_16_string(input: &[u8]) -> Result<String> {
     })
 }
 
-impl Asset for StringTable {
-    fn kind() -> Kind {
-        Kind::StringTable
-    }
+impl AssetParser<Pack> for StringTable {
+    type Output = Self;
 
-    fn parse(input: &[u8], extension: super::Extension) -> Result<Self> {
-        match extension {
-            Extension::Dat => {
-                let (input, count) = number::le_u32(input)?;
-                // TODO(Unavailable): Find out what the "catholic" characters are.
-                let (input, table) = multi::count!(utf_16_string, count as usize)(input)?;
+    type Context<'ctx> = ();
 
-                Ok((input, StringTable { table }))
-            }
-            _ => Err(error::ParseError::unsupported_extension(input, extension).into()),
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, count) = number::le_u32(input)?;
+            // TODO(Unavailable): Find out what the "catholic" characters are.
+            let (input, table) = multi::count!(utf_16_string, count as usize)(input)?;
+
+            Ok((input, StringTable { table }))
         }
     }
 }
@@ -39,12 +36,12 @@ mod tests {
     use crate::utils::test::*;
     use std::cell::LazyCell;
 
-    const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98.dat");
+    const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98-deflated.dat");
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, string_table) = StringTable::parse(&STRING_TABLE_DATA, Extension::Dat)?;
+        let (_, string_table) = <StringTable as AssetParser<Pack>>::parser(())(&STRING_TABLE_DATA)?;
 
         output_file(
             parsed_file_path!("strings/english-uk.txt"),

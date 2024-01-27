@@ -1,10 +1,9 @@
+use super::{mixer::SoundEffect, t_instrument::*, uncompress};
 use crate::{
-    asset::{sound::dat::mixer::Mixer, AssetChunk},
+    asset::{extension::*, sound::dat::mixer::Mixer, AssetParser},
     utils::nom::*,
 };
 use itertools::Itertools;
-
-use super::{mixer::SoundEffect, t_instrument::*, uncompress};
 
 #[derive(Debug)]
 pub struct TSong {
@@ -15,7 +14,7 @@ pub struct TSong {
     /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
     patterns: Vec<Vec<Vec<Option<TPattern>>>>,
     instruments: Vec<TInstrument>,
-    samples: Vec<TSampleParsed>,
+    samples: Vec<TSample>,
 }
 
 impl TSong {
@@ -56,83 +55,79 @@ impl TSong {
     }
 }
 
-impl AssetChunk for TSong {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (header, pointers) = {
-            let (input, header) = TSongHeader::parse(input)?;
-            let (input, pointers) = TSongPointers::parse(input)?;
-            (header, pointers)
-        };
+impl AssetParser<Wildcard> for TSong {
+    type Output = Self;
 
-        let (_, orders) = multi::count!(number::le_u8, header.song_length as usize)(
-            &input[pointers.orders as usize..],
-        )?;
+    type Context<'ctx> = ();
 
-        let patterns: Vec<_> = {
-            let (_, lengths) = multi::count!(number::le_u8, header.pattern_count as usize)(
-                &input[pointers.pattern_lengths as usize..],
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (header, pointers) = {
+                let (input, header) = TSongHeader::parser(())(input)?;
+                let (input, pointers) = TSongPointers::parser(())(input)?;
+                (header, pointers)
+            };
+
+            let (_, orders) = multi::count!(number::le_u8, header.song_length as usize)(
+                &input[pointers.orders as usize..],
             )?;
 
-            multi::count!(number::le_u32, header.pattern_count as usize)(
-                &input[pointers.patterns as usize..],
-            )?
-            .1
-            .into_iter()
-            .map(|position| position + pointers.pattern_data)
-            .map(|position| &input[position as usize..])
-            .zip(lengths)
-            .map(|(input, length)| {
-                multi::count!(
-                    <Option<TPattern>>::parse,
-                    header.channel_count as usize * length as usize
-                )(input)
-            })
-            .map(|patterns| patterns.map(|(_, p)| p))
-            .map(|patterns| {
-                patterns.map(|p| -> Vec<Vec<_>> {
-                    p.into_iter()
-                        .chunks(header.channel_count as usize)
-                        .into_iter()
-                        .map(Iterator::collect)
-                        .collect()
+            let patterns: Vec<_> = {
+                let (_, lengths) = multi::count!(number::le_u8, header.pattern_count as usize)(
+                    &input[pointers.pattern_lengths as usize..],
+                )?;
+
+                multi::count!(number::le_u32, header.pattern_count as usize)(
+                    &input[pointers.patterns as usize..],
+                )?
+                .1
+                .into_iter()
+                .map(|position| position + pointers.pattern_data)
+                .map(|position| &input[position as usize..])
+                .zip(lengths)
+                .map(|(input, length)| {
+                    multi::count!(
+                        <Option<TPattern>>::parser(()),
+                        header.channel_count as usize * length as usize
+                    )(input)
                 })
-            })
-            .collect::<std::result::Result<_, _>>()?
-        };
+                .map(|patterns| patterns.map(|(_, p)| p))
+                .map(|patterns| {
+                    patterns.map(|p| -> Vec<Vec<_>> {
+                        p.into_iter()
+                            .chunks(header.channel_count as usize)
+                            .into_iter()
+                            .map(Iterator::collect)
+                            .collect()
+                    })
+                })
+                .collect::<std::result::Result<_, _>>()?
+            };
 
-        let (_, instruments) = multi::count!(TInstrument::parse, header.instrument_count as usize)(
-            &input[pointers.instruments as usize..],
-        )?;
+            let (_, instruments) = multi::count!(
+                TInstrument::parser(()),
+                header.instrument_count as usize
+            )(&input[pointers.instruments as usize..])?;
 
-        let samples: Vec<_> = {
-            let data = uncompress(&input[pointers.sample_data as usize..]);
+            let samples = uncompress(&input[pointers.sample_data as usize..]);
+            let (_, samples) = multi::count!(
+                TSample::parser(&samples),
+                header.sample_count as usize
+            )(&input[pointers.samples as usize..])?;
 
-            multi::count!(TSample::parse, header.sample_count as usize)(
-                &input[pointers.samples as usize..],
-            )?
-            .1
-            .into_iter()
-            .map(|sample| {
-                TSampleParsed::parse(
-                    &sample,
-                    &data[sample.sample as usize..sample.loop_end as usize],
-                )
-            })
-            .collect()
-        };
-
-        Ok((
-            input,
-            Self {
-                bpm: header.bpm,
-                speed: header.speed,
-                restart_order: header.restart_order,
-                orders,
-                patterns,
-                instruments,
-                samples,
-            },
-        ))
+            Ok((
+                input,
+                Self {
+                    bpm: header.bpm,
+                    speed: header.speed,
+                    restart_order: header.restart_order,
+                    orders,
+                    patterns,
+                    instruments,
+                    samples,
+                },
+            ))
+        }
     }
 }
 
@@ -148,30 +143,36 @@ struct TSongHeader {
     bpm: u8,
 }
 
-impl AssetChunk for TSongHeader {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, song_length) = number::le_u8(input)?;
-        let (input, restart_order) = number::le_u8(input)?;
-        let (input, channel_count) = number::le_u8(input)?;
-        let (input, pattern_count) = number::le_u8(input)?;
-        let (input, instrument_count) = number::le_u8(input)?;
-        let (input, sample_count) = number::le_u8(input)?;
-        let (input, speed) = number::le_u8(input)?;
-        let (input, bpm) = number::le_u8(input)?;
+impl AssetParser<Wildcard> for TSongHeader {
+    type Output = Self;
 
-        Ok((
-            input,
-            Self {
-                song_length,
-                restart_order,
-                channel_count,
-                pattern_count,
-                instrument_count,
-                sample_count,
-                speed,
-                bpm,
-            },
-        ))
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, song_length) = number::le_u8(input)?;
+            let (input, restart_order) = number::le_u8(input)?;
+            let (input, channel_count) = number::le_u8(input)?;
+            let (input, pattern_count) = number::le_u8(input)?;
+            let (input, instrument_count) = number::le_u8(input)?;
+            let (input, sample_count) = number::le_u8(input)?;
+            let (input, speed) = number::le_u8(input)?;
+            let (input, bpm) = number::le_u8(input)?;
+
+            Ok((
+                input,
+                Self {
+                    song_length,
+                    restart_order,
+                    channel_count,
+                    pattern_count,
+                    instrument_count,
+                    sample_count,
+                    speed,
+                    bpm,
+                },
+            ))
+        }
     }
 }
 
@@ -186,28 +187,34 @@ struct TSongPointers {
     sample_data: u32,
 }
 
-impl AssetChunk for TSongPointers {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, orders) = number::le_u32(input)?;
-        let (input, patterns) = number::le_u32(input)?;
-        let (input, pattern_lengths) = number::le_u32(input)?;
-        let (input, pattern_data) = number::le_u32(input)?;
-        let (input, instruments) = number::le_u32(input)?;
-        let (input, samples) = number::le_u32(input)?;
-        let (input, sample_data) = number::le_u32(input)?;
+impl AssetParser<Wildcard> for TSongPointers {
+    type Output = Self;
 
-        Ok((
-            input,
-            Self {
-                orders,
-                patterns,
-                pattern_lengths,
-                pattern_data,
-                instruments,
-                samples,
-                sample_data,
-            },
-        ))
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, orders) = number::le_u32(input)?;
+            let (input, patterns) = number::le_u32(input)?;
+            let (input, pattern_lengths) = number::le_u32(input)?;
+            let (input, pattern_data) = number::le_u32(input)?;
+            let (input, instruments) = number::le_u32(input)?;
+            let (input, samples) = number::le_u32(input)?;
+            let (input, sample_data) = number::le_u32(input)?;
+
+            Ok((
+                input,
+                Self {
+                    orders,
+                    patterns,
+                    pattern_lengths,
+                    pattern_data,
+                    instruments,
+                    samples,
+                    sample_data,
+                },
+            ))
+        }
     }
 }
 
@@ -221,37 +228,49 @@ struct TPattern {
     effect_2: u16,
 }
 
-impl AssetChunk for TPattern {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, flags) = number::le_u8(input)?;
-        let (input, note) = number::le_u8(input)?;
-        let (input, instrument) = number::le_u8(input)?;
-        let (input, volume) = number::le_u8(input)?;
-        let (input, effect_1) = number::le_u16(input)?;
-        let (input, effect_2) = number::le_u16(input)?;
+impl AssetParser<Wildcard> for TPattern {
+    type Output = Self;
 
-        Ok((
-            input,
-            Self {
-                flags,
-                note: (note != 0).then_some(note),
-                instrument,
-                volume,
-                effect_1,
-                effect_2,
-            },
-        ))
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, flags) = number::le_u8(input)?;
+            let (input, note) = number::le_u8(input)?;
+            let (input, instrument) = number::le_u8(input)?;
+            let (input, volume) = number::le_u8(input)?;
+            let (input, effect_1) = number::le_u16(input)?;
+            let (input, effect_2) = number::le_u16(input)?;
+
+            Ok((
+                input,
+                Self {
+                    flags,
+                    note: (note != 0).then_some(note),
+                    instrument,
+                    volume,
+                    effect_1,
+                    effect_2,
+                },
+            ))
+        }
     }
 }
 
-impl AssetChunk for Option<TPattern> {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (after_flags, flags) = number::le_u8(input)?;
-        if (flags & 0x20) != 0 {
-            Ok((after_flags, None))
-        } else {
-            let (input, pattern) = TPattern::parse(input)?;
-            Ok((input, Some(pattern)))
+impl AssetParser<Wildcard> for Option<TPattern> {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (after_flags, flags) = number::le_u8(input)?;
+            if (flags & 0x20) != 0 {
+                Ok((after_flags, None))
+            } else {
+                let (input, pattern) = TPattern::parser(())(input)?;
+                Ok((input, Some(pattern)))
+            }
         }
     }
 }

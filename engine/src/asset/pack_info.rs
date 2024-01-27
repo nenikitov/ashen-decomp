@@ -1,4 +1,4 @@
-use super::AssetChunk;
+use super::{extension::*, AssetParser};
 use crate::utils::nom::*;
 use std::ops::Index;
 
@@ -8,17 +8,23 @@ pub struct PackInfo {
     pub size: u32,
 }
 
-impl AssetChunk for PackInfo {
-    fn parse(input: &[u8]) -> Result<Self> {
-        let (input, offset) = number::le_u32(input)?;
+impl AssetParser<Wildcard> for PackInfo {
+    type Output = Self;
 
-        let (input, size) = number::le_u32(input)?;
+    type Context<'ctx> = ();
 
-        let (input, padding) = number::le_u32(input)?;
-        // TODO(nenikitov): Make it return `Result`
-        assert_eq!(padding, 0);
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, offset) = number::le_u32(input)?;
 
-        Ok((input, PackInfo { offset, size }))
+            let (input, size) = number::le_u32(input)?;
+
+            let (input, padding) = number::le_u32(input)?;
+            // TODO(nenikitov): Make it return `Result`
+            assert_eq!(padding, 0);
+
+            Ok((input, PackInfo { offset, size }))
+        }
     }
 }
 

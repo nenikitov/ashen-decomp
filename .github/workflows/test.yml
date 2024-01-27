@@ -1,14 +1,14 @@
-permissions:
-  contents: read
+name: test
 on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 # Spend CI time only on latest ref: https://github.com/jonhoo/rust-ci-conf/pull/5
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
-name: test
 jobs:
   required:
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
           submodules: true
       - name: Restore cached downloaded game
         id: cache-ashen
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: rom
           key: ${{ runner.os }}-ashen
@@ -54,19 +54,21 @@ jobs:
         run: cargo test --locked -- --ignored parse_rom_packfile
       - name: ROM - Assets
         run: cargo test --locked -- --ignored parse_rom_asset
+        env:
+          SKIP_TEST_WRITE: true
   minimal:
     runs-on: ubuntu-latest
-    name: ubuntu / nightly / minimal-versions
+    name: ubuntu / nightly / direct-minimal-versions
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install nightly for -Zminimal-versions
+      - name: Install nightly for -Z direct-minimal-versions
         uses: dtolnay/rust-toolchain@nightly
       - name: rustup default nightly
         run: rustup default nightly
-      - name: cargo update -Zminimal-versions
-        run: cargo update -Zminimal-versions
+      - name: cargo update -Z direct-minimal-versions
+        run: cargo update -Z direct-minimal-versions
       - name: cargo test
         run: cargo test --locked --all-features --all-targets
   os-check:
