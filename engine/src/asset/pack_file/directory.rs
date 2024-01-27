@@ -1,40 +1,71 @@
 use super::PackFile;
-use crate::{asset::Asset, directory::Directory};
-use std::collections::HashMap;
+use crate::{
+    asset::{
+        color_map::ColorMap, extension::Wildcard, gamma_table::GammaTable, model::Model,
+        skybox::Skybox, string_table::StringTable, texture::dat::texture::Texture, AssetParser,
+    },
+    directory::Directory,
+};
 
-macro_rules! insert_asset {
-    ($hashmap:ident[$key:literal] = $entry:expr) => {
-        let key = ::std::string::String::from($key);
-        let entry = ::std::mem::take(&mut $entry);
-        $hashmap.insert(key, entry.bytes);
-    };
-}
+use std::{
+    any::TypeId,
+    io::{ErrorKind as IoErrorKind, Result as IoResult},
+    path::Path,
+};
+
+struct Level;
+struct Sound;
 
 pub struct PackFileDirectory {
-    assets: HashMap<String, Vec<u8>>,
+    gamma_table: GammaTable,
+    color_maps: Box<[ColorMap]>,
+    models: Box<[Model]>,
+    levels: Box<[Level]>,
+    textures: Box<[Texture]>,
+    sounds: Box<[Sound]>,
+    strings: Box<[StringTable]>,
 }
 
 impl PackFileDirectory {
     pub fn new(packfile: PackFile) -> Self {
-        // TODO(Unavailable): with_capacity();
-        let mut assets = HashMap::new();
-        let mut entries = packfile.entries;
-
-        insert_asset!(assets["gamma_table"] = entries[0x00]);
-
-        Self { assets }
+        todo!()
     }
 }
 
 impl Directory for PackFileDirectory {
-    fn get<A: Asset>(&self, id: &str) -> A {
-        // let bytes = self.assets.get(id).expect("id was found");
-        // A::parse(bytes, Default::default())
+    fn get<A, P>(&self, path: P) -> IoResult<A>
+    where
+        A: AssetParser<Wildcard>,
+        P: AsRef<Path>,
+    {
+        // let entry = path.as_ref().to_str().ok_or(IoErrorKind::InvalidFilename)?;
+        // let entry = self.assets.get(entry).ok_or(IoErrorKind::NotFound)?;
+        //
+        // match A::parse(entry, Extension::Dat) {
+        //     Ok((_input, asset)) => Ok(asset),
+        //     Err(err) => Err(IoError::new(IoErrorKind::InvalidData, err)),
+        // }
+
         todo!()
     }
 
-    fn get_all<A: Asset>(&self) -> Vec<A> {
-        todo!()
+    // TODO(Unavailable): Return something that implements `IntoIterator<Item = A>` so wether a user
+    // passes `Sound` or `SoundCollection` it could directly return a `SoundCollection` regardless.
+    fn all<A>(&self) -> IoResult<Vec<A>>
+    where
+        A: AssetParser<Wildcard> + 'static,
+    {
+        match TypeId::of::<A>() {
+            id if TypeId::of::<GammaTable>() == id => todo!(),
+            id if TypeId::of::<ColorMap>() == id => todo!(),
+            // id if TypeId::of::<Sound>() == id => todo!(),
+            id if TypeId::of::<StringTable>() == id => todo!(),
+            id if TypeId::of::<Skybox>() == id => todo!(),
+            id if TypeId::of::<Model>() == id => todo!(),
+            // id if TypeId::of::<Texture>() == id => todo!(),
+            // id if TypeId::of::<Level>() == id => todo!(),
+            _ => todo!(),
+        }
     }
 }
 
