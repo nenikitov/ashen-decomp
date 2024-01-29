@@ -3,18 +3,19 @@ use crate::{
     asset::{extension::*, sound::dat::mixer::Mixer, AssetParser},
     utils::nom::*,
 };
+use bitflags::bitflags;
 use itertools::Itertools;
 
 #[derive(Debug)]
 pub struct TSong {
-    bpm: u8,
-    speed: u8,
-    restart_order: u8,
-    orders: Vec<u8>,
+    pub bpm: u8,
+    pub speed: u8,
+    pub restart_order: u8,
+    pub orders: Vec<u8>,
     /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
-    patterns: Vec<Vec<Vec<Option<TPattern>>>>,
-    instruments: Vec<TInstrument>,
-    samples: Vec<TSample>,
+    pub patterns: Vec<Vec<Vec<Option<TPattern>>>>,
+    pub instruments: Vec<TInstrument>,
+    pub samples: Vec<TSample>,
 }
 
 impl TSong {
@@ -28,7 +29,7 @@ impl TSong {
                 i += 1;
                 for event in row {
                     if let Some(entry) = event
-                        && let Some(note) = entry.note
+                        && let NoteState::On(note) = entry.note
                         // TODO(nenikitov): Find out what special instrument `0xFF` means
                         && entry.instrument != 0xFF
                     {
@@ -219,13 +220,158 @@ impl AssetParser<Wildcard> for TSongPointers {
 }
 
 #[derive(Debug)]
-struct TPattern {
-    flags: u8,
-    note: Option<u8>,
+pub enum NoteState {
+    None,
+    On(u8),
+    Off,
+}
+
+impl From<u8> for NoteState {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => NoteState::None,
+            1..=95 => NoteState::On(value),
+            96 => NoteState::Off,
+            _ => unreachable!("Note should be in range 0-96"),
+        }
+    }
+}
+
+bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    pub struct TPatternFlags: u8 {
+        const _ = 1 << 0;
+        const _ = 1 << 1;
+        const _ = 1 << 2;
+        const DoEffect1 = 1 << 3;
+        const DoEffect2 = 1 << 4;
+    }
+}
+
+#[derive(Debug)]
+pub enum PatternEffectKind {
+    None,
+    Arpegio,
+    PortaUp,
+    PortaDown,
+    PortaTone,
+    Vibrato,
+    PortaVolume,
+    VibratoVolume,
+    Tremolo,
+    Pan,
+    SampleOffset,
+    VolumeSlide,
+    PositionJump,
+    Volume,
+    Break,
+    Speed,
+    VolumeGlobal,
+    Sync,
+    PortaFineUp,
+    PortaFineDown,
+    NoteRetrigger,
+    VolumeSlideFineUp,
+    VolumeSlideFineDown,
+    NoteCut,
+    NoteDelay,
+    PatternDelay,
+    PortaExtraFineUp,
+    PortaExtraFineDown,
+    // TODO(nenikitov): Verify if it's referring to surround sound
+    SoundControlSurroundOff,
+    SoundControlSurroundOn,
+    SoundControlReverbOn,
+    SoundControlReverbOff,
+    SoundControlCentre,
+    SoundControlQuad,
+    FilterGlobal,
+    FilterLocal,
+    PlayForward,
+    PlayBackward,
+}
+
+impl From<u8> for PatternEffectKind {
+    fn from(value: u8) -> Self {
+        match value {
+            0x00 => Self::Arpegio,
+            0x01 => Self::PortaUp,
+            0x02 => Self::PortaDown,
+            0x03 => Self::PortaTone,
+            0x04 => Self::Vibrato,
+            0x05 => Self::PortaVolume,
+            0x06 => Self::VibratoVolume,
+            0x07 => Self::Tremolo,
+            0x08 => Self::Pan,
+            0x09 => Self::SampleOffset,
+            0x0A => Self::VolumeSlide,
+            0x0B => Self::PositionJump,
+            0x0C => Self::Volume,
+            0x0D => Self::Break,
+            0x0E => Self::Speed,
+            0x0F => Self::VolumeGlobal,
+            0x14 => Self::Sync,
+            0x15 => Self::PortaFineUp,
+            0x16 => Self::PortaFineDown,
+            0x1D => Self::NoteRetrigger,
+            0x1E => Self::VolumeSlideFineUp,
+            0x1F => Self::VolumeSlideFineDown,
+            0x20 => Self::NoteCut,
+            0x21 => Self::NoteDelay,
+            0x22 => Self::PatternDelay,
+            0x24 => Self::PortaExtraFineUp,
+            0x25 => Self::PortaExtraFineDown,
+            0x2E => Self::SoundControlSurroundOn,
+            0x2F => Self::SoundControlSurroundOff,
+            0x30 => Self::SoundControlReverbOn,
+            0x31 => Self::SoundControlReverbOff,
+            0x32 => Self::SoundControlCentre,
+            0x33 => Self::SoundControlQuad,
+            0x34 => Self::FilterGlobal,
+            0x35 => Self::FilterLocal,
+            0x35 => Self::FilterLocal,
+            0x36 => Self::PlayForward,
+            0x37 => Self::PlayBackward,
+            _ => Self::None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PatternEffect {
+    pub kind: PatternEffectKind,
+    pub value: u8,
+}
+
+impl AssetParser<Wildcard> for PatternEffect {
+    type Output = PatternEffect;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, kind) = number::le_u8(input)?;
+            let (input, value) = number::le_u8(input)?;
+
+            Ok((
+                input,
+                Self {
+                    kind: kind.into(),
+                    value,
+                },
+            ))
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TPattern {
+    flags: TPatternFlags,
+    note: NoteState,
     instrument: u8,
     volume: u8,
-    effect_1: u16,
-    effect_2: u16,
+    effect_1: PatternEffect,
+    effect_2: PatternEffect,
 }
 
 impl AssetParser<Wildcard> for TPattern {
@@ -239,14 +385,15 @@ impl AssetParser<Wildcard> for TPattern {
             let (input, note) = number::le_u8(input)?;
             let (input, instrument) = number::le_u8(input)?;
             let (input, volume) = number::le_u8(input)?;
-            let (input, effect_1) = number::le_u16(input)?;
-            let (input, effect_2) = number::le_u16(input)?;
+            let (input, effect_1) = PatternEffect::parser(())(input)?;
+            let (input, effect_2) = PatternEffect::parser(())(input)?;
 
             Ok((
                 input,
                 Self {
-                    flags,
-                    note: (note != 0).then_some(note),
+                    // TODO(nenikitov): Use `Result`
+                    flags: TPatternFlags::from_bits(flags).expect("Flags should be valid"),
+                    note: note.into(),
                     instrument,
                     volume,
                     effect_1,

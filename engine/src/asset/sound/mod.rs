@@ -92,6 +92,16 @@ mod tests {
                 )
             })?;
 
+        // TODO(nenikitov): Remove this debug code
+        let fail_music = sounds
+            .iter()
+            .filter_map(|s| match s {
+                Sound::Song(s) => Some(s),
+                Sound::Effect(_) => None,
+            })
+            .collect::<Vec<_>>()[0xA];
+        dbg!(&fail_music.patterns[0]);
+
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
 
         sounds
