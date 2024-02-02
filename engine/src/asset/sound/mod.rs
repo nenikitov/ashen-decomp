@@ -101,7 +101,7 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0xC];
+            .collect::<Vec<_>>()[0xA];
         dbg!(&fail_music.patterns[0]);
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));

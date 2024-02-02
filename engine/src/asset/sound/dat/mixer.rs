@@ -1,3 +1,5 @@
+use bitflags::Flags;
+
 use crate::asset::sound::dat::t_song::{NoteState, PatternEffectKind, TPatternFlags};
 
 use super::{
@@ -56,23 +58,15 @@ impl TSongMixerUtils for TSong {
                     let channel = &mut channels[c];
 
                     // Process note
-                    match event.note {
-                        NoteState::None => {}
-                        NoteState::On(_) => {
-                            // TODO(nenikitov): This will become huge with more effects, this will need to be refactored
-                            channel.note = event.note;
-                            // TODO(nenikitov): Find out what `instrument` 255 really means instead of skipping it
-                            if event.instrument != 255 {
-                                channel.instrument =
-                                    Some(&self.instruments[event.instrument as usize]);
-                            }
-                            channel.volume = event.volume as f32 / 255.0;
-                            channel.sample_posion = 0;
-                        }
-                        NoteState::Off => {
-                            // TODO(nenikitov): This is repeated from `NoteState::On`, somehow refactor
-                            channel.note = event.note;
-                        }
+                    if event.flags.contains(TPatternFlags::ChangeNote) {
+                        channel.note = event.note;
+                    }
+                    if event.flags.contains(TPatternFlags::ChangeInstrument) {
+                        channel.instrument = Some(&self.instruments[event.instrument as usize]);
+                        channel.sample_posion = SamplePosition::default();
+                    }
+                    if event.flags.contains(TPatternFlags::ChangeVolume) {
+                        channel.volume = event.volume as f32 / u8::MAX as f32;
                     }
 
                     // Process effects
@@ -127,10 +121,22 @@ impl TSongMixerUtils for TSong {
     }
 }
 
+#[derive(PartialEq)]
+enum SamplePosition {
+    Beginning,
+    Loop(isize),
+}
+
+impl Default for SamplePosition {
+    fn default() -> Self {
+        Self::Beginning
+    }
+}
+
 #[derive(Default)]
 struct Channel<'a> {
     instrument: Option<&'a TInstrument>,
-    sample_posion: usize,
+    sample_posion: SamplePosition,
 
     volume: f32,
     note: NoteState,
@@ -139,20 +145,35 @@ struct Channel<'a> {
 impl<'a> Channel<'a> {
     // TODO(nenikitov): Don not pass `samples`, it should somehow be stored in the instrument
     fn tick(&mut self, duration: usize, samples: &Vec<TSample>) -> Sample {
-        if let Some(instrument) = self.instrument
-            && let NoteState::On(note) = self.note
-        {
-            let sample = samples[instrument.samples[note as usize] as usize]
-                .sample_full()
-                .to_vec()
-                .volume(self.volume);
+        if let Some(instrument) = self.instrument {
+            let mut m = Mixer::new();
+            let mut offset = 0;
 
-            self.note = NoteState::Off;
+            let sample = &samples[instrument.samples[note as usize] as usize];
 
-            sample
+            if let NoteState::On(note) = self.note {
+                if self.sample_posion == SamplePosition::Beginning {
+                    let sample = sample.sample_beginning();
+
+                    m.add_sample(&self.treat_sample(sample), 0);
+
+                    // Next sample part that should be played is loop part
+                    self.sample_posion =
+                        SamplePosition::Loop(duration as isize - sample.len() as isize);
+                    offset = sample.len();
+                }
+
+                self.note = NoteState::None;
+            }
+
+            todo!()
         } else {
             vec![]
         }
+    }
+
+    fn treat_sample(&self, sample: &[SamplePoint]) -> Sample {
+        sample.to_vec().volume(self.volume)
     }
 }
 
@@ -169,7 +190,7 @@ impl Mixer {
         }
     }
 
-    pub fn add_sample(&mut self, sample: &Sample, offset: usize) {
+    pub fn add_sample(&mut self, sample: &[i16], offset: usize) {
         let new_len = offset + sample.len();
         if new_len > self.samples.len() {
             self.samples.resize(new_len, 0);

@@ -2,10 +2,18 @@ use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
 };
+use bitflags::bitflags;
+
+bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    pub struct TInstrumentFlags: u8 {
+        const _ = 1 << 0;
+    }
+}
 
 #[derive(Debug)]
 pub struct TInstrument {
-    pub flags: u8,
+    pub flags: TInstrumentFlags,
 
     pub volume_begin: u16,
     pub volume_end: u16,
@@ -67,7 +75,7 @@ impl AssetParser<Wildcard> for TInstrument {
             Ok((
                 input,
                 Self {
-                    flags,
+                    flags: TInstrumentFlags::from_bits(flags).expect("Flags should be valid"),
                     volume_begin,
                     volume_end,
                     volume_sustain,
@@ -90,9 +98,17 @@ impl AssetParser<Wildcard> for TInstrument {
     }
 }
 
+// TODO(nenikitov): I'm not sure about this flag
+bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    pub struct TSampleFlags: u8 {
+        const IsLooping = 1 << 0;
+    }
+}
+
 #[derive(Debug)]
 pub struct TSample {
-    pub flags: u8,
+    pub flags: TSampleFlags,
     pub volume: u8,
     pub panning: u8,
     pub align: u8,
@@ -117,14 +133,14 @@ impl AssetParser<Wildcard> for TSample {
             let (input, loop_end) = number::le_u32(input)?;
             let (input, sample_offset) = number::le_u32(input)?;
 
-            // The game uses offset for `i16`, but it's much more conventient to just use indeces
+            // The game uses offset for `i16`, but it's much more convenient to just use indices
             let loop_end = loop_end / 2;
             let sample_offset = sample_offset / 2;
 
             Ok((
                 input,
                 Self {
-                    flags,
+                    flags: TSampleFlags::from_bits(flags).expect("Flags should be valid"),
                     volume,
                     panning,
                     align,
@@ -142,7 +158,15 @@ impl TSample {
         &self.data
     }
 
+    pub fn sample_beginning(&self) -> &[i16] {
+        &self.data[..self.data.len() - self.loop_length as usize]
+    }
+
     pub fn sample_loop(&self) -> &[i16] {
-        &self.data[self.data.len() - 1 - self.loop_length as usize..]
+        if self.loop_length != 0 {
+            &self.data[self.data.len() - self.loop_length as usize..]
+        } else {
+            &[]
+        }
     }
 }

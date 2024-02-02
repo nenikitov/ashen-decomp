@@ -203,9 +203,9 @@ impl From<u8> for NoteState {
 bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct TPatternFlags: u8 {
-        const _ = 1 << 0;
-        const _ = 1 << 1;
-        const _ = 1 << 2;
+        const ChangeNote = 1 << 0;
+        const ChangeInstrument = 1 << 1;
+        const ChangeVolume = 1 << 2;
         const DoEffect1 = 1 << 3;
         const DoEffect2 = 1 << 4;
     }
