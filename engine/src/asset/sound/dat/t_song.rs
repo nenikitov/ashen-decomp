@@ -41,7 +41,7 @@ impl TSong {
                             let sample = &self.samples[sample as usize];
                             let data = sample.data.clone();
 
-                            m.add_samples(&data.volume(Self::volume(sample.volume)), i * 1000);
+                            m.add_sample(&data.volume(Self::volume(sample.volume)), i * 1000);
                         }
                     }
                 }
@@ -219,8 +219,9 @@ impl AssetParser<Wildcard> for TSongPointers {
     }
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum NoteState {
+    #[default]
     None,
     On(u8),
     Off,
@@ -337,6 +338,7 @@ impl From<u8> for PatternEffectKind {
     }
 }
 
+// TODO(nenikitov): Use enum with associated value instead of a struct
 #[derive(Debug)]
 pub struct PatternEffect {
     pub kind: PatternEffectKind,
@@ -366,12 +368,13 @@ impl AssetParser<Wildcard> for PatternEffect {
 
 #[derive(Debug)]
 pub struct TPattern {
-    flags: TPatternFlags,
-    note: NoteState,
-    instrument: u8,
-    volume: u8,
-    effect_1: PatternEffect,
-    effect_2: PatternEffect,
+    pub flags: TPatternFlags,
+    pub note: NoteState,
+    // TODO(nenikitov): Maybe this should be a direct reference to corresponding `TInstrument`
+    pub instrument: u8,
+    pub volume: u8,
+    pub effect_1: PatternEffect,
+    pub effect_2: PatternEffect,
 }
 
 impl AssetParser<Wildcard> for TPattern {
