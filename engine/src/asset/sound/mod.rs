@@ -1,5 +1,7 @@
 mod dat;
 
+use self::dat::mixer::TSongMixer;
+
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -17,7 +19,7 @@ pub enum Sound {
 impl Sound {
     pub fn mix(&self) -> Vec<i16> {
         match self {
-            Sound::Song(sound) => sound.mix(),
+            Sound::Song(sound) => sound.mix(false),
             Sound::Effect(effect) => effect.mix(),
         }
     }
@@ -99,8 +101,8 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0xA];
-        //dbg!(&fail_music.patterns[0]);
+            .collect::<Vec<_>>()[0xC];
+        dbg!(&fail_music.patterns[0]);
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
 

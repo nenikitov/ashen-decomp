@@ -1,8 +1,8 @@
 use crate::asset::sound::dat::t_song::{NoteState, PatternEffectKind, TPatternFlags};
 
 use super::{
-    t_instrument::TInstrument,
-    t_song::{TPattern, TSong},
+    t_instrument::{TInstrument, TSample},
+    t_song::TSong,
 };
 
 type SamplePoint = i16;
@@ -31,19 +31,21 @@ trait TSongMixerUtils {
 
     fn mix(&self, start: usize) -> Sample;
 
-    fn ticks_per_beat(bpm: usize, speed: usize) -> f32;
+    fn seconds_per_tick(bpm: usize, speed: usize) -> f32;
 }
 
 impl TSongMixerUtils for TSong {
     fn mix(&self, start: usize) -> Sample {
         let mut m = Mixer::new();
 
-        let mut channels: Vec<_> = (0..self.patterns[0].len())
+        let mut channels: Vec<_> = (0..self.patterns[0][0].len())
             .map(|_| Channel::default())
             .collect();
 
-        let mut offset: usize = 0;
+        let mut offset = 0;
+        let mut sample_length_fractional = 0.0;
         let mut bpm = self.bpm;
+        let mut speed = self.speed;
 
         for pattern in &self.orders[start..] {
             let pattern = &self.patterns[*pattern as usize];
@@ -59,7 +61,11 @@ impl TSongMixerUtils for TSong {
                         NoteState::On(_) => {
                             // TODO(nenikitov): This will become huge with more effects, this will need to be refactored
                             channel.note = event.note;
-                            channel.instrument = Some(&self.instruments[event.instrument as usize]);
+                            // TODO(nenikitov): Find out what `instrument` 255 really means instead of skipping it
+                            if event.instrument != 255 {
+                                channel.instrument =
+                                    Some(&self.instruments[event.instrument as usize]);
+                            }
                             channel.volume = event.volume as f32 / 255.0;
                             channel.sample_posion = 0;
                         }
@@ -86,7 +92,11 @@ impl TSongMixerUtils for TSong {
                         match effect.kind {
                             // TODO(nenikitov): Add effects
                             PatternEffectKind::Speed => {
-                                bpm = effect.value;
+                                if effect.value >= 0x20 {
+                                    bpm = effect.value;
+                                } else {
+                                    speed = effect.value;
+                                }
                             }
                             _ => {}
                         }
@@ -94,12 +104,14 @@ impl TSongMixerUtils for TSong {
                 }
 
                 // Mix current tick
-                let sample_length = Self::ticks_per_beat(bpm as usize, self.speed as usize)
-                    * Self::SAMPLE_RATE as f32;
+                let sample_length = Self::seconds_per_tick(bpm as usize, speed as usize)
+                    * Self::SAMPLE_RATE as f32
+                    + sample_length_fractional;
+                sample_length_fractional = sample_length - sample_length.floor();
                 let sample_length = sample_length as usize;
 
-                for c in &channels {
-                    m.add_sample(&c.tick(sample_length), offset);
+                for c in &mut channels {
+                    m.add_sample(&c.tick(sample_length, &self.samples), offset);
                 }
 
                 // Advance to next tick
@@ -110,8 +122,8 @@ impl TSongMixerUtils for TSong {
         m.mix()
     }
 
-    fn ticks_per_beat(bpm: usize, speed: usize) -> f32 {
-        (bpm * speed) as f32 / 60.0
+    fn seconds_per_tick(bpm: usize, speed: usize) -> f32 {
+        60.0 / (bpm * speed) as f32
     }
 }
 
@@ -125,17 +137,21 @@ struct Channel<'a> {
 }
 
 impl<'a> Channel<'a> {
-    fn tick(&self, duration: usize) -> Sample {
-        todo!()
-    }
+    // TODO(nenikitov): Don not pass `samples`, it should somehow be stored in the instrument
+    fn tick(&mut self, duration: usize, samples: &Vec<TSample>) -> Sample {
+        if let Some(instrument) = self.instrument
+            && let NoteState::On(note) = self.note
+        {
+            let sample = samples[instrument.samples[note as usize] as usize]
+                .sample_full()
+                .to_vec()
+                .volume(self.volume);
 
-    fn play_event(&mut self, event: &TPattern, instruments: &'a [TInstrument]) {
-        if event.note != NoteState::None {
-            *self = Self::default();
-        }
+            self.note = NoteState::Off;
 
-        if let NoteState::On(note) = event.note {
-            self.instrument = Some(&instruments[event.instrument as usize]);
+            sample
+        } else {
+            vec![]
         }
     }
 }

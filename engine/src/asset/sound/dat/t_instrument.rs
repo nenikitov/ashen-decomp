@@ -26,6 +26,7 @@ pub struct TInstrument {
     pub fadeout: u32,
     pub vibrato_table: u32,
 
+    // TODO(nenikitov): Maybe this should be a direct reference to corresponding `TInstrument`
     pub samples: Box<[u8; 96]>,
 }
 

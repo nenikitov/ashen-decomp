@@ -1,6 +1,6 @@
-use super::{mixer::SoundEffect, t_instrument::*, uncompress};
+use super::{t_instrument::*, uncompress};
 use crate::{
-    asset::{extension::*, sound::dat::mixer::Mixer, AssetParser},
+    asset::{extension::*, AssetParser},
     utils::nom::*,
 };
 use bitflags::bitflags;
@@ -16,44 +16,6 @@ pub struct TSong {
     pub patterns: Vec<Vec<Vec<Option<TPattern>>>>,
     pub instruments: Vec<TInstrument>,
     pub samples: Vec<TSample>,
-}
-
-impl TSong {
-    pub fn mix(&self) -> Vec<i16> {
-        let mut m = Mixer::new();
-
-        let mut i = 0;
-        for pattern in &self.orders {
-            let pattern = &self.patterns[*pattern as usize];
-            for row in pattern {
-                i += 1;
-                for event in row {
-                    if let Some(entry) = event
-                        && let NoteState::On(note) = entry.note
-                        // TODO(nenikitov): Find out what special instrument `0xFF` means
-                        && entry.instrument != 0xFF
-                    {
-                        let instrument = &self.instruments[entry.instrument as usize];
-                        // TODO(nenikitov): See if doing `- 1` in parsing will look nicer
-                        let sample = instrument.samples[(note - 1) as usize];
-                        // TODO(nenikitov): Find out what special sample `0xFF` means
-                        if sample != 0xFF {
-                            let sample = &self.samples[sample as usize];
-                            let data = sample.data.clone();
-
-                            m.add_sample(&data.volume(Self::volume(sample.volume)), i * 1000);
-                        }
-                    }
-                }
-            }
-        }
-
-        m.mix()
-    }
-
-    fn volume(volume: u8) -> f32 {
-        volume as f32 / u8::MAX as f32
-    }
 }
 
 impl AssetParser<Wildcard> for TSong {
