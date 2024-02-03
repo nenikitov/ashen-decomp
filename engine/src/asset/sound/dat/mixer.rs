@@ -1,4 +1,4 @@
-use super::{t_instrument::*, t_song::*};
+use super::{pattern_event::*, t_instrument::*, t_song::*};
 use std::ops::Deref;
 
 type SamplePoint = i16;
@@ -51,25 +51,25 @@ impl TSongMixerUtils for TSong {
                     let channel = &mut channels[c];
 
                     // Process note
-                    if event.flags.contains(TPatternFlags::ChangeNote) {
+                    if event.flags.contains(PatternEventFlags::ChangeNote) {
                         channel.note = event.note;
                     }
-                    if event.flags.contains(TPatternFlags::ChangeInstrument) {
+                    if event.flags.contains(PatternEventFlags::ChangeInstrument) {
                         channel.instrument = Some(&event.instrument);
                         channel.sample_posion = SamplePosition::default();
                     }
-                    if event.flags.contains(TPatternFlags::ChangeVolume) {
+                    if event.flags.contains(PatternEventFlags::ChangeVolume) {
                         channel.volume = event.volume as f32 / u8::MAX as f32;
                     }
 
                     // Process effects
                     let effects = [
-                        if event.flags.contains(TPatternFlags::DoEffect1) {
+                        if event.flags.contains(PatternEventFlags::DoEffect1) {
                             Some(&event.effect_1)
                         } else {
                             None
                         },
-                        if event.flags.contains(TPatternFlags::DoEffect2) {
+                        if event.flags.contains(PatternEventFlags::DoEffect2) {
                             Some(&event.effect_2)
                         } else {
                             None
@@ -132,19 +132,19 @@ struct Channel<'a> {
     sample_posion: SamplePosition,
 
     volume: f32,
-    note: NoteState,
+    note: PatternEventNote,
 }
 
 impl<'a> Channel<'a> {
     // TODO(nenikitov): Don not pass `samples`, it should somehow be stored in the instrument
     fn tick(&mut self, duration: usize) -> Sample {
         if let Some(instrument) = self.instrument
-            && let NoteState::On(note) = self.note
+            && let PatternEventNote::On(note) = self.note
             && let TPatternInstrumentKind::Predefined(instrument) = instrument
             && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
         {
             let sample = sample.sample_full().to_vec().volume(self.volume);
-            self.note = NoteState::None;
+            self.note = PatternEventNote::None;
             sample
         } else {
             vec![]

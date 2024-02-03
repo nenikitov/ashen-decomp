@@ -182,8 +182,6 @@ impl TSample {
     }
 
     pub fn sample_beginning(&self) -> &[i16] {
-        dbg!(self.data.len());
-        dbg!(self.loop_length);
         &self.data[..self.data.len() - self.loop_length as usize]
     }
 
