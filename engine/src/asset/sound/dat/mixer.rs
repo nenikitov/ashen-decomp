@@ -1,9 +1,7 @@
-use bitflags::Flags;
-
 use crate::asset::sound::dat::t_song::{NoteState, PatternEffectKind, TPatternFlags};
 
 use super::{
-    t_instrument::{TInstrument, TSample},
+    t_instrument::{TInstrument, TInstrumentSampleKind},
     t_song::TSong,
 };
 
@@ -62,7 +60,9 @@ impl TSongMixerUtils for TSong {
                         channel.note = event.note;
                     }
                     if event.flags.contains(TPatternFlags::ChangeInstrument) {
-                        channel.instrument = Some(&self.instruments[event.instrument as usize]);
+                        if event.instrument != 255 {
+                            channel.instrument = Some(&self.instruments[event.instrument as usize]);
+                        }
                         channel.sample_posion = SamplePosition::default();
                     }
                     if event.flags.contains(TPatternFlags::ChangeVolume) {
@@ -105,7 +105,7 @@ impl TSongMixerUtils for TSong {
                 let sample_length = sample_length as usize;
 
                 for c in &mut channels {
-                    m.add_sample(&c.tick(sample_length, &self.samples), offset);
+                    m.add_sample(&c.tick(sample_length), offset);
                 }
 
                 // Advance to next tick
@@ -144,36 +144,17 @@ struct Channel<'a> {
 
 impl<'a> Channel<'a> {
     // TODO(nenikitov): Don not pass `samples`, it should somehow be stored in the instrument
-    fn tick(&mut self, duration: usize, samples: &Vec<TSample>) -> Sample {
-        if let Some(instrument) = self.instrument {
-            let mut m = Mixer::new();
-            let mut offset = 0;
-
-            let sample = &samples[instrument.samples[note as usize] as usize];
-
-            if let NoteState::On(note) = self.note {
-                if self.sample_posion == SamplePosition::Beginning {
-                    let sample = sample.sample_beginning();
-
-                    m.add_sample(&self.treat_sample(sample), 0);
-
-                    // Next sample part that should be played is loop part
-                    self.sample_posion =
-                        SamplePosition::Loop(duration as isize - sample.len() as isize);
-                    offset = sample.len();
-                }
-
-                self.note = NoteState::None;
-            }
-
-            todo!()
+    fn tick(&mut self, duration: usize) -> Sample {
+        if let Some(instrument) = self.instrument
+            && let NoteState::On(note) = self.note
+            && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
+        {
+            let sample = sample.sample_full().to_vec().volume(self.volume);
+            self.note = NoteState::None;
+            sample
         } else {
             vec![]
         }
-    }
-
-    fn treat_sample(&self, sample: &[SamplePoint]) -> Sample {
-        sample.to_vec().volume(self.volume)
     }
 }
 

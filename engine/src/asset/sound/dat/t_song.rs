@@ -5,6 +5,7 @@ use crate::{
 };
 use bitflags::bitflags;
 use itertools::Itertools;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct TSong {
@@ -15,7 +16,7 @@ pub struct TSong {
     /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
     pub patterns: Vec<Vec<Vec<Option<TPattern>>>>,
     pub instruments: Vec<TInstrument>,
-    pub samples: Vec<TSample>,
+    pub samples: Vec<Rc<TSample>>,
 }
 
 impl AssetParser<Wildcard> for TSong {
@@ -67,16 +68,17 @@ impl AssetParser<Wildcard> for TSong {
                 .collect::<std::result::Result<_, _>>()?
             };
 
-            let (_, instruments) = multi::count!(
-                TInstrument::parser(()),
-                header.instrument_count as usize
-            )(&input[pointers.instruments as usize..])?;
-
             let samples = uncompress(&input[pointers.sample_data as usize..]);
             let (_, samples) = multi::count!(
                 TSample::parser(&samples),
                 header.sample_count as usize
             )(&input[pointers.samples as usize..])?;
+            let samples = samples.into_iter().map(Rc::new).collect::<Vec<_>>();
+
+            let (_, instruments) = multi::count!(
+                TInstrument::parser(&samples),
+                header.instrument_count as usize
+            )(&input[pointers.instruments as usize..])?;
 
             Ok((
                 input,

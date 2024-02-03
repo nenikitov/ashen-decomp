@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
@@ -9,6 +11,14 @@ bitflags! {
     pub struct TInstrumentFlags: u8 {
         const _ = 1 << 0;
     }
+}
+
+// TODO(nenikitov): Maybe make it an `AssetParser`
+#[derive(Debug)]
+pub enum TInstrumentSampleKind {
+    // TODO(nenikitov): Figure out what instrumentn `255` is
+    Special,
+    Predefined(Rc<TSample>),
 }
 
 #[derive(Debug)]
@@ -34,16 +44,15 @@ pub struct TInstrument {
     pub fadeout: u32,
     pub vibrato_table: u32,
 
-    // TODO(nenikitov): Maybe this should be a direct reference to corresponding `TInstrument`
-    pub samples: Box<[u8; 96]>,
+    pub samples: Box<[TInstrumentSampleKind; 96]>,
 }
 
 impl AssetParser<Wildcard> for TInstrument {
     type Output = Self;
 
-    type Context<'ctx> = ();
+    type Context<'ctx> = &'ctx [Rc<TSample>];
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(samples: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
 
@@ -70,7 +79,7 @@ impl AssetParser<Wildcard> for TInstrument {
             let (input, fadeout) = number::le_u32(input)?;
             let (input, vibrato_table) = number::le_u32(input)?;
 
-            let (input, samples) = multi::count!(number::le_u8)(input)?;
+            let (input, sample_indexes): (_, [u8; 96]) = multi::count!(number::le_u8)(input)?;
 
             Ok((
                 input,
@@ -91,7 +100,20 @@ impl AssetParser<Wildcard> for TInstrument {
                     vibrato_sweep,
                     fadeout,
                     vibrato_table,
-                    samples: Box::new(samples),
+                    samples: Box::new(
+                        sample_indexes
+                            .into_iter()
+                            .map(|i| {
+                                if i == 255 {
+                                    TInstrumentSampleKind::Special
+                                } else {
+                                    TInstrumentSampleKind::Predefined(samples[i as usize].clone())
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .try_into()
+                            .unwrap(),
+                    ),
                 },
             ))
         }
@@ -136,6 +158,7 @@ impl AssetParser<Wildcard> for TSample {
             // The game uses offset for `i16`, but it's much more convenient to just use indices
             let loop_end = loop_end / 2;
             let sample_offset = sample_offset / 2;
+            let loop_length = loop_length / 2;
 
             Ok((
                 input,
@@ -159,6 +182,8 @@ impl TSample {
     }
 
     pub fn sample_beginning(&self) -> &[i16] {
+        dbg!(self.data.len());
+        dbg!(self.loop_length);
         &self.data[..self.data.len() - self.loop_length as usize]
     }
 
