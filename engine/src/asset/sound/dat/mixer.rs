@@ -47,7 +47,6 @@ impl TSongMixerUtils for TSong {
             for row in pattern.deref() {
                 // Update channels
                 for (c, event) in row.iter().enumerate() {
-                    let Some(event) = event else { continue };
                     let channel = &mut channels[c];
 
                     // Process note
@@ -124,7 +123,6 @@ struct Channel<'a> {
 }
 
 impl<'a> Channel<'a> {
-    // TODO(nenikitov): Don not pass `samples`, it should somehow be stored in the instrument
     fn tick(&mut self, duration: usize) -> Sample {
         if let Some(instrument) = self.instrument
             && let PatternEventNote::On(note) = self.note

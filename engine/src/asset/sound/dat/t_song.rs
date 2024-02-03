@@ -6,7 +6,7 @@ use crate::{
 use itertools::Itertools;
 use std::rc::Rc;
 
-pub type PatternRow = Vec<Option<PatternEvent>>;
+pub type PatternRow = Vec<PatternEvent>;
 pub type Pattern = Vec<PatternRow>;
 
 pub struct TSong {
@@ -14,7 +14,7 @@ pub struct TSong {
     pub speed: u8,
     pub restart_order: u8,
     pub orders: Vec<Rc<Pattern>>,
-    /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
+    /// Reusable and repeatable sequence -> Row -> Channel
     pub patterns: Vec<Rc<Pattern>>,
     pub instruments: Vec<Rc<TInstrument>>,
     pub samples: Vec<Rc<TSample>>,
@@ -61,7 +61,7 @@ impl AssetParser<Wildcard> for TSong {
                 .zip(lengths)
                 .map(|(input, length)| {
                     multi::count!(
-                        <Option<PatternEvent>>::parser(&instruments),
+                        PatternEvent::parser(&instruments),
                         header.channel_count as usize * length as usize
                     )(input)
                 })

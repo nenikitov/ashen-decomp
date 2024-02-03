@@ -45,6 +45,7 @@ bitflags! {
         const ChangeVolume = 1 << 2;
         const ChangeEffect1 = 1 << 3;
         const ChangeEffect2 = 1 << 4;
+        const IsEmpty = 1 << 5;
     }
 }
 
@@ -219,6 +220,7 @@ impl AssetParser<Wildcard> for Option<PatternEventInstrumentKind> {
     }
 }
 
+#[derive(Default)]
 pub struct PatternEvent {
     pub note: Option<PatternEventNote>,
     pub instrument: Option<PatternEventInstrumentKind>,
@@ -235,54 +237,40 @@ impl AssetParser<Wildcard> for PatternEvent {
         move |input| {
             let (input, flags) = PatternEventFlags::parser(())(input)?;
 
-            let (input, note) = <Option<PatternEventNote>>::parser(
-                flags.contains(PatternEventFlags::ChangeNote),
-            )(input)?;
-
-            let (input, instrument) = <Option<PatternEventInstrumentKind>>::parser((
-                (flags.contains(PatternEventFlags::ChangeInstrument)),
-                instruments,
-            ))(input)?;
-
-            let (input, volume) = number::le_u8(input)?;
-            let volume = flags
-                .contains(PatternEventFlags::ChangeVolume)
-                .then_some(volume);
-
-            let (input, effect_1) = <Option<PatternEffect>>::parser(
-                flags.contains(PatternEventFlags::ChangeEffect1),
-            )(input)?;
-
-            let (input, effect_2) = <Option<PatternEffect>>::parser(
-                flags.contains(PatternEventFlags::ChangeEffect2),
-            )(input)?;
-
-            Ok((
-                input,
-                Self {
-                    note,
-                    instrument,
-                    volume,
-                    effects: [effect_1, effect_2],
-                },
-            ))
-        }
-    }
-}
-
-impl AssetParser<Wildcard> for Option<PatternEvent> {
-    type Output = Self;
-
-    type Context<'ctx> = &'ctx [Rc<TInstrument>];
-
-    fn parser(instruments: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
-        move |input| {
-            let (after_flags, flags) = number::le_u8(input)?;
-            if (flags & 0x20) != 0 {
-                Ok((after_flags, None))
+            if flags.contains(PatternEventFlags::IsEmpty) {
+                Ok((input, Self::default()))
             } else {
-                let (input, pattern) = PatternEvent::parser(instruments)(input)?;
-                Ok((input, Some(pattern)))
+                let (input, note) = <Option<PatternEventNote>>::parser(
+                    flags.contains(PatternEventFlags::ChangeNote),
+                )(input)?;
+
+                let (input, instrument) = <Option<PatternEventInstrumentKind>>::parser((
+                    (flags.contains(PatternEventFlags::ChangeInstrument)),
+                    instruments,
+                ))(input)?;
+
+                let (input, volume) = number::le_u8(input)?;
+                let volume = flags
+                    .contains(PatternEventFlags::ChangeVolume)
+                    .then_some(volume);
+
+                let (input, effect_1) = <Option<PatternEffect>>::parser(
+                    flags.contains(PatternEventFlags::ChangeEffect1),
+                )(input)?;
+
+                let (input, effect_2) = <Option<PatternEffect>>::parser(
+                    flags.contains(PatternEventFlags::ChangeEffect2),
+                )(input)?;
+
+                Ok((
+                    input,
+                    Self {
+                        note,
+                        instrument,
+                        volume,
+                        effects: [effect_1, effect_2],
+                    },
+                ))
             }
         }
     }
