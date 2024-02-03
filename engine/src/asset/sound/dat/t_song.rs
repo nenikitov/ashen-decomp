@@ -7,15 +7,18 @@ use bitflags::bitflags;
 use itertools::Itertools;
 use std::rc::Rc;
 
+pub type PatternRow = Vec<Option<PatternEvent>>;
+pub type Pattern = Vec<PatternRow>;
+
 #[derive(Debug)]
 pub struct TSong {
     pub bpm: u8,
     pub speed: u8,
     pub restart_order: u8,
-    pub orders: Vec<u8>,
+    pub orders: Vec<Rc<Pattern>>,
     /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
-    pub patterns: Vec<Vec<Vec<Option<TPattern>>>>,
-    pub instruments: Vec<TInstrument>,
+    pub patterns: Vec<Rc<Pattern>>,
+    pub instruments: Vec<Rc<TInstrument>>,
     pub samples: Vec<Rc<TSample>>,
 }
 
@@ -32,9 +35,18 @@ impl AssetParser<Wildcard> for TSong {
                 (header, pointers)
             };
 
-            let (_, orders) = multi::count!(number::le_u8, header.song_length as usize)(
-                &input[pointers.orders as usize..],
-            )?;
+            let samples = uncompress(&input[pointers.sample_data as usize..]);
+            let (_, samples) = multi::count!(
+                TSample::parser(&samples),
+                header.sample_count as usize
+            )(&input[pointers.samples as usize..])?;
+            let samples = samples.into_iter().map(Rc::new).collect::<Vec<_>>();
+
+            let (_, instruments) = multi::count!(
+                TInstrument::parser(&samples),
+                header.instrument_count as usize
+            )(&input[pointers.instruments as usize..])?;
+            let instruments = instruments.into_iter().map(Rc::new).collect::<Vec<_>>();
 
             let patterns: Vec<_> = {
                 let (_, lengths) = multi::count!(number::le_u8, header.pattern_count as usize)(
@@ -51,7 +63,7 @@ impl AssetParser<Wildcard> for TSong {
                 .zip(lengths)
                 .map(|(input, length)| {
                     multi::count!(
-                        <Option<TPattern>>::parser(()),
+                        <Option<PatternEvent>>::parser(&instruments),
                         header.channel_count as usize * length as usize
                     )(input)
                 })
@@ -67,18 +79,15 @@ impl AssetParser<Wildcard> for TSong {
                 })
                 .collect::<std::result::Result<_, _>>()?
             };
+            let patterns = patterns.into_iter().map(Rc::new).collect::<Vec<_>>();
 
-            let samples = uncompress(&input[pointers.sample_data as usize..]);
-            let (_, samples) = multi::count!(
-                TSample::parser(&samples),
-                header.sample_count as usize
-            )(&input[pointers.samples as usize..])?;
-            let samples = samples.into_iter().map(Rc::new).collect::<Vec<_>>();
-
-            let (_, instruments) = multi::count!(
-                TInstrument::parser(&samples),
-                header.instrument_count as usize
-            )(&input[pointers.instruments as usize..])?;
+            let (_, orders) = multi::count!(number::le_u8, header.song_length as usize)(
+                &input[pointers.orders as usize..],
+            )?;
+            let orders = orders
+                .into_iter()
+                .map(|o| patterns[o as usize].clone())
+                .collect::<Vec<_>>();
 
             Ok((
                 input,
@@ -331,26 +340,32 @@ impl AssetParser<Wildcard> for PatternEffect {
 }
 
 #[derive(Debug)]
-pub struct TPattern {
+pub enum TPatternInstrumentKind {
+    // TODO(nenikitov): Figure out what instrument `255` is
+    Special,
+    Predefined(Rc<TInstrument>),
+}
+
+#[derive(Debug)]
+pub struct PatternEvent {
     pub flags: TPatternFlags,
     pub note: NoteState,
-    // TODO(nenikitov): Maybe this should be a direct reference to corresponding `TInstrument`
-    pub instrument: u8,
+    pub instrument: TPatternInstrumentKind,
     pub volume: u8,
     pub effect_1: PatternEffect,
     pub effect_2: PatternEffect,
 }
 
-impl AssetParser<Wildcard> for TPattern {
+impl AssetParser<Wildcard> for PatternEvent {
     type Output = Self;
 
-    type Context<'ctx> = ();
+    type Context<'ctx> = &'ctx [Rc<TInstrument>];
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(instruments: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
             let (input, note) = number::le_u8(input)?;
-            let (input, instrument) = number::le_u8(input)?;
+            let (input, instrument_index) = number::le_u8(input)?;
             let (input, volume) = number::le_u8(input)?;
             let (input, effect_1) = PatternEffect::parser(())(input)?;
             let (input, effect_2) = PatternEffect::parser(())(input)?;
@@ -361,7 +376,13 @@ impl AssetParser<Wildcard> for TPattern {
                     // TODO(nenikitov): Use `Result`
                     flags: TPatternFlags::from_bits(flags).expect("Flags should be valid"),
                     note: note.into(),
-                    instrument,
+                    instrument: if instrument_index == 255 {
+                        TPatternInstrumentKind::Special
+                    } else {
+                        TPatternInstrumentKind::Predefined(
+                            instruments[instrument_index as usize].clone(),
+                        )
+                    },
                     volume,
                     effect_1,
                     effect_2,
@@ -371,18 +392,18 @@ impl AssetParser<Wildcard> for TPattern {
     }
 }
 
-impl AssetParser<Wildcard> for Option<TPattern> {
+impl AssetParser<Wildcard> for Option<PatternEvent> {
     type Output = Self;
 
-    type Context<'ctx> = ();
+    type Context<'ctx> = &'ctx [Rc<TInstrument>];
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(instruments: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (after_flags, flags) = number::le_u8(input)?;
             if (flags & 0x20) != 0 {
                 Ok((after_flags, None))
             } else {
-                let (input, pattern) = TPattern::parser(())(input)?;
+                let (input, pattern) = PatternEvent::parser(instruments)(input)?;
                 Ok((input, Some(pattern)))
             }
         }

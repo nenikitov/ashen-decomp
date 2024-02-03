@@ -16,7 +16,7 @@ bitflags! {
 // TODO(nenikitov): Maybe make it an `AssetParser`
 #[derive(Debug)]
 pub enum TInstrumentSampleKind {
-    // TODO(nenikitov): Figure out what instrumentn `255` is
+    // TODO(nenikitov): Figure out what sample `255` is
     Special,
     Predefined(Rc<TSample>),
 }

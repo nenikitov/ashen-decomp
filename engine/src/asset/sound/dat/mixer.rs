@@ -1,9 +1,5 @@
-use crate::asset::sound::dat::t_song::{NoteState, PatternEffectKind, TPatternFlags};
-
-use super::{
-    t_instrument::{TInstrument, TInstrumentSampleKind},
-    t_song::TSong,
-};
+use super::{t_instrument::*, t_song::*};
+use std::ops::Deref;
 
 type SamplePoint = i16;
 type Sample = Vec<SamplePoint>;
@@ -48,8 +44,7 @@ impl TSongMixerUtils for TSong {
         let mut speed = self.speed;
 
         for pattern in &self.orders[start..] {
-            let pattern = &self.patterns[*pattern as usize];
-            for row in pattern {
+            for row in pattern.deref() {
                 // Update channels
                 for (c, event) in row.iter().enumerate() {
                     let Some(event) = event else { continue };
@@ -60,9 +55,7 @@ impl TSongMixerUtils for TSong {
                         channel.note = event.note;
                     }
                     if event.flags.contains(TPatternFlags::ChangeInstrument) {
-                        if event.instrument != 255 {
-                            channel.instrument = Some(&self.instruments[event.instrument as usize]);
-                        }
+                        channel.instrument = Some(&event.instrument);
                         channel.sample_posion = SamplePosition::default();
                     }
                     if event.flags.contains(TPatternFlags::ChangeVolume) {
@@ -135,7 +128,7 @@ impl Default for SamplePosition {
 
 #[derive(Default)]
 struct Channel<'a> {
-    instrument: Option<&'a TInstrument>,
+    instrument: Option<&'a TPatternInstrumentKind>,
     sample_posion: SamplePosition,
 
     volume: f32,
@@ -147,6 +140,7 @@ impl<'a> Channel<'a> {
     fn tick(&mut self, duration: usize) -> Sample {
         if let Some(instrument) = self.instrument
             && let NoteState::On(note) = self.note
+            && let TPatternInstrumentKind::Predefined(instrument) = instrument
             && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
         {
             let sample = sample.sample_full().to_vec().volume(self.volume);
