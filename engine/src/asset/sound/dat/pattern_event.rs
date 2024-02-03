@@ -9,29 +9,30 @@ use std::rc::Rc;
 #[derive(Default, PartialEq, Clone, Copy)]
 pub enum PatternEventNote {
     #[default]
-    None,
-    On(u8),
     Off,
+    On(u8),
 }
 
-impl AssetParser<Wildcard> for PatternEventNote {
+impl AssetParser<Wildcard> for Option<PatternEventNote> {
     type Output = Self;
 
-    type Context<'ctx> = ();
+    type Context<'ctx> = bool;
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, note) = number::le_u8(input)?;
 
-            let note = match note {
-                0 => PatternEventNote::None,
-                1..=95 => PatternEventNote::On(note),
-                96 => PatternEventNote::Off,
-                // TODO(nenikitov): Should be a `Result`
-                _ => unreachable!("Note should be in range 0-96"),
-            };
-
-            Ok((input, note))
+            Ok((
+                input,
+                should_parse.then(|| {
+                    match note {
+                        1..=95 => PatternEventNote::On(note),
+                        96 => PatternEventNote::Off,
+                        // TODO(nenikitov): Should be a `Result`
+                        _ => unreachable!("Note should be in range 0-96"),
+                    }
+                }),
+            ))
         }
     }
 }
@@ -42,8 +43,8 @@ bitflags! {
         const ChangeNote = 1 << 0;
         const ChangeInstrument = 1 << 1;
         const ChangeVolume = 1 << 2;
-        const DoEffect1 = 1 << 3;
-        const DoEffect2 = 1 << 4;
+        const ChangeEffect1 = 1 << 3;
+        const ChangeEffect2 = 1 << 4;
     }
 }
 
@@ -163,41 +164,66 @@ pub struct PatternEffect {
     pub value: u8,
 }
 
-impl AssetParser<Wildcard> for PatternEffect {
-    type Output = PatternEffect;
+impl AssetParser<Wildcard> for Option<PatternEffect> {
+    type Output = Self;
 
-    type Context<'ctx> = ();
+    type Context<'ctx> = bool;
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, kind) = number::le_u8(input)?;
             let (input, value) = number::le_u8(input)?;
 
             Ok((
                 input,
-                Self {
+                should_parse.then(|| PatternEffect {
                     kind: kind.into(),
                     value,
-                },
+                }),
             ))
         }
     }
 }
 
 #[derive(Debug)]
-pub enum TPatternInstrumentKind {
+pub enum PatternEventInstrumentKind {
     // TODO(nenikitov): Figure out what instrument `255` is
     Special,
     Predefined(Rc<TInstrument>),
 }
 
+impl AssetParser<Wildcard> for Option<PatternEventInstrumentKind> {
+    type Output = Self;
+
+    type Context<'ctx> = (bool, &'ctx [Rc<TInstrument>]);
+
+    fn parser(
+        (should_parse, instruments): Self::Context<'_>,
+    ) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, instrument) = number::le_u8(input)?;
+
+            Ok((
+                input,
+                should_parse.then(|| {
+                    if instrument == 255 {
+                        PatternEventInstrumentKind::Special
+                    } else {
+                        PatternEventInstrumentKind::Predefined(
+                            instruments[instrument as usize].clone(),
+                        )
+                    }
+                }),
+            ))
+        }
+    }
+}
+
 pub struct PatternEvent {
-    pub flags: PatternEventFlags,
-    pub note: PatternEventNote,
-    pub instrument: TPatternInstrumentKind,
-    pub volume: u8,
-    pub effect_1: PatternEffect,
-    pub effect_2: PatternEffect,
+    pub note: Option<PatternEventNote>,
+    pub instrument: Option<PatternEventInstrumentKind>,
+    pub volume: Option<u8>,
+    pub effects: [Option<PatternEffect>; 2],
 }
 
 impl AssetParser<Wildcard> for PatternEvent {
@@ -208,28 +234,36 @@ impl AssetParser<Wildcard> for PatternEvent {
     fn parser(instruments: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, flags) = PatternEventFlags::parser(())(input)?;
-            let (input, note) = PatternEventNote::parser(())(input)?;
-            let (input, instrument_index) = number::le_u8(input)?;
+
+            let (input, note) = <Option<PatternEventNote>>::parser(
+                flags.contains(PatternEventFlags::ChangeNote),
+            )(input)?;
+
+            let (input, instrument) = <Option<PatternEventInstrumentKind>>::parser((
+                (flags.contains(PatternEventFlags::ChangeInstrument)),
+                instruments,
+            ))(input)?;
+
             let (input, volume) = number::le_u8(input)?;
-            let (input, effect_1) = PatternEffect::parser(())(input)?;
-            let (input, effect_2) = PatternEffect::parser(())(input)?;
+            let volume = flags
+                .contains(PatternEventFlags::ChangeVolume)
+                .then_some(volume);
+
+            let (input, effect_1) = <Option<PatternEffect>>::parser(
+                flags.contains(PatternEventFlags::ChangeEffect1),
+            )(input)?;
+
+            let (input, effect_2) = <Option<PatternEffect>>::parser(
+                flags.contains(PatternEventFlags::ChangeEffect2),
+            )(input)?;
 
             Ok((
                 input,
                 Self {
-                    // TODO(nenikitov): Use `Result`
-                    flags,
-                    note: note.into(),
-                    instrument: if instrument_index == 255 {
-                        TPatternInstrumentKind::Special
-                    } else {
-                        TPatternInstrumentKind::Predefined(
-                            instruments[instrument_index as usize].clone(),
-                        )
-                    },
+                    note,
+                    instrument,
                     volume,
-                    effect_1,
-                    effect_2,
+                    effects: [effect_1, effect_2],
                 },
             ))
         }

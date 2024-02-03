@@ -51,31 +51,19 @@ impl TSongMixerUtils for TSong {
                     let channel = &mut channels[c];
 
                     // Process note
-                    if event.flags.contains(PatternEventFlags::ChangeNote) {
-                        channel.note = event.note;
+                    if let Some(note) = event.note {
+                        channel.note = note;
                     }
-                    if event.flags.contains(PatternEventFlags::ChangeInstrument) {
-                        channel.instrument = Some(&event.instrument);
+                    if let Some(instrument) = &event.instrument {
+                        channel.instrument = Some(instrument);
                         channel.sample_posion = SamplePosition::default();
                     }
-                    if event.flags.contains(PatternEventFlags::ChangeVolume) {
-                        channel.volume = event.volume as f32 / u8::MAX as f32;
+                    if let Some(volume) = event.volume {
+                        channel.volume = volume as f32 / u8::MAX as f32;
                     }
 
                     // Process effects
-                    let effects = [
-                        if event.flags.contains(PatternEventFlags::DoEffect1) {
-                            Some(&event.effect_1)
-                        } else {
-                            None
-                        },
-                        if event.flags.contains(PatternEventFlags::DoEffect2) {
-                            Some(&event.effect_2)
-                        } else {
-                            None
-                        },
-                    ];
-                    for effect in effects.into_iter().flatten() {
+                    for effect in event.effects.iter().flatten() {
                         match effect.kind {
                             // TODO(nenikitov): Add effects
                             PatternEffectKind::Speed => {
@@ -128,7 +116,7 @@ impl Default for SamplePosition {
 
 #[derive(Default)]
 struct Channel<'a> {
-    instrument: Option<&'a TPatternInstrumentKind>,
+    instrument: Option<&'a PatternEventInstrumentKind>,
     sample_posion: SamplePosition,
 
     volume: f32,
@@ -140,11 +128,11 @@ impl<'a> Channel<'a> {
     fn tick(&mut self, duration: usize) -> Sample {
         if let Some(instrument) = self.instrument
             && let PatternEventNote::On(note) = self.note
-            && let TPatternInstrumentKind::Predefined(instrument) = instrument
+            && let PatternEventInstrumentKind::Predefined(instrument) = instrument
             && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
         {
             let sample = sample.sample_full().to_vec().volume(self.volume);
-            self.note = PatternEventNote::None;
+            self.note = PatternEventNote::Off;
             sample
         } else {
             vec![]
