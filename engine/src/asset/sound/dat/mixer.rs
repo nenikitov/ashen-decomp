@@ -52,10 +52,10 @@ impl TSongMixerUtils for TSong {
                     // Process note
                     if let Some(note) = event.note {
                         channel.note = note;
+                        channel.sample_posion = 0;
                     }
                     if let Some(instrument) = &event.instrument {
                         channel.instrument = Some(instrument);
-                        channel.sample_posion = SamplePosition::default();
                     }
                     if let Some(volume) = event.volume {
                         channel.volume = volume as f32 / u8::MAX as f32;
@@ -101,22 +101,11 @@ impl TSongMixerUtils for TSong {
     }
 }
 
-#[derive(PartialEq)]
-enum SamplePosition {
-    Beginning,
-    Loop(isize),
-}
-
-impl Default for SamplePosition {
-    fn default() -> Self {
-        Self::Beginning
-    }
-}
-
 #[derive(Default)]
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
-    sample_posion: SamplePosition,
+
+    sample_posion: usize,
 
     volume: f32,
     note: PatternEventNote,
@@ -129,9 +118,18 @@ impl<'a> Channel<'a> {
             && let PatternEventInstrumentKind::Predefined(instrument) = instrument
             && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
         {
-            let sample = sample.sample_full().to_vec().volume(self.volume);
-            self.note = PatternEventNote::Off;
-            sample
+            let data = sample
+                .sample_beginning()
+                .iter()
+                .chain(sample.sample_loop().iter().cycle())
+                .skip(self.sample_posion)
+                .take(duration)
+                .copied()
+                .collect::<Vec<_>>();
+
+            self.sample_posion += duration;
+
+            data
         } else {
             vec![]
         }

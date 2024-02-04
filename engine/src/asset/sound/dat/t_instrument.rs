@@ -1,15 +1,16 @@
-use std::rc::Rc;
-
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
 };
 use bitflags::bitflags;
+use std::rc::Rc;
 
+// TODO(nenikitov): Double check these flags
 bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct TInstrumentFlags: u8 {
-        const _ = 1 << 0;
+        const HasVolumeEnveloppe = 1 << 0;
+        const HasPanEnveloppe = 1 << 1;
     }
 }
 
@@ -177,10 +178,6 @@ impl AssetParser<Wildcard> for TSample {
 }
 
 impl TSample {
-    pub fn sample_full(&self) -> &[i16] {
-        &self.data
-    }
-
     pub fn sample_beginning(&self) -> &[i16] {
         &self.data[..self.data.len() - self.loop_length as usize]
     }
