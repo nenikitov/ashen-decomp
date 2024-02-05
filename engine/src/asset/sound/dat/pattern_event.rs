@@ -6,7 +6,7 @@ use crate::{
 use bitflags::bitflags;
 use std::rc::Rc;
 
-#[derive(Default, PartialEq, Clone, Copy)]
+#[derive(Default, PartialEq, Clone, Copy, Debug)]
 pub enum PatternEventNote {
     #[default]
     Off,

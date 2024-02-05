@@ -52,7 +52,7 @@ impl TSongMixerUtils for TSong {
                     // Process note
                     if let Some(note) = event.note {
                         channel.note = note;
-                        channel.sample_posion = 0;
+                        channel.sample_position = 0;
                     }
                     if let Some(instrument) = &event.instrument {
                         channel.instrument = Some(instrument);
@@ -105,11 +105,17 @@ impl TSongMixerUtils for TSong {
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
 
-    sample_posion: usize,
+    sample_position: usize,
 
     volume: f32,
     note: PatternEventNote,
 }
+
+fn note_to_pitch(note: u8) -> f32 {
+    440.0 * 2.0f32.powf((note as f32 - 49.0) / 12.0)
+}
+
+const BASE_NOTE: u8 = 48;
 
 impl<'a> Channel<'a> {
     fn tick(&mut self, duration: usize) -> Sample {
@@ -118,18 +124,23 @@ impl<'a> Channel<'a> {
             && let PatternEventInstrumentKind::Predefined(instrument) = instrument
             && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
         {
+            let pitch_factor = note_to_pitch(BASE_NOTE) /  note_to_pitch(note);
+
+            let duration_scaled = (duration as f32 / pitch_factor).round() as usize;
+
             let data = sample
                 .sample_beginning()
                 .iter()
                 .chain(sample.sample_loop().iter().cycle())
-                .skip(self.sample_posion)
-                .take(duration)
+                .skip(self.sample_position)
+                .take(duration_scaled)
                 .copied()
                 .collect::<Vec<_>>();
 
-            self.sample_posion += duration;
+            self.sample_position += duration_scaled;
 
-            data
+            let factor = duration as f32 / data.len() as f32;
+            data.volume(self.volume).pitch_with_time_stretch(factor)
         } else {
             vec![]
         }
@@ -169,13 +180,20 @@ impl Mixer {
 }
 
 pub trait SoundEffect {
-    fn pitch(self, note: u8) -> Sample;
+    fn pitch_with_time_stretch(self, note: f32) -> Sample;
     fn volume(self, volume: f32) -> Sample;
 }
 
 impl SoundEffect for Sample {
-    fn pitch(self, note: u8) -> Sample {
-        todo!("(nenikitov): Figure out how this work")
+    fn pitch_with_time_stretch(self, factor: f32) -> Sample {
+        let len = (self.len() as f32 * factor).floor() as usize;
+        let mut result = Vec::with_capacity(len);
+
+        for i in 0..len {
+            result.push(self[(i as f32 / factor).floor() as usize]);
+        }
+
+        result
     }
 
     fn volume(self, volume: f32) -> Sample {

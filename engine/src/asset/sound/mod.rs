@@ -1,7 +1,6 @@
 mod dat;
 
 use self::dat::mixer::TSongMixer;
-
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -95,13 +94,14 @@ mod tests {
             })?;
 
         // TODO(nenikitov): Remove this debug code
-        let fail_music = sounds
+        let test_music = sounds
             .iter()
             .filter_map(|s| match s {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0xA];
+            .collect::<Vec<_>>()[0xC];
+        dbg!(&test_music.patterns[1][0][6].note);
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
 
