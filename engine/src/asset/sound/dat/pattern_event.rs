@@ -1,4 +1,4 @@
-use super::t_instrument::*;
+use super::{finetune::FineTune, t_instrument::*};
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
@@ -10,7 +10,7 @@ use std::rc::Rc;
 pub enum PatternEventNote {
     #[default]
     Off,
-    On(u8),
+    On(FineTune),
 }
 
 impl AssetParser<Wildcard> for Option<PatternEventNote> {
@@ -26,7 +26,7 @@ impl AssetParser<Wildcard> for Option<PatternEventNote> {
                 input,
                 should_parse.then(|| {
                     match note {
-                        1..=95 => PatternEventNote::On(note),
+                        1..=95 => PatternEventNote::On(FineTune::new_from_note(note as i32)),
                         96 => PatternEventNote::Off,
                         // TODO(nenikitov): Should be a `Result`
                         _ => unreachable!("Note should be in range 0-96"),

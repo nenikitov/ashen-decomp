@@ -1,3 +1,5 @@
+use crate::asset::sound::dat::finetune::FineTune;
+
 use super::{pattern_event::*, t_instrument::*, t_song::*};
 use std::ops::Deref;
 
@@ -112,21 +114,17 @@ struct Channel<'a> {
     note: PatternEventNote,
 }
 
-fn note_to_pitch(note: u8) -> f32 {
-    440.0 * 2.0f32.powf((note as f32 - 49.0) / 12.0)
-}
-
-const BASE_NOTE: u8 = 60;
+// TODO(nenikitov): Double check that the game actually uses C_5 as a base note for all samples
+const BASE_NOTE: FineTune = FineTune::new_from_note(60);
 
 impl<'a> Channel<'a> {
     fn tick(&mut self, duration: usize) -> Sample {
         if let Some(instrument) = self.instrument
             && let PatternEventNote::On(note) = self.note
             && let PatternEventInstrumentKind::Predefined(instrument) = instrument
-            && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
+            && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note.note() as usize]
         {
-            let pitch_factor = note_to_pitch((BASE_NOTE as i32 - sample.finetune / 128) as u8)
-                / note_to_pitch(note);
+            let pitch_factor = (BASE_NOTE - sample.finetune) / note;
 
             let duration_scaled = (duration as f32 / pitch_factor).round() as usize;
 

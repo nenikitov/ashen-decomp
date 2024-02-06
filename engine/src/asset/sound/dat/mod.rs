@@ -8,6 +8,7 @@ pub mod pattern_event;
 pub mod t_effect;
 mod t_instrument;
 pub mod t_song;
+pub mod finetune;
 
 // TODO(nenikitov): Make this falliable.
 fn uncompress(bytes: &[u8]) -> Vec<i16> {

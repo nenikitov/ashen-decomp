@@ -5,6 +5,8 @@ use crate::{
 use bitflags::bitflags;
 use std::rc::Rc;
 
+use super::finetune::FineTune;
+
 // TODO(nenikitov): Double check these flags
 bitflags! {
     #[derive(Debug, Clone, Copy)]
@@ -135,7 +137,7 @@ pub struct TSample {
     pub volume: u8,
     pub panning: u8,
     pub align: u8,
-    pub finetune: i32,
+    pub finetune: FineTune,
     pub loop_length: u32,
     pub data: Vec<i16>,
 }
@@ -168,7 +170,7 @@ impl AssetParser<Wildcard> for TSample {
                     volume,
                     panning,
                     align,
-                    finetune,
+                    finetune: FineTune::new(finetune),
                     loop_length,
                     data: sample_data[sample_offset as usize..loop_end as usize].to_vec(),
                 },
