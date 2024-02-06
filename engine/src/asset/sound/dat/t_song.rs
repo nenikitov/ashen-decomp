@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
+use itertools::Itertools;
+
 use super::{pattern_event::*, t_instrument::*, uncompress};
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
 };
-use itertools::Itertools;
-use std::rc::Rc;
 
 pub type PatternRow = Vec<PatternEvent>;
 pub type Pattern = Vec<PatternRow>;

@@ -67,9 +67,10 @@ impl AssetParser<Pack> for SoundCollection {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::LazyCell, path::PathBuf};
+
     use super::*;
     use crate::utils::{format::*, test::*};
-    use std::{cell::LazyCell, path::PathBuf};
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
 

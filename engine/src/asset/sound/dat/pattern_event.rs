@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
+use bitflags::bitflags;
+
 use super::{finetune::FineTune, t_instrument::*};
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
 };
-use bitflags::bitflags;
-use std::rc::Rc;
 
 #[derive(Default, PartialEq, Clone, Copy, Debug)]
 pub enum PatternEventNote {

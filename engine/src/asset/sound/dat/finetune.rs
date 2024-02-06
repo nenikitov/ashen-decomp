@@ -60,8 +60,9 @@ impl Div for FineTune {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assert_approx_eq::assert_approx_eq;
+
+    use super::*;
 
     #[test]
     fn new_works() {

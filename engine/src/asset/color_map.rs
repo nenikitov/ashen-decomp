@@ -1,6 +1,7 @@
+use std::{mem, ops::Deref};
+
 use super::{extension::*, AssetParser};
 use crate::{error, utils::nom::*};
-use std::{mem, ops::Deref};
 
 const COLORS_COUNT: usize = 256;
 const SHADES_COUNT: usize = 32;
@@ -90,9 +91,10 @@ impl AssetParser<Pack> for ColorMap {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::LazyCell;
+
     use super::*;
     use crate::utils::{format::*, test::*};
-    use std::cell::LazyCell;
 
     #[test]
     fn shade_works() -> eyre::Result<()> {

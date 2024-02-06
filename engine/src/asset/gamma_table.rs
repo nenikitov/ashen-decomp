@@ -1,6 +1,7 @@
+use std::mem;
+
 use super::{extension::*, AssetParser};
 use crate::{error, utils::nom::*};
-use std::mem;
 
 const ROWS_COUNT: usize = 256;
 const COLS_COUNT: usize = 101;
@@ -47,12 +48,13 @@ impl AssetParser<Pack> for GammaTable {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::LazyCell;
+
     use super::*;
     use crate::{
         asset::color_map::Color,
         utils::{format::*, test::*},
     };
-    use std::cell::LazyCell;
 
     const GAMMA_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("00.dat");
 

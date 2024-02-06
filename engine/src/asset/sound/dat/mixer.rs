@@ -1,7 +1,7 @@
-use crate::asset::sound::dat::finetune::FineTune;
+use std::ops::Deref;
 
 use super::{pattern_event::*, t_instrument::*, t_song::*};
-use std::ops::Deref;
+use crate::asset::sound::dat::finetune::FineTune;
 
 type SamplePoint = i16;
 type Sample = Vec<SamplePoint>;

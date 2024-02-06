@@ -1,4 +1,5 @@
-use crate::asset::color_map::Color;
+use std::ops::Deref;
+
 use image::{
     codecs::{
         gif::{GifEncoder, Repeat},
@@ -6,7 +7,8 @@ use image::{
     },
     Frame, ImageEncoder, RgbaImage,
 };
-use std::ops::Deref;
+
+use crate::asset::color_map::Color;
 
 pub trait PngFile {
     fn to_png(&self) -> Vec<u8>;

@@ -1,11 +1,12 @@
+use std::rc::Rc;
+
+use bitflags::bitflags;
+
+use super::{finetune::FineTune, mixer::SoundEffect};
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
 };
-use bitflags::bitflags;
-use std::rc::Rc;
-
-use super::{finetune::FineTune, mixer::SoundEffect};
 
 // TODO(nenikitov): Double check these flags
 bitflags! {
