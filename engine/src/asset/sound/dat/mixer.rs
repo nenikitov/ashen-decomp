@@ -134,14 +134,26 @@ impl<'a> Channel<'a> {
                 .iter()
                 .chain(sample.sample_loop().iter().cycle())
                 .skip(self.sample_position)
-                .take(duration_scaled)
+                // TODO(nenikitov): This `+1` is necessary for linear interpolation.
+                // If not present, linear interpolation can produce clicks.
+                // If interpolation is reverted, this magic shouldn't be here
+                .take(duration_scaled + 1)
                 .copied()
                 .collect::<Vec<_>>();
 
             self.sample_position += duration_scaled;
 
-            let factor = duration as f32 / data.len() as f32;
-            data.volume(self.volume).pitch_with_time_stretch(factor)
+            // TODO(nenikitov): Same here, these `+1` and `pop` are necessary for linear interpolation.
+            // If interpolation is reverted, this magic shouldn't be here
+            let pitch_factor = (duration + 1) as f32 / data.len() as f32;
+            let mut data = data
+                .volume(self.volume)
+                .pitch_with_time_stretch(pitch_factor);
+            if (data.len() != duration) {
+                data.pop();
+            }
+
+            data
         } else {
             vec![]
         }
@@ -193,21 +205,24 @@ impl SoundEffect for Sample {
     }
 
     fn pitch_with_time_stretch(self, factor: f32) -> Self {
+        // TODO(nenikitov): Linear interpolation sounds nicer and less crusty, but
+        // Introduces occasional clicks.
+        // Maybe it should be removed.
         let len = (self.len() as f32 * factor as f32).round() as usize;
-    
+
         (0..len)
             .map(|i| {
                 let frac = i as f32 / factor;
                 let index = (frac).floor() as usize;
                 let frac = frac - index as f32;
-    
+
                 let sample_1 = self[index];
                 let sample_2 = if index + 1 < self.len() {
                     self[index + 1]
                 } else {
                     self[index]
                 };
-    
+
                 sample_1 + ((sample_2 - sample_1) as f32 * frac) as i16
             })
             .collect()
