@@ -24,7 +24,7 @@ impl TSongMixer for TSong {
 }
 
 trait TSongMixerUtils {
-    const SAMPLE_RATE: usize = 16000;
+    const SAMPLE_RATE: usize = 48000;
     const CHANNEL_COUNT: usize = 1;
 
     fn mix(&self, start: usize) -> Sample;
@@ -146,9 +146,9 @@ impl<'a> Channel<'a> {
             // TODO(nenikitov): Same here, these `+1` and `pop` are necessary for linear interpolation.
             // If interpolation is reverted, this magic shouldn't be here
             let pitch_factor = (duration + 1) as f32 / data.len() as f32;
-            let mut data = data
-                .volume(self.volume)
-                .pitch_with_time_stretch(pitch_factor);
+            let mut data =
+                data.volume(self.volume)
+                    .pitch_with_time_stretch(pitch_factor, true, false);
             if (data.len() != duration) {
                 data.pop();
             }
@@ -194,7 +194,7 @@ impl Mixer {
 
 pub trait SoundEffect {
     fn volume(self, volume: f32) -> Self;
-    fn pitch_with_time_stretch(self, factor: f32) -> Self;
+    fn pitch_with_time_stretch(self, factor: f32, interpolate: bool, loop_end: bool) -> Self;
 }
 
 impl SoundEffect for Sample {
@@ -204,7 +204,7 @@ impl SoundEffect for Sample {
             .collect()
     }
 
-    fn pitch_with_time_stretch(self, factor: f32) -> Self {
+    fn pitch_with_time_stretch(self, factor: f32, interpolate: bool, loop_end: bool) -> Self {
         // TODO(nenikitov): Linear interpolation sounds nicer and less crusty, but
         // Introduces occasional clicks.
         // Maybe it should be removed.
@@ -214,11 +214,13 @@ impl SoundEffect for Sample {
             .map(|i| {
                 let frac = i as f32 / factor;
                 let index = (frac).floor() as usize;
-                let frac = frac - index as f32;
+                let frac = if interpolate { frac - index as f32 } else { 0.0 };
 
                 let sample_1 = self[index];
                 let sample_2 = if index + 1 < self.len() {
                     self[index + 1]
+                } else if loop_end {
+                    self[0]
                 } else {
                     self[index]
                 };
@@ -253,15 +255,15 @@ mod tests {
     fn pitch_with_time_stretch_works() {
         assert_eq!(
             vec![-10, 20, 40, 30, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0, true, false),
         );
         assert_eq!(
             vec![-10, 5, 20, 30, 40, 35, 30, -24, -78, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0, true, false),
         );
         assert_eq!(
             vec![-10, 40, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5, true, false),
         );
     }
 }

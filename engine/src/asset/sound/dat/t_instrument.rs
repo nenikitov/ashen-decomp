@@ -5,7 +5,7 @@ use crate::{
 use bitflags::bitflags;
 use std::rc::Rc;
 
-use super::finetune::FineTune;
+use super::{finetune::FineTune, mixer::SoundEffect};
 
 // TODO(nenikitov): Double check these flags
 bitflags! {
@@ -158,7 +158,7 @@ impl AssetParser<Wildcard> for TSample {
             let (input, loop_end) = number::le_u32(input)?;
             let (input, sample_offset) = number::le_u32(input)?;
 
-            // The game uses offset for `i16`, but it's much more convenient to just use indices
+            // The game uses offset for `i16`, but it's much more convenient to just use indices, so that's why `/ 2`
             let loop_end = loop_end / 2;
             let sample_offset = sample_offset / 2;
             let loop_length = loop_length / 2;
@@ -171,8 +171,11 @@ impl AssetParser<Wildcard> for TSample {
                     panning,
                     align,
                     finetune: FineTune::new(finetune),
-                    loop_length,
-                    data: sample_data[sample_offset as usize..loop_end as usize].to_vec(),
+                    // I resample sample data from 16k to 48k Hz, so offset should be `* 3`
+                    loop_length: loop_length * 3,
+                    data: sample_data[sample_offset as usize..loop_end as usize]
+                        .to_vec()
+                        .pitch_with_time_stretch(3.0, true, false),
                 },
             ))
         }
