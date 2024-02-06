@@ -223,7 +223,7 @@ impl SoundEffect for Sample {
                     self[index]
                 };
 
-                sample_1 + ((sample_2 - sample_1) as f32 * frac) as i16
+                ((1.0 - frac) * sample_1 as f32 + frac * sample_2 as f32) as i16
             })
             .collect()
     }
