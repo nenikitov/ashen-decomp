@@ -147,8 +147,8 @@ impl<'a> Channel<'a> {
             // If interpolation is reverted, this magic shouldn't be here
             let pitch_factor = (duration + 1) as f32 / data.len() as f32;
             let mut data = data
-                .volume(self.volume)
-                .pitch_with_time_stretch(pitch_factor, true);
+                .volume(self.volume * 0.5)
+                .pitch_with_time_stretch(pitch_factor, false);
             if (data.len() != duration) {
                 data.pop();
             }
@@ -208,6 +208,7 @@ impl SoundEffect for Sample {
         // TODO(nenikitov): Linear interpolation sounds nicer and less crusty, but
         // Introduces occasional clicks.
         // Maybe it should be removed.
+        // Or improved...
         let len = (self.len() as f32 * factor as f32).round() as usize;
 
         (0..len)
