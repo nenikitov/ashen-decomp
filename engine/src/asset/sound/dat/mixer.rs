@@ -60,7 +60,11 @@ impl TSongMixerUtils for TSong {
                         channel.sample_position = 0;
                     }
                     if let Some(volume) = event.volume {
-                        channel.volume = volume as f32 / u8::MAX as f32;
+                        if volume == u8::MAX {
+                            channel.volume = ChannelVolume::Sample;
+                        } else {
+                            channel.volume = ChannelVolume::Value(volume);
+                        }
                     }
 
                     // Process effects
@@ -74,6 +78,9 @@ impl TSongMixerUtils for TSong {
                                     speed = effect.value;
                                 }
                             }
+                            PatternEffectKind::SampleOffset => {
+                                channel.sample_position = effect.value as usize * 256 * 3
+                            }
                             _ => {}
                         }
                     }
@@ -86,7 +93,7 @@ impl TSongMixerUtils for TSong {
                 sample_length_fractional = sample_length - sample_length.floor();
                 let sample_length = sample_length as usize;
 
-                for c in &mut channels {
+                for (i, c) in channels.iter_mut().enumerate() {
                     m.add_sample(&c.tick(sample_length), offset);
                 }
 
@@ -104,13 +111,24 @@ impl TSongMixerUtils for TSong {
     }
 }
 
+enum ChannelVolume {
+    Sample,
+    Value(u8),
+}
+
+impl Default for ChannelVolume {
+    fn default() -> Self {
+        ChannelVolume::Value(0)
+    }
+}
+
 #[derive(Default)]
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
 
     sample_position: usize,
 
-    volume: f32,
+    volume: ChannelVolume,
     note: PatternEventNote,
 }
 
@@ -125,6 +143,12 @@ impl<'a> Channel<'a> {
             && let TInstrumentSampleKind::Predefined(sample) =
                 &instrument.samples[note.note() as usize]
         {
+            let volume = match self.volume {
+                ChannelVolume::Sample => sample.volume,
+                ChannelVolume::Value(value) => value,
+            } as f32
+                / u8::MAX as f32;
+
             let pitch_factor = (BASE_NOTE - sample.finetune) / note;
 
             let duration_scaled = (duration as f32 / pitch_factor).round() as usize;
@@ -147,7 +171,7 @@ impl<'a> Channel<'a> {
             // If interpolation is reverted, this magic shouldn't be here
             let pitch_factor = (duration + 1) as f32 / data.len() as f32;
             let mut data = data
-                .volume(self.volume * 0.5)
+                .volume(volume)
                 .pitch_with_time_stretch(pitch_factor, false);
             if (data.len() != duration) {
                 data.pop();

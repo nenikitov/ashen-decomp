@@ -100,13 +100,25 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0xC];
+            .collect::<Vec<_>>()[0x8];
 
-        dbg!(&test_music
-            .instruments
+        dbg!(&test_music.patterns[1]
             .iter()
-            .map(|s| s.volume_end)
+            .map(|r| &r[2].effects)
             .collect::<Vec<_>>());
+
+        test_music
+            .samples
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, s)| {
+                let file = output_dir.join(format!("sample-{i}.wav"));
+                output_file(
+                    file,
+                    s.data
+                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
+                )
+            })?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
 
