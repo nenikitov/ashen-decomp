@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn note_works() {
-        assert_eq!(5, FineTune::new_from_note(5).cents())
+        assert_eq!(5, FineTune::new_from_note(5).note())
     }
 
     #[test]

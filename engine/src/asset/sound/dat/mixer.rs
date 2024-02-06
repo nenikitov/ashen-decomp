@@ -122,7 +122,8 @@ impl<'a> Channel<'a> {
         if let Some(instrument) = self.instrument
             && let PatternEventNote::On(note) = self.note
             && let PatternEventInstrumentKind::Predefined(instrument) = instrument
-            && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note.note() as usize]
+            && let TInstrumentSampleKind::Predefined(sample) =
+                &instrument.samples[note.note() as usize]
         {
             let pitch_factor = (BASE_NOTE - sample.finetune) / note;
 
@@ -180,22 +181,72 @@ impl Mixer {
 }
 
 pub trait SoundEffect {
-    fn pitch_with_time_stretch(self, note: f32) -> Sample;
-    fn volume(self, volume: f32) -> Sample;
+    fn volume(self, volume: f32) -> Self;
+    fn pitch_with_time_stretch(self, factor: f32) -> Self;
 }
 
 impl SoundEffect for Sample {
-    fn pitch_with_time_stretch(self, factor: f32) -> Sample {
-        let len = (self.len() as f32 * factor).floor() as usize;
-
-        (0..len)
-            .map(|i| self[(i as f32 / factor).floor() as usize])
-            .collect()
-    }
-
-    fn volume(self, volume: f32) -> Sample {
+    fn volume(self, volume: f32) -> Self {
         self.into_iter()
             .map(|s| (s as f32 * volume) as i16)
             .collect()
+    }
+
+    fn pitch_with_time_stretch(self, factor: f32) -> Self {
+        let len = (self.len() as f32 * factor as f32).round() as usize;
+    
+        (0..len)
+            .map(|i| {
+                let frac = i as f32 / factor;
+                let index = (frac).floor() as usize;
+                let frac = frac - index as f32;
+    
+                let sample_1 = self[index];
+                let sample_2 = if index + 1 < self.len() {
+                    self[index + 1]
+                } else {
+                    self[index]
+                };
+    
+                sample_1 + ((sample_2 - sample_1) as f32 * frac) as i16
+            })
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sound_effect_volume_works() {
+        assert_eq!(
+            vec![-10, 20, 40, 30, -78],
+            vec![-10, 20, 40, 30, -78].volume(1.0),
+        );
+        assert_eq!(
+            vec![-40, 80, 160, 120, -312],
+            vec![-20, 40, 80, 60, -156].volume(2.0)
+        );
+        assert_eq!(
+            vec![-10, 20, 40, 30, -78],
+            vec![-20, 40, 80, 60, -156].volume(0.5)
+        );
+    }
+
+    #[test]
+    fn pitch_with_time_stretch_works() {
+        assert_eq!(
+            vec![-10, 20, 40, 30, -78],
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0),
+        );
+        assert_eq!(
+            vec![-10, 5, 20, 30, 40, 35, 30, -24, -78, -78],
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0),
+        );
+        assert_eq!(
+            vec![-10, 40, -78],
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5),
+        );
     }
 }
