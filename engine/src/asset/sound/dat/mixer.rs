@@ -52,10 +52,10 @@ impl TSongMixerUtils for TSong {
                     // Process note
                     if let Some(note) = event.note {
                         channel.note = note;
-                        channel.sample_position = 0;
                     }
                     if let Some(instrument) = &event.instrument {
                         channel.instrument = Some(instrument);
+                        channel.sample_position = 0;
                     }
                     if let Some(volume) = event.volume {
                         channel.volume = volume as f32 / u8::MAX as f32;
@@ -97,7 +97,8 @@ impl TSongMixerUtils for TSong {
     }
 
     fn seconds_per_tick(bpm: usize, speed: usize) -> f32 {
-        60.0 / (bpm * speed) as f32
+        // TODO(nenikitov): Figure out what constant `24` means (maybe `6` default speed * `4` beats/measure???)
+        60.0 / (bpm * 24 / speed) as f32
     }
 }
 
@@ -115,7 +116,7 @@ fn note_to_pitch(note: u8) -> f32 {
     440.0 * 2.0f32.powf((note as f32 - 49.0) / 12.0)
 }
 
-const BASE_NOTE: u8 = 48;
+const BASE_NOTE: u8 = 60;
 
 impl<'a> Channel<'a> {
     fn tick(&mut self, duration: usize) -> Sample {
@@ -124,7 +125,8 @@ impl<'a> Channel<'a> {
             && let PatternEventInstrumentKind::Predefined(instrument) = instrument
             && let TInstrumentSampleKind::Predefined(sample) = &instrument.samples[note as usize]
         {
-            let pitch_factor = note_to_pitch(BASE_NOTE) /  note_to_pitch(note);
+            let pitch_factor = note_to_pitch((BASE_NOTE as i32 - sample.finetune / 128) as u8)
+                / note_to_pitch(note);
 
             let duration_scaled = (duration as f32 / pitch_factor).round() as usize;
 
@@ -187,13 +189,10 @@ pub trait SoundEffect {
 impl SoundEffect for Sample {
     fn pitch_with_time_stretch(self, factor: f32) -> Sample {
         let len = (self.len() as f32 * factor).floor() as usize;
-        let mut result = Vec::with_capacity(len);
 
-        for i in 0..len {
-            result.push(self[(i as f32 / factor).floor() as usize]);
-        }
-
-        result
+        (0..len)
+            .map(|i| self[(i as f32 / factor).floor() as usize])
+            .collect()
     }
 
     fn volume(self, volume: f32) -> Sample {
@@ -202,5 +201,3 @@ impl SoundEffect for Sample {
             .collect()
     }
 }
-
-fn note_frequency(note: u8) {}

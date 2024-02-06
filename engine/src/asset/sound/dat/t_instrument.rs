@@ -135,7 +135,7 @@ pub struct TSample {
     pub volume: u8,
     pub panning: u8,
     pub align: u8,
-    pub finetune: u32,
+    pub finetune: i32,
     pub loop_length: u32,
     pub data: Vec<i16>,
 }
@@ -151,7 +151,7 @@ impl AssetParser<Wildcard> for TSample {
             let (input, volume) = number::le_u8(input)?;
             let (input, panning) = number::le_u8(input)?;
             let (input, align) = number::le_u8(input)?;
-            let (input, finetune) = number::le_u32(input)?;
+            let (input, finetune) = number::le_i32(input)?;
             let (input, loop_length) = number::le_u32(input)?;
             let (input, loop_end) = number::le_u32(input)?;
             let (input, sample_offset) = number::le_u32(input)?;
