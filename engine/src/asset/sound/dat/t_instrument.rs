@@ -175,7 +175,7 @@ impl AssetParser<Wildcard> for TSample {
                     loop_length: loop_length * 3,
                     data: sample_data[sample_offset as usize..loop_end as usize]
                         .to_vec()
-                        .pitch_with_time_stretch(3.0, true, false),
+                        .pitch_with_time_stretch(3.0, true),
                 },
             ))
         }
