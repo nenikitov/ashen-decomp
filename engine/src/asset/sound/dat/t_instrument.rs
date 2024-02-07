@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use bitflags::bitflags;
 
-use super::{finetune::FineTune, mixer::SoundEffect};
+use super::finetune::FineTune;
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
@@ -172,11 +172,9 @@ impl AssetParser<Wildcard> for TSample {
                     panning,
                     align,
                     finetune: FineTune::new(finetune),
-                    // I resample sample data from 16k to 48k Hz, so offset should be `* 3`
-                    loop_length: loop_length * 3,
-                    data: sample_data[sample_offset as usize..loop_end as usize]
-                        .to_vec()
-                        .pitch_with_time_stretch(3.0, false),
+                    // TODO(nenikitov): Look into resampling the sample to 48 KHz
+                    loop_length,
+                    data: sample_data[sample_offset as usize..loop_end as usize].to_vec(),
                 },
             ))
         }

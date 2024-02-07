@@ -24,7 +24,7 @@ impl TSongMixer for TSong {
 }
 
 trait TSongMixerUtils {
-    const SAMPLE_RATE: usize = 48000;
+    const SAMPLE_RATE: usize = 16000;
     const CHANNEL_COUNT: usize = 1;
 
     fn mix(&self, start: usize) -> Sample;
@@ -158,26 +158,14 @@ impl<'a> Channel<'a> {
                 .iter()
                 .chain(sample.sample_loop().iter().cycle())
                 .skip(self.sample_position)
-                // TODO(nenikitov): This `+1` is necessary for linear interpolation.
-                // If not present, linear interpolation can produce clicks.
-                // If interpolation is reverted, this magic shouldn't be here
-                .take(duration_scaled + 1)
+                .take(duration_scaled)
                 .copied()
                 .collect::<Vec<_>>();
 
             self.sample_position += duration_scaled;
 
-            // TODO(nenikitov): Same here, these `+1` and `pop` are necessary for linear interpolation.
-            // If interpolation is reverted, this magic shouldn't be here
-            let pitch_factor = (duration + 1) as f32 / data.len() as f32;
-            let mut data = data
-                .volume(volume)
-                .pitch_with_time_stretch(pitch_factor, false);
-            if (data.len() != duration) {
-                data.pop();
-            }
-
-            data
+            let pitch_factor = duration as f32 / data.len() as f32;
+            data.volume(volume).pitch_with_time_stretch(pitch_factor)
         } else {
             vec![]
         }
@@ -218,7 +206,7 @@ impl Mixer {
 
 pub trait SoundEffect {
     fn volume(self, volume: f32) -> Self;
-    fn pitch_with_time_stretch(self, factor: f32, interpolate: bool) -> Self;
+    fn pitch_with_time_stretch(self, factor: f32) -> Self;
 }
 
 impl SoundEffect for Sample {
@@ -228,32 +216,12 @@ impl SoundEffect for Sample {
             .collect()
     }
 
-    fn pitch_with_time_stretch(self, factor: f32, interpolate: bool) -> Self {
-        // TODO(nenikitov): Linear interpolation sounds nicer and less crusty, but
-        // Introduces occasional clicks.
-        // Maybe it should be removed.
-        // Or improved...
-        let len = (self.len() as f32 * factor as f32).round() as usize;
+    fn pitch_with_time_stretch(self, factor: f32) -> Self {
+        // TODO(nenikitov): Look into linear interpolation
+        let len = (self.len() as f32 * factor).round() as usize;
 
         (0..len)
-            .map(|i| {
-                let frac = i as f32 / factor;
-                let index = (frac).floor() as usize;
-                let frac = if interpolate {
-                    frac - index as f32
-                } else {
-                    0.0
-                };
-
-                let sample_1 = self[index];
-                let sample_2 = if index + 1 < self.len() {
-                    self[index + 1]
-                } else {
-                    self[index]
-                };
-
-                ((1.0 - frac) * sample_1 as f32 + frac * sample_2 as f32) as i16
-            })
+            .map(|i| self[(i as f32 / factor).floor() as usize])
             .collect()
     }
 }
@@ -282,15 +250,15 @@ mod tests {
     fn pitch_with_time_stretch_works() {
         assert_eq!(
             vec![-10, 20, 40, 30, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0, true),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0),
         );
         assert_eq!(
-            vec![-10, 5, 20, 30, 40, 35, 30, -24, -78, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0, true),
+            vec![-10, -10, 20, 20, 40, 40, 30, 30, -78, -78],
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0),
         );
         assert_eq!(
             vec![-10, 40, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5, true),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5),
         );
     }
 }

@@ -27,7 +27,7 @@ impl Sound {
 pub struct SoundCollection;
 
 impl SoundCollection {
-    pub const SAMPLE_RATE: usize = 48000;
+    pub const SAMPLE_RATE: usize = 16000;
     pub const CHANNEL_COUNT: usize = 1;
 }
 
