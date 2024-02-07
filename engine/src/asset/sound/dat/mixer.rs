@@ -53,7 +53,10 @@ impl TSongMixerUtils for TSong {
 
                     // Process note
                     if let Some(note) = event.note {
-                        channel.note = note;
+                        channel.note = match note {
+                            PatternEventNote::Off => note,
+                            PatternEventNote::On(note) => PatternEventNote::On(note - FineTune::new(12)),
+                        };
                     }
                     if let Some(instrument) = &event.instrument {
                         channel.instrument = Some(instrument);
@@ -94,7 +97,10 @@ impl TSongMixerUtils for TSong {
                 let sample_length = sample_length as usize;
 
                 for (i, c) in channels.iter_mut().enumerate() {
-                    m.add_sample(&c.tick(sample_length), offset);
+                    let data = c.tick(sample_length);
+                    if i != 255 {
+                        m.add_sample(&data, offset);
+                    }
                 }
 
                 // Advance to next tick
@@ -149,23 +155,28 @@ impl<'a> Channel<'a> {
             } as f32
                 / u8::MAX as f32;
 
-            let pitch_factor = (BASE_NOTE - sample.finetune) / note;
+            let pitch_factor = BASE_NOTE / (note + sample.finetune);
 
-            let duration_scaled = (duration as f32 / pitch_factor).round() as usize;
+            let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
 
-            let data = sample
+            let mut data = sample
                 .sample_beginning()
                 .iter()
                 .chain(sample.sample_loop().iter().cycle())
-                .skip(self.sample_position)
+                .skip(self.sample_position + 1)
                 .take(duration_scaled)
                 .copied()
                 .collect::<Vec<_>>();
 
             self.sample_position += duration_scaled;
 
-            let pitch_factor = duration as f32 / data.len() as f32;
-            data.volume(volume).pitch_with_time_stretch(pitch_factor)
+            let pitch_factor = (duration + 1) as f32 / data.len() as f32;
+            let mut data = data
+                .volume(volume)
+                .pitch_with_time_stretch(pitch_factor, None);
+            data.truncate(duration);
+
+            data
         } else {
             vec![]
         }
@@ -206,7 +217,7 @@ impl Mixer {
 
 pub trait SoundEffect {
     fn volume(self, volume: f32) -> Self;
-    fn pitch_with_time_stretch(self, factor: f32) -> Self;
+    fn pitch_with_time_stretch(self, factor: f32, next_sample: Option<i16>) -> Self;
 }
 
 impl SoundEffect for Sample {
@@ -216,12 +227,27 @@ impl SoundEffect for Sample {
             .collect()
     }
 
-    fn pitch_with_time_stretch(self, factor: f32) -> Self {
+    fn pitch_with_time_stretch(self, factor: f32, next_sample: Option<i16>) -> Self {
         // TODO(nenikitov): Look into linear interpolation
         let len = (self.len() as f32 * factor).round() as usize;
 
         (0..len)
-            .map(|i| self[(i as f32 / factor).floor() as usize])
+            .map(|i| {
+                let frac = i as f32 / factor;
+                let index = frac.floor() as usize;
+                let frac = frac - index as f32;
+
+                let sample_1 = self[index] as f32;
+                let sample_2 = if self.len() > index + 1 {
+                    self[index + 1]
+                } else if let Some(next_sample) = next_sample {
+                    next_sample
+                } else {
+                    self[index]
+                } as f32;
+
+                ((1.0 - frac) * sample_1 + frac * sample_2).floor() as i16
+            })
             .collect()
     }
 }
@@ -250,15 +276,15 @@ mod tests {
     fn pitch_with_time_stretch_works() {
         assert_eq!(
             vec![-10, 20, 40, 30, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0, None),
         );
         assert_eq!(
             vec![-10, -10, 20, 20, 40, 40, 30, 30, -78, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0, None),
         );
         assert_eq!(
             vec![-10, 40, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5),
+            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5, None),
         );
     }
 }

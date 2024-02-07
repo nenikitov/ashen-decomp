@@ -7,7 +7,7 @@ pub struct FineTune {
 
 impl FineTune {
     const BASE_NOTE: FineTune = FineTune::new_from_note(49);
-    const BASE_FREQUENCY: f32 = 440.0;
+    const BASE_FREQUENCY: f64 = 440.0;
 
     const CENTS_PER_NOTE: i32 = 128;
 
@@ -19,10 +19,10 @@ impl FineTune {
         FineTune::new(note * Self::CENTS_PER_NOTE)
     }
 
-    pub fn frequency(&self) -> f32 {
+    pub fn frequency(&self) -> f64 {
         Self::BASE_FREQUENCY
-            * 2.0f32
-                .powf((*self - Self::BASE_NOTE).cents as f32 / (12 * Self::CENTS_PER_NOTE) as f32)
+            * 2.0f64
+                .powf((*self - Self::BASE_NOTE).cents as f64 / (12 * Self::CENTS_PER_NOTE) as f64)
     }
 
     pub fn cents(&self) -> i32 {
@@ -51,7 +51,7 @@ impl Sub for FineTune {
 }
 
 impl Div for FineTune {
-    type Output = f32;
+    type Output = f64;
 
     fn div(self, rhs: Self) -> Self::Output {
         self.frequency() / rhs.frequency()
