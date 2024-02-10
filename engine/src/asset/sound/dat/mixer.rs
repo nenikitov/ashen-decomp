@@ -138,9 +138,6 @@ struct Channel<'a> {
     note: PatternEventNote,
 }
 
-// TODO(nenikitov): Double check that the game actually uses C_5 as a base note for all samples
-const BASE_NOTE: FineTune = FineTune::new_from_note(60);
-
 impl<'a> Channel<'a> {
     fn tick(&mut self, duration: usize) -> Sample {
         if let Some(instrument) = self.instrument
@@ -155,7 +152,7 @@ impl<'a> Channel<'a> {
             } as f32
                 / u8::MAX as f32;
 
-            let pitch_factor = BASE_NOTE / (note + sample.finetune);
+            let pitch_factor = (note + sample.finetune).pitch_factor();
 
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
 
