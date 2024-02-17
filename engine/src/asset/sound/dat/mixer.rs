@@ -63,11 +63,7 @@ impl TSongMixerUtils for TSong {
                         channel.sample_position = 0;
                     }
                     if let Some(volume) = event.volume {
-                        if volume == u8::MAX {
-                            channel.volume = ChannelVolume::Sample;
-                        } else {
-                            channel.volume = ChannelVolume::Value(volume);
-                        }
+                        channel.volume = volume
                     }
 
                     // Process effects
@@ -117,24 +113,13 @@ impl TSongMixerUtils for TSong {
     }
 }
 
-enum ChannelVolume {
-    Sample,
-    Value(u8),
-}
-
-impl Default for ChannelVolume {
-    fn default() -> Self {
-        ChannelVolume::Value(0)
-    }
-}
-
 #[derive(Default)]
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
 
     sample_position: usize,
 
-    volume: ChannelVolume,
+    volume: PatternEventVolume,
     note: PatternEventNote,
 }
 
@@ -147,10 +132,9 @@ impl<'a> Channel<'a> {
                 &instrument.samples[note.note() as usize]
         {
             let volume = match self.volume {
-                ChannelVolume::Sample => sample.volume,
-                ChannelVolume::Value(value) => value,
-            } as f32
-                / u8::MAX as f32;
+                PatternEventVolume::Sample => sample.volume,
+                PatternEventVolume::Value(value) => value,
+            };
 
             let pitch_factor = (note + sample.finetune).pitch_factor();
 

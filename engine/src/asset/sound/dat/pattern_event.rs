@@ -221,11 +221,46 @@ impl AssetParser<Wildcard> for Option<PatternEventInstrumentKind> {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum PatternEventVolume {
+    Sample,
+    Value(f32),
+}
+
+impl Default for PatternEventVolume {
+    fn default() -> Self {
+        PatternEventVolume::Value(0.0)
+    }
+}
+
+impl AssetParser<Wildcard> for Option<PatternEventVolume> {
+    type Output = Self;
+
+    type Context<'ctx> = bool;
+
+    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, volume) = number::le_u8(input)?;
+
+            Ok((
+                input,
+                should_parse.then(|| {
+                    if volume == 255 {
+                        PatternEventVolume::Sample
+                    } else {
+                        PatternEventVolume::Value(volume as f32 / u8::MAX as f32)
+                    }
+                }),
+            ))
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct PatternEvent {
     pub note: Option<PatternEventNote>,
     pub instrument: Option<PatternEventInstrumentKind>,
-    pub volume: Option<u8>,
+    pub volume: Option<PatternEventVolume>,
     pub effects: [Option<PatternEffect>; 2],
 }
 
@@ -250,10 +285,9 @@ impl AssetParser<Wildcard> for PatternEvent {
                     instruments,
                 ))(input)?;
 
-                let (input, volume) = number::le_u8(input)?;
-                let volume = flags
-                    .contains(PatternEventFlags::ChangeVolume)
-                    .then_some(volume);
+                let (input, volume) = <Option<PatternEventVolume>>::parser(
+                    flags.contains(PatternEventFlags::ChangeVolume),
+                )(input)?;
 
                 let (input, effect_1) = <Option<PatternEffect>>::parser(
                     flags.contains(PatternEventFlags::ChangeEffect1),

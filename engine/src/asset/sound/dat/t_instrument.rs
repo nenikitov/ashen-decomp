@@ -135,7 +135,7 @@ bitflags! {
 #[derive(Debug)]
 pub struct TSample {
     pub flags: TSampleFlags,
-    pub volume: u8,
+    pub volume: f32,
     pub panning: u8,
     pub align: u8,
     pub finetune: FineTune,
@@ -168,7 +168,7 @@ impl AssetParser<Wildcard> for TSample {
                 input,
                 Self {
                     flags: TSampleFlags::from_bits(flags).expect("Flags should be valid"),
-                    volume,
+                    volume: volume as f32 / u8::MAX as f32,
                     panning,
                     align,
                     finetune: FineTune::new(finetune),
