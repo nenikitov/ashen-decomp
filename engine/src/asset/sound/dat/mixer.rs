@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use super::{pattern_event::*, t_instrument::*, t_song::*};
 use crate::asset::sound::dat::finetune::FineTune;
 
@@ -46,7 +44,7 @@ impl TSongMixerUtils for TSong {
         let mut speed = self.speed;
 
         for pattern in &self.orders[start..] {
-            for row in pattern.deref() {
+            for row in &**pattern {
                 // Update channels
                 for (c, event) in row.iter().enumerate() {
                     let channel = &mut channels[c];
@@ -84,10 +82,10 @@ impl TSongMixerUtils for TSong {
                                 }
                             }
                             PatternEffectKind::SampleOffset => {
-                                channel.sample_position = effect.value as usize * 256 * 3
+                                channel.sample_position = effect.value as usize * 256;
                             }
                             _ => {}
-                        }
+                        };
                     }
                 }
 

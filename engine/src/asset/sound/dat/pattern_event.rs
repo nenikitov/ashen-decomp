@@ -28,7 +28,7 @@ impl AssetParser<Wildcard> for Option<PatternEventNote> {
                 input,
                 should_parse.then(|| {
                     match note {
-                        1..=95 => PatternEventNote::On(FineTune::new_from_note(note as i32)),
+                        1..=95 => PatternEventNote::On(FineTune::from_note(note as i32)),
                         96 => PatternEventNote::Off,
                         // TODO(nenikitov): Should be a `Result`
                         _ => unreachable!("Note should be in range 0-96"),
@@ -151,7 +151,6 @@ impl From<u8> for PatternEffectKind {
             0x32 => Self::SoundControlCentre,
             0x33 => Self::SoundControlQuad,
             0x34 => Self::FilterGlobal,
-            0x35 => Self::FilterLocal,
             0x35 => Self::FilterLocal,
             0x36 => Self::PlayForward,
             0x37 => Self::PlayBackward,
