@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cmp, rc::Rc};
 
 use bitflags::bitflags;
 
@@ -12,8 +12,28 @@ use crate::{
 bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct TInstrumentFlags: u8 {
-        const HasVolumeEnveloppe = 1 << 0;
-        const HasPanEnveloppe = 1 << 1;
+        const HasVolumeEnvelope = 1 << 0;
+        const HasPanEnvelope = 1 << 1;
+    }
+}
+
+impl AssetParser<Wildcard> for TInstrumentFlags {
+    type Output = Self;
+
+    type Context<'ctx> = ();
+
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, flags) = number::le_u8(input)?;
+
+            Ok((
+                input,
+                // TODO(nenikitov): Should be a `Result`
+                TInstrumentFlags::from_bits(flags).expect(&format!(
+                    "PatternEvent flags should be valid: received: {flags:b}"
+                )),
+            ))
+        }
     }
 }
 
@@ -26,14 +46,78 @@ pub enum TInstrumentSampleKind {
 }
 
 #[derive(Debug)]
+pub struct TInstrumentVolumeEnvelope {
+    data: Vec<f32>,
+    sustain: Option<usize>,
+}
+
+impl TInstrumentVolumeEnvelope {
+    pub fn volume_beginning(&self) -> &[f32] {
+        if let Some(sustain) = self.sustain {
+            &self.data[0..sustain]
+        } else {
+            &self.data
+        }
+    }
+
+    pub fn volume_loop(&self) -> f32 {
+        if let Some(sustain) = self.sustain {
+            self.data[sustain]
+        } else {
+            64.0 / u8::MAX as f32
+        }
+    }
+
+    pub fn volume_end(&self) -> &[f32] {
+        if let Some(sustain) = self.sustain {
+            &self.data[sustain + 1..]
+        } else {
+            &[]
+        }
+    }
+}
+
+impl AssetParser<Wildcard> for Option<TInstrumentVolumeEnvelope> {
+    type Output = Self;
+
+    type Context<'ctx> = bool;
+
+    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+        move |input| {
+            let (input, begin) = number::le_u16(input)?;
+            let (input, end) = number::le_u16(input)?;
+            let (input, sustain) = number::le_u16(input)?;
+            let (input, end_total) = number::le_u16(input)?;
+            let (input, data) = multi::count!(number::le_u8, 325)(input)?;
+
+            Ok((
+                input,
+                should_parse.then(|| {
+                    let data = data
+                        .into_iter()
+                        .skip(begin as usize)
+                        .take(cmp::min(cmp::min(end, end_total), 325) as usize)
+                        .map(|v| v as f32 / u8::MAX as f32)
+                        .collect::<Vec<_>>();
+                    TInstrumentVolumeEnvelope {
+                        data,
+                        sustain: if sustain == u16::MAX {
+                            None
+                        } else {
+                            Some((sustain - begin) as usize)
+                        },
+                    }
+                }),
+            ))
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct TInstrument {
     pub flags: TInstrumentFlags,
 
-    pub volume_begin: u16,
-    pub volume_end: u16,
-    pub volume_sustain: u16,
-    pub volume_envelope_border: u16,
-    pub volume_envelope: Box<[u8; 325]>,
+    pub volume_envelope: Option<TInstrumentVolumeEnvelope>,
 
     pub pan_begin: u16,
     pub pan_end: u16,
@@ -58,15 +142,13 @@ impl AssetParser<Wildcard> for TInstrument {
 
     fn parser(samples: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
-            let (input, flags) = number::le_u8(input)?;
+            let (input, flags) = TInstrumentFlags::parser(())(input)?;
 
             let (input, _) = bytes::take(1usize)(input)?;
 
-            let (input, volume_begin) = number::le_u16(input)?;
-            let (input, volume_end) = number::le_u16(input)?;
-            let (input, volume_sustain) = number::le_u16(input)?;
-            let (input, volume_envelope_border) = number::le_u16(input)?;
-            let (input, volume_envelope) = multi::count!(number::le_u8)(input)?;
+            let (input, volume_envelope) = <Option<TInstrumentVolumeEnvelope>>::parser(
+                flags.contains(TInstrumentFlags::HasVolumeEnvelope),
+            )(input)?;
 
             let (input, pan_begin) = number::le_u16(input)?;
             let (input, pan_end) = number::le_u16(input)?;
@@ -83,17 +165,13 @@ impl AssetParser<Wildcard> for TInstrument {
             let (input, fadeout) = number::le_u32(input)?;
             let (input, vibrato_table) = number::le_u32(input)?;
 
-            let (input, sample_indexes): (_, [u8; 96]) = multi::count!(number::le_u8)(input)?;
+            let (input, sample_indexes): (_, [_; 96]) = multi::count!(number::le_u8)(input)?;
 
             Ok((
                 input,
                 Self {
-                    flags: TInstrumentFlags::from_bits(flags).expect("Flags should be valid"),
-                    volume_begin,
-                    volume_end,
-                    volume_sustain,
-                    volume_envelope_border,
-                    volume_envelope: Box::new(volume_envelope),
+                    flags,
+                    volume_envelope,
                     pan_begin,
                     pan_end,
                     pan_sustain,
@@ -108,7 +186,7 @@ impl AssetParser<Wildcard> for TInstrument {
                         sample_indexes
                             .into_iter()
                             .map(|i| {
-                                if i == 255 {
+                                if i == u8::MAX {
                                     TInstrumentSampleKind::Special
                                 } else {
                                     TInstrumentSampleKind::Predefined(samples[i as usize].clone())

@@ -94,7 +94,7 @@ impl TSongMixerUtils for TSong {
 
                 for (i, c) in channels.iter_mut().enumerate() {
                     let data = c.tick(sample_length);
-                    if i != 255 {
+                    if i == 0 {
                         m.add_sample(&data, offset);
                     }
                 }

@@ -101,12 +101,19 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0x8];
+            .collect::<Vec<_>>()[0xC];
 
-        dbg!(&test_music.patterns[1]
-            .iter()
-            .map(|r| &r[2].effects)
-            .collect::<Vec<_>>());
+        // dbg!(&test_music
+        //     .instruments
+        //     .iter()
+        //     .map(|i| (
+        //         i.flags,
+        //         i.volume_envelope_border,
+        //         i.volume_begin,
+        //         i.volume_end,
+        //         i.volume_sustain,
+        //     ))
+        //     .collect::<Vec<_>>());
 
         test_music
             .samples

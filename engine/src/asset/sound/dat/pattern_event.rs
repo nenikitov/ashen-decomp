@@ -245,7 +245,7 @@ impl AssetParser<Wildcard> for Option<PatternEventVolume> {
             Ok((
                 input,
                 should_parse.then(|| {
-                    if volume == 255 {
+                    if volume == u8::MAX {
                         PatternEventVolume::Sample
                     } else {
                         PatternEventVolume::Value(volume as f32 / u8::MAX as f32)
