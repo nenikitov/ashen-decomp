@@ -51,12 +51,7 @@ impl TSongMixerUtils for TSong {
 
                     // Process note
                     if let Some(note) = event.note {
-                        channel.note = match note {
-                            PatternEventNote::Off => note,
-                            PatternEventNote::On(note) => {
-                                PatternEventNote::On(note - FineTune::new(12))
-                            }
-                        };
+                        channel.change_note(note);
                     }
                     if let Some(instrument) = &event.instrument {
                         channel.instrument = Some(instrument);
@@ -113,6 +108,11 @@ impl TSongMixerUtils for TSong {
     }
 }
 
+struct ChannelNote {
+    finetune: FineTune,
+    on: bool,
+}
+
 #[derive(Default)]
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
@@ -120,23 +120,46 @@ struct Channel<'a> {
     sample_position: usize,
 
     volume: PatternEventVolume,
-    note: PatternEventNote,
+    volume_envelope_position: usize,
+    note: Option<ChannelNote>,
 }
 
 impl<'a> Channel<'a> {
+    fn change_note(&mut self, note: PatternEventNote) {
+        match (&mut self.note, note) {
+            (None, PatternEventNote::Off) => {
+                self.note = None;
+            }
+            (None, PatternEventNote::On(target)) => {
+                self.note = Some(ChannelNote {
+                    finetune: target,
+                    on: true,
+                });
+            }
+            (Some(current), PatternEventNote::Off) => {
+                current.on = false;
+            }
+            (Some(current), PatternEventNote::On(target)) => {
+                current.finetune = target;
+                current.on = true;
+            }
+        }
+    }
+
     fn tick(&mut self, duration: usize) -> Sample {
         if let Some(instrument) = self.instrument
-            && let PatternEventNote::On(note) = self.note
+            && let Some(note) = &self.note
+            && note.on
             && let PatternEventInstrumentKind::Predefined(instrument) = instrument
             && let TInstrumentSampleKind::Predefined(sample) =
-                &instrument.samples[note.note() as usize]
+                &instrument.samples[note.finetune.note() as usize]
         {
             let volume = match self.volume {
                 PatternEventVolume::Sample => sample.volume,
                 PatternEventVolume::Value(value) => value,
             };
 
-            let pitch_factor = (note + sample.finetune).pitch_factor();
+            let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
 
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
 
