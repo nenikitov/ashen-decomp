@@ -55,7 +55,9 @@ impl TSongMixerUtils for TSong {
                     if let Some(note) = event.note {
                         channel.note = match note {
                             PatternEventNote::Off => note,
-                            PatternEventNote::On(note) => PatternEventNote::On(note - FineTune::new(12)),
+                            PatternEventNote::On(note) => {
+                                PatternEventNote::On(note - FineTune::new(12))
+                            }
                         };
                     }
                     if let Some(instrument) = &event.instrument {

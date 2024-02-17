@@ -1,6 +1,6 @@
 use super::{
     extension::*,
-    texture::dat::{size::TextureSize, texture::Texture},
+    texture::{Texture, TextureSize},
     AssetParser,
 };
 use crate::{asset::color_map::Color, utils::nom::*};
