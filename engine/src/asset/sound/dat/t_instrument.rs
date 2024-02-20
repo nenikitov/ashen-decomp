@@ -2,7 +2,7 @@ use std::{cmp, rc::Rc};
 
 use bitflags::bitflags;
 
-use super::finetune::FineTune;
+use super::{convert_volume, finetune::FineTune};
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
@@ -103,7 +103,7 @@ impl AssetParser<Wildcard> for TInstrumentVolume {
                         .into_iter()
                         .skip(begin as usize)
                         .take(cmp::min(cmp::min(end, end_total), 325) as usize)
-                        .map(|v| v as f32 / u8::MAX as f32)
+                        .map(|v| convert_volume(v))
                         .collect::<Vec<_>>();
                     TInstrumentVolume::Envelope(TInstrumentVolumeEnvelope {
                         data,
@@ -254,7 +254,7 @@ impl AssetParser<Wildcard> for TSample {
                 input,
                 Self {
                     flags: TSampleFlags::from_bits(flags).expect("Flags should be valid"),
-                    volume: volume as f32 / u8::MAX as f32,
+                    volume: convert_volume(volume),
                     panning,
                     align,
                     finetune: FineTune::new(finetune),

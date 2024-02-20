@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use bitflags::bitflags;
 
-use super::{finetune::FineTune, t_instrument::*};
+use super::{convert_volume, finetune::FineTune, t_instrument::*};
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
@@ -248,7 +248,7 @@ impl AssetParser<Wildcard> for Option<PatternEventVolume> {
                     if volume == u8::MAX {
                         PatternEventVolume::Sample
                     } else {
-                        PatternEventVolume::Value(volume as f32 / u8::MAX as f32)
+                        PatternEventVolume::Value(convert_volume(volume))
                     }
                 }),
             ))
