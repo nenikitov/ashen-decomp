@@ -119,15 +119,29 @@ struct ChannelNote {
     on: bool,
 }
 
+struct ChannelVolume {
+    initial: PatternEventVolume,
+    factor: f32,
+}
+
+impl Default for ChannelVolume {
+    fn default() -> Self {
+        Self {
+            initial: PatternEventVolume::Value(0.0),
+            factor: 1.0,
+        }
+    }
+}
+
 #[derive(Default)]
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
+    note: Option<ChannelNote>,
 
     sample_position: usize,
 
-    volume: PatternEventVolume,
-    volume_envelope_position: usize,
-    note: Option<ChannelNote>,
+    volume: ChannelVolume,
+    volume_evelope_position: usize,
 }
 
 impl<'a> Channel<'a> {
@@ -144,7 +158,7 @@ impl<'a> Channel<'a> {
             }
             (Some(current), PatternEventNote::Off) => {
                 current.on = false;
-                self.volume_envelope_position = 0;
+                self.volume_evelope_position = 0;
             }
             (Some(current), PatternEventNote::On(target)) => {
                 current.finetune = target;
@@ -156,11 +170,12 @@ impl<'a> Channel<'a> {
     fn change_instrument(&mut self, instrument: &'a PatternEventInstrumentKind) {
         self.instrument = Some(instrument);
         self.sample_position = 0;
-        self.volume_envelope_position = 0;
+        self.volume_evelope_position = 0;
     }
 
     fn change_volume(&mut self, volume: PatternEventVolume) {
-        self.volume = volume;
+        self.volume.initial = volume;
+        self.volume.factor = 1.0;
     }
 
     fn tick(&mut self, duration: usize) -> Sample {
@@ -171,22 +186,23 @@ impl<'a> Channel<'a> {
                 &instrument.samples[note.finetune.note() as usize]
         {
             // Generate data
-            let volume_note = match self.volume {
-                PatternEventVolume::Sample => sample.volume,
-                PatternEventVolume::Value(value) => value,
-            };
+            let volume_note = self.volume.factor
+                * match self.volume.initial {
+                    PatternEventVolume::Sample => sample.volume,
+                    PatternEventVolume::Value(volume) => volume,
+                };
             let volume_envelope = match &instrument.volume {
                 TInstrumentVolume::Envelope(envelope) => {
                     if note.on {
                         envelope
                             .volume_beginning()
-                            .get(self.volume_envelope_position)
+                            .get(self.volume_evelope_position)
                             .map(ToOwned::to_owned)
                             .unwrap_or(envelope.volume_loop())
                     } else {
                         envelope
                             .volume_end()
-                            .get(self.volume_envelope_position)
+                            .get(self.volume_evelope_position)
                             .map(ToOwned::to_owned)
                             .unwrap_or_default()
                     }
@@ -215,7 +231,7 @@ impl<'a> Channel<'a> {
 
             // Update
             self.sample_position += duration_scaled;
-            self.volume_envelope_position += 1;
+            self.volume_evelope_position += 1;
 
             // Return
             data

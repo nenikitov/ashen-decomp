@@ -101,7 +101,7 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0xC];
+            .collect::<Vec<_>>()[0x1];
 
         dbg!(&test_music
             .instruments
