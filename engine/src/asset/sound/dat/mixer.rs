@@ -1,4 +1,9 @@
-use super::{pattern_event::*, t_instrument::*, t_song::*};
+use super::{
+    pattern_effect::{PatternEffect, PatternEffectSpeed},
+    pattern_event::*,
+    t_instrument::*,
+    t_song::*,
+};
 use crate::asset::sound::dat::finetune::FineTune;
 
 type SamplePoint = i16;
@@ -62,19 +67,15 @@ impl TSongMixerUtils for TSong {
 
                     // Process effects
                     for effect in event.effects.iter().flatten() {
-                        match effect.kind {
-                            // TODO(nenikitov): Add effects
-                            PatternEffectKind::Speed => {
-                                if effect.value >= 0x20 {
-                                    bpm = effect.value as usize;
-                                } else {
-                                    speed = effect.value as usize;
-                                }
+                        match effect {
+                            PatternEffect::Dummy => {}
+                            PatternEffect::Speed(s) => match s {
+                                PatternEffectSpeed::Bpm(s) => bpm = *s,
+                                PatternEffectSpeed::TicksPerRow(s) => speed = *s,
+                            },
+                            PatternEffect::SampleOffset(offset) => {
+                                channel.sample_position = *offset;
                             }
-                            PatternEffectKind::SampleOffset => {
-                                channel.sample_position = effect.value as usize * 256;
-                            }
-                            _ => {}
                         };
                     }
                 }
