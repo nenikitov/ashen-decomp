@@ -102,12 +102,14 @@ mod tests {
                 Sound::Effect(_) => None,
             })
             .collect::<Vec<_>>()[0x1];
+        let file = output_dir.join("test.wav");
 
-        dbg!(&test_music
-            .instruments
-            .iter()
-            .map(|i| (i.flags, i.fadeout, &i.volume))
-            .collect::<Vec<_>>());
+        dbg!(&test_music.patterns[5][0x32][1].effects);
+
+        // dbg!(&test_music.patterns[2]
+        //     .iter()
+        //     .map(|p| p.iter().map(|r| &r.effects).collect::<Vec<_>>())
+        //     .collect::<Vec<_>>());
 
         test_music
             .samples

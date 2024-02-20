@@ -1,11 +1,8 @@
 use std::rc::Rc;
 
-use super::{
-    pattern_effect::{PatternEffect, PatternEffectSpeed},
-    pattern_event::*,
-    t_instrument::*,
-    t_song::*,
-};
+use itertools::Itertools;
+
+use super::{pattern_effect::*, pattern_event::*, t_instrument::*, t_song::*};
 use crate::asset::sound::dat::finetune::FineTune;
 
 type SamplePoint = i16;
@@ -31,7 +28,7 @@ impl TSongMixer for TSong {
 trait TSongMixerUtils {
     const SAMPLE_RATE: usize = 16000;
     const CHANNEL_COUNT: usize = 1;
-    const GLOBAL_VOLUME: f32 = 0.5;
+    const VOLUME_SCALE: f32 = 0.5;
 
     fn mix(&self, start: usize) -> Sample;
 
@@ -67,8 +64,13 @@ impl TSongMixerUtils for TSong {
                     if let Some(volume) = event.volume {
                         channel.change_volume(volume);
                     }
+                    for (i, effect) in event.effects.iter().enumerate() {
+                        if let Some(effect) = effect {
+                            channel.change_effect(i, effect);
+                        }
+                    }
 
-                    // Process effects
+                    // Init effects
                     for effect in event.effects.iter().flatten() {
                         match effect {
                             PatternEffect::Dummy => {}
@@ -76,10 +78,29 @@ impl TSongMixerUtils for TSong {
                                 PatternEffectSpeed::Bpm(s) => bpm = *s,
                                 PatternEffectSpeed::TicksPerRow(s) => speed = *s,
                             },
+                            PatternEffect::Volume(v) => match v {
+                                PatternEffectVolume::Value(v) => channel.volume = *v,
+                                PatternEffectVolume::Slide(v) => {
+                                    if let Some(v) = v {
+                                        channel.volume_slide = *v;
+                                    }
+                                }
+                            },
                             PatternEffect::SampleOffset(offset) => {
                                 channel.sample_position = *offset;
                             }
                         };
+                    }
+
+                    // Process repeatable effects
+                    for effect in channel.effects.iter().flatten() {
+                        match effect {
+                            PatternEffect::Volume(PatternEffectVolume::Slide(_)) => {
+                                channel.volume =
+                                    (channel.volume + channel.volume_slide).clamp(0.0, 4.0);
+                            }
+                            _ => {}
+                        }
                     }
                 }
 
@@ -90,6 +111,11 @@ impl TSongMixerUtils for TSong {
                 let sample_length = sample_length as usize;
                 let tick_length = sample_length / speed;
 
+                let volumes = channels
+                    .iter()
+                    .map(|c| format!("{: >10}", c.volume))
+                    .join(" ");
+
                 for (i, c) in channels.iter_mut().enumerate() {
                     for j in 0..speed {
                         let offset = offset + j * tick_length;
@@ -99,7 +125,7 @@ impl TSongMixerUtils for TSong {
                             sample_length - j * tick_length
                         };
 
-                        let data = c.tick(tick_length, Self::GLOBAL_VOLUME);
+                        let data = c.tick(tick_length, Self::VOLUME_SCALE);
                         m.add_sample(&data, offset);
                     }
                 }
@@ -127,11 +153,13 @@ struct ChannelNote {
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
     note: Option<ChannelNote>,
+    effects: [Option<&'a PatternEffect>; 2],
 
     sample_position: usize,
 
     volume: f32,
     volume_evelope_position: usize,
+    volume_slide: f32,
 }
 
 impl<'a> Channel<'a> {
@@ -189,7 +217,7 @@ impl<'a> Channel<'a> {
         }
     }
 
-    fn tick(&mut self, duration: usize, global_volume: f32) -> Sample {
+    fn tick(&mut self, duration: usize, volume_scale: f32) -> Sample {
         if let Some((note, instrument, sample)) = self.get_note_instrument_sample() {
             // Generate data
             let volume_envelope = match &instrument.volume {
@@ -226,7 +254,7 @@ impl<'a> Channel<'a> {
 
             let pitch_factor = (duration + 1) as f32 / data.len() as f32;
             let mut data = data
-                .volume(global_volume * self.volume * volume_envelope)
+                .volume(volume_scale * self.volume * volume_envelope)
                 .pitch_with_time_stretch(pitch_factor, None);
             data.truncate(duration);
 
@@ -239,6 +267,10 @@ impl<'a> Channel<'a> {
         } else {
             vec![]
         }
+    }
+
+    fn change_effect(&mut self, i: usize, effect: &'a PatternEffect) {
+        self.effects[i] = Some(effect);
     }
 }
 

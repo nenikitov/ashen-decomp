@@ -1,16 +1,26 @@
+use super::convert_volume;
 use crate::{
     asset::{extension::*, AssetParser},
     utils::nom::*,
 };
 
+#[derive(Debug)]
 pub enum PatternEffectSpeed {
     TicksPerRow(usize),
     Bpm(usize),
 }
 
+#[derive(Debug)]
+pub enum PatternEffectVolume {
+    Value(f32),
+    Slide(Option<f32>),
+}
+
+#[derive(Debug)]
 pub enum PatternEffect {
     Dummy,
     Speed(PatternEffectSpeed),
+    Volume(PatternEffectVolume),
     SampleOffset(usize),
 }
 
@@ -33,6 +43,22 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     } else {
                         PatternEffectSpeed::TicksPerRow(value as usize)
                     }),
+                    0x0C => {
+                        PatternEffect::Volume(PatternEffectVolume::Value(convert_volume(value)))
+                    }
+                    0x0A => {
+                        if value == 0 {
+                            PatternEffect::Volume(PatternEffectVolume::Slide(None))
+                        } else {
+                            PatternEffect::Volume(PatternEffectVolume::Slide(Some(
+                                if value >= 16 {
+                                    convert_volume(value / 16)
+                                } else {
+                                    -convert_volume(value)
+                                },
+                            )))
+                        }
+                    }
                     // TODO(nenikitov): Remove dummy effect
                     0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x0A | 0x0B
                     | 0x0C | 0x0D | 0x0F | 0x14 | 0x15 | 0x16 | 0x1D | 0x1E | 0x1F | 0x20
