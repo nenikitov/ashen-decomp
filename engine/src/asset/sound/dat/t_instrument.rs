@@ -64,7 +64,7 @@ impl TInstrumentVolumeEnvelope {
         if let Some(sustain) = self.sustain {
             self.data[sustain]
         } else {
-            64.0 / u8::MAX as f32
+            0.0
         }
     }
 
@@ -77,12 +77,18 @@ impl TInstrumentVolumeEnvelope {
     }
 }
 
-impl AssetParser<Wildcard> for Option<TInstrumentVolumeEnvelope> {
+#[derive(Debug)]
+pub enum TInstrumentVolume {
+    Envelope(TInstrumentVolumeEnvelope),
+    Constant(f32),
+}
+
+impl AssetParser<Wildcard> for TInstrumentVolume {
     type Output = Self;
 
     type Context<'ctx> = bool;
 
-    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(has_envelope: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
             let (input, begin) = number::le_u16(input)?;
             let (input, end) = number::le_u16(input)?;
@@ -92,22 +98,24 @@ impl AssetParser<Wildcard> for Option<TInstrumentVolumeEnvelope> {
 
             Ok((
                 input,
-                should_parse.then(|| {
+                if has_envelope {
                     let data = data
                         .into_iter()
                         .skip(begin as usize)
                         .take(cmp::min(cmp::min(end, end_total), 325) as usize)
                         .map(|v| v as f32 / u8::MAX as f32)
                         .collect::<Vec<_>>();
-                    TInstrumentVolumeEnvelope {
+                    TInstrumentVolume::Envelope(TInstrumentVolumeEnvelope {
                         data,
                         sustain: if sustain == u16::MAX {
                             None
                         } else {
                             Some((sustain - begin) as usize)
                         },
-                    }
-                }),
+                    })
+                } else {
+                    TInstrumentVolume::Constant(0.25)
+                },
             ))
         }
     }
@@ -117,7 +125,7 @@ impl AssetParser<Wildcard> for Option<TInstrumentVolumeEnvelope> {
 pub struct TInstrument {
     pub flags: TInstrumentFlags,
 
-    pub volume_envelope: Option<TInstrumentVolumeEnvelope>,
+    pub volume: TInstrumentVolume,
 
     pub pan_begin: u16,
     pub pan_end: u16,
@@ -146,7 +154,7 @@ impl AssetParser<Wildcard> for TInstrument {
 
             let (input, _) = bytes::take(1usize)(input)?;
 
-            let (input, volume_envelope) = <Option<TInstrumentVolumeEnvelope>>::parser(
+            let (input, volume_envelope) = TInstrumentVolume::parser(
                 flags.contains(TInstrumentFlags::HasVolumeEnvelope),
             )(input)?;
 
@@ -171,7 +179,7 @@ impl AssetParser<Wildcard> for TInstrument {
                 input,
                 Self {
                     flags,
-                    volume_envelope,
+                    volume: volume_envelope,
                     pan_begin,
                     pan_end,
                     pan_sustain,

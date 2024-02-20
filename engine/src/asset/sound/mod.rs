@@ -103,17 +103,11 @@ mod tests {
             })
             .collect::<Vec<_>>()[0xC];
 
-        // dbg!(&test_music
-        //     .instruments
-        //     .iter()
-        //     .map(|i| (
-        //         i.flags,
-        //         i.volume_envelope_border,
-        //         i.volume_begin,
-        //         i.volume_end,
-        //         i.volume_sustain,
-        //     ))
-        //     .collect::<Vec<_>>());
+        dbg!(&test_music
+            .instruments
+            .iter()
+            .map(|i| (i.flags, i.fadeout, &i.volume))
+            .collect::<Vec<_>>());
 
         test_music
             .samples
