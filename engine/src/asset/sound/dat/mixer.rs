@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::{
     pattern_effect::{PatternEffect, PatternEffectSpeed},
     pattern_event::*,
@@ -29,6 +31,7 @@ impl TSongMixer for TSong {
 trait TSongMixerUtils {
     const SAMPLE_RATE: usize = 16000;
     const CHANNEL_COUNT: usize = 1;
+    const GLOBAL_VOLUME: f32 = 0.5;
 
     fn mix(&self, start: usize) -> Sample;
 
@@ -96,7 +99,7 @@ impl TSongMixerUtils for TSong {
                             sample_length - j * tick_length
                         };
 
-                        let data = c.tick(tick_length);
+                        let data = c.tick(tick_length, Self::GLOBAL_VOLUME);
                         m.add_sample(&data, offset);
                     }
                 }
@@ -120,20 +123,6 @@ struct ChannelNote {
     on: bool,
 }
 
-struct ChannelVolume {
-    initial: PatternEventVolume,
-    factor: f32,
-}
-
-impl Default for ChannelVolume {
-    fn default() -> Self {
-        Self {
-            initial: PatternEventVolume::Value(0.0),
-            factor: 1.0,
-        }
-    }
-}
-
 #[derive(Default)]
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
@@ -141,7 +130,7 @@ struct Channel<'a> {
 
     sample_position: usize,
 
-    volume: ChannelVolume,
+    volume: f32,
     volume_evelope_position: usize,
 }
 
@@ -175,23 +164,34 @@ impl<'a> Channel<'a> {
     }
 
     fn change_volume(&mut self, volume: PatternEventVolume) {
-        self.volume.initial = volume;
-        self.volume.factor = 1.0;
+        self.volume = match volume {
+            PatternEventVolume::Sample => {
+                if let Some((_, _, sample)) = self.get_note_instrument_sample() {
+                    sample.volume
+                } else {
+                    0.0
+                }
+            }
+
+            PatternEventVolume::Value(value) => value,
+        };
     }
 
-    fn tick(&mut self, duration: usize) -> Sample {
-        if let Some(instrument) = self.instrument
-            && let Some(note) = &self.note
-            && let PatternEventInstrumentKind::Predefined(instrument) = instrument
+    fn get_note_instrument_sample(&self) -> Option<(&ChannelNote, &Rc<TInstrument>, &Rc<TSample>)> {
+        if let Some(note) = &self.note
+            && let Some(PatternEventInstrumentKind::Predefined(instrument)) = self.instrument
             && let TInstrumentSampleKind::Predefined(sample) =
                 &instrument.samples[note.finetune.note() as usize]
         {
+            Some((note, instrument, sample))
+        } else {
+            None
+        }
+    }
+
+    fn tick(&mut self, duration: usize, global_volume: f32) -> Sample {
+        if let Some((note, instrument, sample)) = self.get_note_instrument_sample() {
             // Generate data
-            let volume_note = self.volume.factor
-                * match self.volume.initial {
-                    PatternEventVolume::Sample => sample.volume,
-                    PatternEventVolume::Value(volume) => volume,
-                };
             let volume_envelope = match &instrument.volume {
                 TInstrumentVolume::Envelope(envelope) => {
                     if note.on {
@@ -226,7 +226,7 @@ impl<'a> Channel<'a> {
 
             let pitch_factor = (duration + 1) as f32 / data.len() as f32;
             let mut data = data
-                .volume(volume_note * volume_envelope)
+                .volume(global_volume * self.volume * volume_envelope)
                 .pitch_with_time_stretch(pitch_factor, None);
             data.truncate(duration);
 
