@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use super::convert_volume;
 use crate::{
     asset::{extension::*, AssetParser},
@@ -5,23 +7,47 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub enum PatternEffectSpeed {
+pub enum Speed {
     TicksPerRow(usize),
     Bpm(usize),
 }
 
 #[derive(Debug)]
-pub enum PatternEffectVolume {
+pub enum Volume {
     Value(f32),
     Slide(Option<f32>),
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub enum PatternEffectMemoryKey {
+    VolumeValue,
+    VolumeSlide,
+    SampleOffset,
 }
 
 #[derive(Debug)]
 pub enum PatternEffect {
     Dummy,
-    Speed(PatternEffectSpeed),
-    Volume(PatternEffectVolume),
+    Speed(Speed),
+    Volume(Volume),
     SampleOffset(usize),
+}
+
+impl PatternEffect {
+    fn memory_key(&self) -> Option<PatternEffectMemoryKey> {
+        match self {
+            PatternEffect::Volume(Volume::Value(_)) => Some(PatternEffectMemoryKey::VolumeValue),
+            PatternEffect::Volume(Volume::Slide(_)) => Some(PatternEffectMemoryKey::VolumeSlide),
+            PatternEffect::SampleOffset(_) => Some(PatternEffectMemoryKey::SampleOffset),
+            _ => None,
+        }
+    }
+}
+
+impl Hash for PatternEffect {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.memory_key().hash(state)
+    }
 }
 
 impl AssetParser<Wildcard> for Option<PatternEffect> {
@@ -39,24 +65,20 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                 should_parse.then(|| match kind {
                     0x09 => PatternEffect::SampleOffset(value as usize * 256),
                     0x0E => PatternEffect::Speed(if value >= 0x20 {
-                        PatternEffectSpeed::Bpm(value as usize)
+                        Speed::Bpm(value as usize)
                     } else {
-                        PatternEffectSpeed::TicksPerRow(value as usize)
+                        Speed::TicksPerRow(value as usize)
                     }),
-                    0x0C => {
-                        PatternEffect::Volume(PatternEffectVolume::Value(convert_volume(value)))
-                    }
+                    0x0C => PatternEffect::Volume(Volume::Value(convert_volume(value))),
                     0x0A => {
                         if value == 0 {
-                            PatternEffect::Volume(PatternEffectVolume::Slide(None))
+                            PatternEffect::Volume(Volume::Slide(None))
                         } else {
-                            PatternEffect::Volume(PatternEffectVolume::Slide(Some(
-                                if value >= 16 {
-                                    convert_volume(value / 16)
-                                } else {
-                                    -convert_volume(value)
-                                },
-                            )))
+                            PatternEffect::Volume(Volume::Slide(Some(if value >= 16 {
+                                convert_volume(value / 16)
+                            } else {
+                                -convert_volume(value)
+                            })))
                         }
                     }
                     // TODO(nenikitov): Remove dummy effect
@@ -107,3 +129,75 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
         }
     }
 }
+
+/*
+use std::{collections::HashMap, hash::Hash};
+
+struct Channel;
+struct Song;
+
+#[derive(Hash, Debug, PartialEq, Eq)]
+enum PanKind {
+    Set,
+    Slide,
+}
+
+#[derive(Hash, Debug, PartialEq, Eq)]
+enum EffectKind {
+    Bpm,
+    Volume,
+    Pan(PanKind),
+}
+
+#[derive(Debug)]
+enum Pan {
+    Set(f32),
+    Slide(f32),
+}
+
+#[derive(Debug)]
+enum Effect {
+    Bpm(usize),
+    Volume(f32),
+    Pan(Pan),
+}
+
+impl Effect {
+    fn kind(&self) -> EffectKind {
+        match self {
+            Effect::Bpm(_) => EffectKind::Bpm,
+            Effect::Volume(_) => EffectKind::Volume,
+            Effect::Pan(Pan::Set(_)) => EffectKind::Pan(PanKind::Set),
+            Effect::Pan(Pan::Slide(_)) => EffectKind::Pan(PanKind::Slide),
+        }
+    }
+}
+
+impl Hash for Effect {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.kind().hash(state)
+    }
+}
+
+fn main() {
+    let mut effects = HashMap::new();
+
+    let effect_1 = Effect::Volume(0.15);
+    let effect_2 = Effect::Bpm(120);
+    let effect_3 = Effect::Volume(0.25);
+    let effect_4 = Effect::Pan(Pan::Set(0.25));
+    let effect_5 = Effect::Pan(Pan::Set(0.5));
+    let effect_6 = Effect::Pan(Pan::Slide(-0.25));
+    let effect_7 = Effect::Pan(Pan::Slide(-0.5));
+
+    effects.insert(effect_1.kind(), &effect_1);
+    effects.insert(effect_2.kind(), &effect_2);
+    effects.insert(effect_3.kind(), &effect_3);
+    effects.insert(effect_4.kind(), &effect_4);
+    effects.insert(effect_5.kind(), &effect_5);
+    effects.insert(effect_6.kind(), &effect_6);
+    effects.insert(effect_7.kind(), &effect_7);
+
+    dbg!(effects);
+}
+*/

@@ -75,12 +75,12 @@ impl TSongMixerUtils for TSong {
                         match effect {
                             PatternEffect::Dummy => {}
                             PatternEffect::Speed(s) => match s {
-                                PatternEffectSpeed::Bpm(s) => bpm = *s,
-                                PatternEffectSpeed::TicksPerRow(s) => speed = *s,
+                                Speed::Bpm(s) => bpm = *s,
+                                Speed::TicksPerRow(s) => speed = *s,
                             },
                             PatternEffect::Volume(v) => match v {
-                                PatternEffectVolume::Value(v) => channel.volume = *v,
-                                PatternEffectVolume::Slide(v) => {
+                                Volume::Value(v) => channel.volume = *v,
+                                Volume::Slide(v) => {
                                     if let Some(v) = v {
                                         channel.volume_slide = *v;
                                     }
@@ -95,7 +95,7 @@ impl TSongMixerUtils for TSong {
                     // Process repeatable effects
                     for effect in channel.effects.iter().flatten() {
                         match effect {
-                            PatternEffect::Volume(PatternEffectVolume::Slide(_)) => {
+                            PatternEffect::Volume(Volume::Slide(_)) => {
                                 channel.volume =
                                     (channel.volume + channel.volume_slide).clamp(0.0, 4.0);
                             }
