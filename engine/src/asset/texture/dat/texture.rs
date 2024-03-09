@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use super::size::TextureSize;
 use crate::{
     asset::{
@@ -7,7 +9,6 @@ use crate::{
     },
     utils::nom::*,
 };
-use itertools::Itertools;
 
 // TODO(nenikitov): Move this to a separate public module later
 #[derive(Clone)]

@@ -1,6 +1,7 @@
+use std::ops::Index;
+
 use super::{extension::*, AssetParser};
 use crate::utils::nom::*;
-use std::ops::Index;
 
 #[derive(Debug)]
 pub struct PackInfo {

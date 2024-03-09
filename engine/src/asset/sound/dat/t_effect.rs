@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::{
     mixer::Mixer,
     t_instrument::{TInstrument, TSample},
@@ -10,14 +12,14 @@ use crate::{
 
 pub struct TEffect {
     instrument: TInstrument,
-    sample: TSample,
+    sample: Rc<TSample>,
 }
 
 // It should be separated
 impl TEffect {
     pub fn mix(&self) -> Vec<i16> {
         let mut m = Mixer::new();
-        m.add_samples(&self.sample.data, 0);
+        m.add_sample(&self.sample.data, 0);
         m.mix()
     }
 }
@@ -31,10 +33,14 @@ impl AssetParser<Wildcard> for TEffect {
         move |input| {
             let (_, pointers) = TEffectPointers::parser(())(input)?;
 
-            let (_, instrument) = TInstrument::parser(())(&input[pointers.instrument as usize..])?;
-
             let sample = uncompress(&input[pointers.sample_data as usize..]);
             let (_, sample) = TSample::parser(&sample)(&input[pointers.sample as usize..])?;
+            let sample = [Rc::new(sample)];
+
+            let (_, instrument) =
+                TInstrument::parser(&sample)(&input[pointers.instrument as usize..])?;
+
+            let [sample] = sample;
 
             Ok((&[], Self { instrument, sample }))
         }

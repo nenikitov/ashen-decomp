@@ -1,6 +1,8 @@
-use crate::utils::nom::Input;
-use nom::error::ErrorKind as NomErrorKind;
 use std::num::NonZeroUsize;
+
+use nom::error::ErrorKind as NomErrorKind;
+
+use crate::utils::nom::Input;
 
 // TODO(Unavailable): implement Error and Display.
 //

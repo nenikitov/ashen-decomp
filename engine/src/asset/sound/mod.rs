@@ -1,5 +1,6 @@
 mod dat;
 
+use self::dat::mixer::TSongMixer;
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -17,7 +18,7 @@ pub enum Sound {
 impl Sound {
     pub fn mix(&self) -> Vec<i16> {
         match self {
-            Sound::Song(sound) => sound.mix(),
+            Sound::Song(sound) => sound.mix(false),
             Sound::Effect(effect) => effect.mix(),
         }
     }
@@ -66,9 +67,10 @@ impl AssetParser<Pack> for SoundCollection {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::LazyCell, path::PathBuf};
+
     use super::*;
     use crate::utils::{format::*, test::*};
-    use std::{cell::LazyCell, path::PathBuf};
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
 
@@ -88,6 +90,36 @@ mod tests {
                 output_file(
                     file,
                     song.mix()
+                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
+                )
+            })?;
+
+        // TODO(nenikitov): Remove this debug code
+        let test_music = sounds
+            .iter()
+            .filter_map(|s| match s {
+                Sound::Song(s) => Some(s),
+                Sound::Effect(_) => None,
+            })
+            .collect::<Vec<_>>()[0x1];
+        let file = output_dir.join("test.wav");
+
+        dbg!(&test_music.patterns[5][0x32][1].effects);
+
+        // dbg!(&test_music.patterns[2]
+        //     .iter()
+        //     .map(|p| p.iter().map(|r| &r.effects).collect::<Vec<_>>())
+        //     .collect::<Vec<_>>());
+
+        test_music
+            .samples
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, s)| {
+                let file = output_dir.join(format!("sample-{i}.wav"));
+                output_file(
+                    file,
+                    s.data
                         .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
                 )
             })?;

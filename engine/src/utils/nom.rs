@@ -14,11 +14,11 @@ macro_rules! re_export {
 
 /// Re-exports all `nom::number` items.
 pub mod number {
+    use nom::number;
     pub use nom::number::complete::*;
+    use paste::paste;
 
     use super::Result;
-    use nom::number;
-    use paste::paste;
 
     macro_rules! parser_for_fixed {
         ($type: ty, $bits: expr) => {
