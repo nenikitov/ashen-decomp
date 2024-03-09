@@ -6,6 +6,13 @@ use crate::{
     utils::nom::*,
 };
 
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub enum PatternEffectMemoryKey {
+    VolumeValue,
+    VolumeSlide,
+    SampleOffset,
+}
+
 #[derive(Debug)]
 pub enum Speed {
     TicksPerRow(usize),
@@ -16,13 +23,6 @@ pub enum Speed {
 pub enum Volume {
     Value(f32),
     Slide(Option<f32>),
-}
-
-#[derive(Debug, Hash, PartialEq, Eq)]
-pub enum PatternEffectMemoryKey {
-    VolumeValue,
-    VolumeSlide,
-    SampleOffset,
 }
 
 #[derive(Debug)]
@@ -70,17 +70,13 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                         Speed::TicksPerRow(value as usize)
                     }),
                     0x0C => PatternEffect::Volume(Volume::Value(convert_volume(value))),
-                    0x0A => {
-                        if value == 0 {
-                            PatternEffect::Volume(Volume::Slide(None))
+                    0x0A => PatternEffect::Volume(Volume::Slide((value != 0).then(|| {
+                        if value >= 16 {
+                            convert_volume(value / 16)
                         } else {
-                            PatternEffect::Volume(Volume::Slide(Some(if value >= 16 {
-                                convert_volume(value / 16)
-                            } else {
-                                -convert_volume(value)
-                            })))
+                            -convert_volume(value)
                         }
-                    }
+                    }))),
                     // TODO(nenikitov): Remove dummy effect
                     0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x0A | 0x0B
                     | 0x0C | 0x0D | 0x0F | 0x14 | 0x15 | 0x16 | 0x1D | 0x1E | 0x1F | 0x20
@@ -123,81 +119,9 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     // 0x36 => Self::PlayForward,
                     // 0x37 => Self::PlayBackward,
                     // TODO(nenikitov): Should be a `Result`
-                    a => unreachable!("Effect is outside the range {a}"),
+                    kind => unreachable!("Effect is outside the range {kind}"),
                 }),
             ))
         }
     }
 }
-
-/*
-use std::{collections::HashMap, hash::Hash};
-
-struct Channel;
-struct Song;
-
-#[derive(Hash, Debug, PartialEq, Eq)]
-enum PanKind {
-    Set,
-    Slide,
-}
-
-#[derive(Hash, Debug, PartialEq, Eq)]
-enum EffectKind {
-    Bpm,
-    Volume,
-    Pan(PanKind),
-}
-
-#[derive(Debug)]
-enum Pan {
-    Set(f32),
-    Slide(f32),
-}
-
-#[derive(Debug)]
-enum Effect {
-    Bpm(usize),
-    Volume(f32),
-    Pan(Pan),
-}
-
-impl Effect {
-    fn kind(&self) -> EffectKind {
-        match self {
-            Effect::Bpm(_) => EffectKind::Bpm,
-            Effect::Volume(_) => EffectKind::Volume,
-            Effect::Pan(Pan::Set(_)) => EffectKind::Pan(PanKind::Set),
-            Effect::Pan(Pan::Slide(_)) => EffectKind::Pan(PanKind::Slide),
-        }
-    }
-}
-
-impl Hash for Effect {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.kind().hash(state)
-    }
-}
-
-fn main() {
-    let mut effects = HashMap::new();
-
-    let effect_1 = Effect::Volume(0.15);
-    let effect_2 = Effect::Bpm(120);
-    let effect_3 = Effect::Volume(0.25);
-    let effect_4 = Effect::Pan(Pan::Set(0.25));
-    let effect_5 = Effect::Pan(Pan::Set(0.5));
-    let effect_6 = Effect::Pan(Pan::Slide(-0.25));
-    let effect_7 = Effect::Pan(Pan::Slide(-0.5));
-
-    effects.insert(effect_1.kind(), &effect_1);
-    effects.insert(effect_2.kind(), &effect_2);
-    effects.insert(effect_3.kind(), &effect_3);
-    effects.insert(effect_4.kind(), &effect_4);
-    effects.insert(effect_5.kind(), &effect_5);
-    effects.insert(effect_6.kind(), &effect_6);
-    effects.insert(effect_7.kind(), &effect_7);
-
-    dbg!(effects);
-}
-*/
