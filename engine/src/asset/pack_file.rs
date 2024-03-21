@@ -1,5 +1,7 @@
 //! This only works with the last version of Ashen :).
 
+mod directory;
+
 use crate::utils::nom::*;
 
 #[derive(Debug, PartialEq)]
@@ -8,7 +10,7 @@ struct EntryHeader {
     size: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct EntryData {
     bytes: Vec<u8>,
 }
