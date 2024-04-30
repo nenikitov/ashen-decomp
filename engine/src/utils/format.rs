@@ -7,8 +7,12 @@ use image::{
     },
     Frame, ImageEncoder, RgbaImage,
 };
+use itertools::Itertools;
 
-use crate::asset::color_map::Color;
+use crate::asset::{
+    color_map::Color,
+    sound::sample::{Sample, SamplePoint},
+};
 
 pub trait PngFile {
     fn to_png(&self) -> Vec<u8>;
@@ -96,10 +100,47 @@ where
 }
 
 pub trait WaveFile {
+    fn to_wave(&self) -> Vec<u8>;
+}
+
+impl<S: SamplePoint, const CHANNELS: usize> WaveFile for Sample<S, CHANNELS> {
+    fn to_wave(&self) -> Vec<u8> {
+        let bits_per_sample: usize = S::BITS;
+        let bytes_per_sample: usize = bits_per_sample / 8;
+
+        let size = self.len() * CHANNELS * bytes_per_sample;
+
+        "RIFF"
+            .bytes()
+            .chain(u32::to_le_bytes((36 + size) as u32))
+            .chain("WAVE".bytes())
+            .chain("fmt ".bytes())
+            .chain(u32::to_le_bytes(16))
+            .chain(u16::to_le_bytes(1))
+            .chain(u16::to_le_bytes(CHANNELS as u16))
+            .chain(u32::to_le_bytes(self.sample_rate as u32))
+            .chain(u32::to_le_bytes(
+                (self.sample_rate * CHANNELS * bytes_per_sample) as u32,
+            ))
+            .chain(u16::to_le_bytes((CHANNELS * bytes_per_sample) as u16))
+            .chain(u16::to_le_bytes(bits_per_sample as u16))
+            .chain("data".bytes())
+            .chain(u32::to_le_bytes(size as u32))
+            .chain((0..self.data.len()).into_iter().flat_map(|i| {
+                self.data
+                    .iter()
+                    .flat_map(|channel| channel[i].to_le_bytes())
+                    .collect_vec()
+            }))
+            .collect()
+    }
+}
+
+pub trait WaveFileOld {
     fn to_wave(&self, sample_rate: usize, channel_count: usize) -> Vec<u8>;
 }
 
-impl WaveFile for Vec<i16> {
+impl WaveFileOld for Vec<i16> {
     fn to_wave(&self, sample_rate: usize, channel_count: usize) -> Vec<u8> {
         const BITS_PER_SAMPLE: usize = 16;
         const BYTES_PER_SAMPLE: usize = BITS_PER_SAMPLE / 8;

@@ -103,7 +103,7 @@ impl AssetParser<Wildcard> for TInstrumentVolume {
                         .into_iter()
                         .skip(begin as usize)
                         .take(cmp::min(cmp::min(end, end_total), 325) as usize)
-                        .map(|v| convert_volume(v))
+                        .map(convert_volume)
                         .collect::<Vec<_>>();
                     TInstrumentVolume::Envelope(TInstrumentVolumeEnvelope {
                         data,

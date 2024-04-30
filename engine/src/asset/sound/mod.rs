@@ -1,5 +1,5 @@
 mod dat;
-mod sample;
+pub(crate) mod sample;
 
 use self::dat::mixer::TSongMixer;
 use super::{extension::*, AssetParser};
