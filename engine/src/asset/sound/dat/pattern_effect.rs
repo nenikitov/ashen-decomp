@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
 
 use super::convert_volume;
 use crate::{
@@ -6,47 +6,50 @@ use crate::{
     utils::nom::*,
 };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
-pub enum PatternEffectMemoryKey {
-    VolumeValue,
-    VolumeSlide,
-    SampleOffset,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Speed {
     TicksPerRow(usize),
     Bpm(usize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Volume {
     Value(f32),
     Slide(Option<f32>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum PatternEffectMemoryKey {
+    VolumeSlide,
+    SampleOffset,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum PatternEffect {
     Dummy,
     Speed(Speed),
     Volume(Volume),
-    SampleOffset(usize),
+    SampleOffset(Option<usize>),
 }
 
 impl PatternEffect {
-    fn memory_key(&self) -> Option<PatternEffectMemoryKey> {
+    pub fn memory_key(&self) -> Option<PatternEffectMemoryKey> {
         match self {
-            PatternEffect::Volume(Volume::Value(_)) => Some(PatternEffectMemoryKey::VolumeValue),
             PatternEffect::Volume(Volume::Slide(_)) => Some(PatternEffectMemoryKey::VolumeSlide),
             PatternEffect::SampleOffset(_) => Some(PatternEffectMemoryKey::SampleOffset),
             _ => None,
         }
     }
-}
 
-impl Hash for PatternEffect {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.memory_key().hash(state)
+    pub fn has_memory(&self) -> bool {
+        self.memory_key().is_some()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        matches!(
+            self,
+            PatternEffect::Volume(Volume::Slide(None)) | PatternEffect::SampleOffset(None)
+        )
     }
 }
 
@@ -63,7 +66,11 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
             Ok((
                 input,
                 should_parse.then(|| match kind {
-                    0x09 => PatternEffect::SampleOffset(value as usize * 256),
+                    0x09 => PatternEffect::SampleOffset(if value != 0 {
+                        Some(value as usize * 256)
+                    } else {
+                        None
+                    }),
                     0x0E => PatternEffect::Speed(if value >= 0x20 {
                         Speed::Bpm(value as usize)
                     } else {

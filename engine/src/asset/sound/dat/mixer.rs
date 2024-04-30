@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use itertools::Itertools;
 
@@ -66,29 +66,31 @@ impl TSongMixerUtils for TSong {
                     }
                     for (i, effect) in event.effects.iter().enumerate() {
                         if let Some(effect) = effect {
-                            channel.change_effect(i, effect);
+                            channel.change_effect(i, *effect);
                         }
                     }
 
                     // Init effects
+                    // Efffects from now on have their memory initialized
                     for effect in event.effects.iter().flatten() {
                         match effect {
                             PatternEffect::Dummy => {}
-                            PatternEffect::Speed(s) => match s {
-                                Speed::Bpm(s) => bpm = *s,
-                                Speed::TicksPerRow(s) => speed = *s,
-                            },
-                            PatternEffect::Volume(v) => match v {
-                                Volume::Value(v) => channel.volume = *v,
-                                Volume::Slide(v) => {
-                                    if let Some(v) = v {
-                                        channel.volume_slide = *v;
-                                    }
-                                }
-                            },
-                            PatternEffect::SampleOffset(offset) => {
+                            PatternEffect::Speed(Speed::Bpm(s)) => {
+                                bpm = *s;
+                            }
+                            PatternEffect::Speed(Speed::TicksPerRow(s)) => {
+                                speed = *s;
+                            }
+                            PatternEffect::Volume(Volume::Value(volume)) => {
+                                channel.volume = *volume;
+                            }
+                            PatternEffect::Volume(Volume::Slide(Some(volume))) => {
+                                channel.volume_slide = *volume;
+                            }
+                            PatternEffect::SampleOffset(Some(offset)) => {
                                 channel.sample_position = *offset;
                             }
+                            _ => (),
                         };
                     }
 
@@ -96,8 +98,7 @@ impl TSongMixerUtils for TSong {
                     for effect in channel.effects.iter().flatten() {
                         match effect {
                             PatternEffect::Volume(Volume::Slide(_)) => {
-                                channel.volume =
-                                    (channel.volume + channel.volume_slide).clamp(0.0, 4.0);
+                                channel.volume = channel.volume + channel.volume_slide;
                             }
                             _ => {}
                         }
@@ -153,7 +154,8 @@ struct ChannelNote {
 struct Channel<'a> {
     instrument: Option<&'a PatternEventInstrumentKind>,
     note: Option<ChannelNote>,
-    effects: [Option<&'a PatternEffect>; 2],
+    effects: [Option<PatternEffect>; 2],
+    effects_memory: HashMap<PatternEffectMemoryKey, PatternEffect>,
 
     sample_position: usize,
 
@@ -254,7 +256,7 @@ impl<'a> Channel<'a> {
 
             let pitch_factor = (duration + 1) as f32 / data.len() as f32;
             let mut data = data
-                .volume(volume_scale * self.volume * volume_envelope)
+                .volume(volume_scale * self.volume.clamp(0.0, 4.0) * volume_envelope)
                 .pitch_with_time_stretch(pitch_factor, None);
             data.truncate(duration);
 
@@ -269,8 +271,20 @@ impl<'a> Channel<'a> {
         }
     }
 
-    fn change_effect(&mut self, i: usize, effect: &'a PatternEffect) {
-        self.effects[i] = Some(effect);
+    pub fn recall_effect_with_memory(&mut self, effect: PatternEffect) -> PatternEffect {
+        if let Some(key) = effect.memory_key() {
+            if !effect.is_empty() {
+                self.effects_memory.insert(key, effect);
+            }
+
+            self.effects_memory[&key]
+        } else {
+            effect
+        }
+    }
+
+    fn change_effect(&mut self, i: usize, effect: PatternEffect) {
+        self.effects[i] = Some(self.recall_effect_with_memory(effect));
     }
 }
 

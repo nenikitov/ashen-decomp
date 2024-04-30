@@ -1,4 +1,5 @@
 mod dat;
+mod sample;
 
 use self::dat::mixer::TSongMixer;
 use super::{extension::*, AssetParser};
