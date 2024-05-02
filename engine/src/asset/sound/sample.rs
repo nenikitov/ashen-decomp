@@ -69,9 +69,11 @@ impl SamplePoint for i32 {}
 impl SamplePoint for f32 {}
 
 #[derive(Debug, Clone, Copy)]
-pub enum Interpolation {
+pub enum Interpolation<S: SamplePoint, const CHANNELS: usize> {
     Nearest,
-    Linear,
+    Linear {
+        first_sample_after: Option<[S; CHANNELS]>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -157,12 +159,10 @@ impl<S: SamplePoint, const CHANNELS: usize> Sample<S, CHANNELS> {
         self.data.len() as f32 / self.sample_rate as f32
     }
 
-    pub fn resample(&self, sample_rate: usize, interpolation: Interpolation) -> Self {
-        let data = self.data.stretch(
-            sample_rate as f32 / self.sample_rate as f32,
-            Some([S::from_f32(0.0); CHANNELS]),
-            interpolation,
-        );
+    pub fn resample(&self, sample_rate: usize, interpolation: Interpolation<S, CHANNELS>) -> Self {
+        let data = self
+            .data
+            .stretch(sample_rate as f32 / self.sample_rate as f32, interpolation);
 
         Self {
             data: Box::new(data),
@@ -171,15 +171,32 @@ impl<S: SamplePoint, const CHANNELS: usize> Sample<S, CHANNELS> {
     }
 }
 
+pub trait SamplePointProcessing<S: SamplePoint, const CHANNELS: usize> {
+    fn add_sample(&mut self, other: &[S; CHANNELS]);
+    fn volume(&self, volume: f32) -> Self;
+}
+
+impl<S: SamplePoint, const CHANNELS: usize> SamplePointProcessing<S, CHANNELS> for [S; CHANNELS] {
+    fn add_sample(&mut self, other: &[S; CHANNELS]) {
+        for channel_i in 0..CHANNELS {
+            self[channel_i] = S::from_f32(self[channel_i].into_f32() + other[channel_i].into_f32());
+        }
+    }
+
+    fn volume(&self, volume: f32) -> Self {
+        self.iter()
+            .map(|sample| sample.into_f32() * volume)
+            .map(S::from_f32)
+            .collect_vec()
+            .try_into()
+            .unwrap()
+    }
+}
+
 pub trait SampleDataProcessing<S: SamplePoint, const CHANNELS: usize> {
     fn add_sample(&mut self, other: &[[S; CHANNELS]], offset: usize);
     fn volume(&self, volume: f32) -> Self;
-    fn stretch(
-        &self,
-        factor: f32,
-        last_sample: Option<[S; CHANNELS]>,
-        interpolation: Interpolation,
-    ) -> Self;
+    fn stretch(&self, factor: f32, interpolation: Interpolation<S, CHANNELS>) -> Self;
 }
 
 impl<S: SamplePoint, const CHANNELS: usize> SampleDataProcessing<S, CHANNELS>
@@ -195,34 +212,17 @@ impl<S: SamplePoint, const CHANNELS: usize> SampleDataProcessing<S, CHANNELS>
         for (i, samples_other) in other.iter().enumerate() {
             let i = i + offset;
 
-            for channel_i in 0..self[i].len() {
-                self[i][channel_i] = S::from_f32(
-                    self[i][channel_i].into_f32() + samples_other[channel_i].into_f32(),
-                );
+            for channel_i in 0..CHANNELS {
+                self[i].add_sample(samples_other);
             }
         }
     }
 
     fn volume(&self, volume: f32) -> Self {
-        self.iter()
-            .map(|sample_channels| {
-                sample_channels
-                    .iter()
-                    .map(|&sample| (sample).into_f32() * volume)
-                    .map(|sample| S::from_f32(sample))
-                    .collect_vec()
-                    .try_into()
-                    .unwrap()
-            })
-            .collect()
+        self.iter().map(|samples| samples.volume(volume)).collect()
     }
 
-    fn stretch(
-        &self,
-        factor: f32,
-        last_sample: Option<[S; CHANNELS]>,
-        interpolation: Interpolation,
-    ) -> Self {
+    fn stretch(&self, factor: f32, interpolation: Interpolation<S, CHANNELS>) -> Self {
         let len = (self.len() as f32 * factor).round() as usize;
 
         (0..len)
@@ -234,7 +234,9 @@ impl<S: SamplePoint, const CHANNELS: usize> SampleDataProcessing<S, CHANNELS>
                         Interpolation::Nearest => {
                             self[(i_sample as f32 / factor).floor() as usize][i_channel]
                         }
-                        Interpolation::Linear => {
+                        Interpolation::Linear {
+                            first_sample_after: last_sample,
+                        } => {
                             let frac = i_sample as f32 / factor;
                             let index = frac.floor() as usize;
                             let frac = frac - index as f32;
@@ -355,7 +357,7 @@ mod tests {
         ];
 
         assert_eq!(
-            samples.stretch(2.0, None, Interpolation::Nearest),
+            samples.stretch(2.0, Interpolation::Nearest),
             vec![
                 [10, 20],
                 [10, 20],
@@ -385,7 +387,7 @@ mod tests {
         ];
 
         assert_eq!(
-            samples.stretch(1.5, None, Interpolation::Nearest),
+            samples.stretch(1.5, Interpolation::Nearest),
             vec![
                 [10, 20],
                 [10, 20],
@@ -412,7 +414,12 @@ mod tests {
         ];
 
         assert_eq!(
-            samples.stretch(2.0, None, Interpolation::Linear),
+            samples.stretch(
+                2.0,
+                Interpolation::Linear {
+                    first_sample_after: None
+                }
+            ),
             vec![
                 [10, 20],
                 [-5, -10],
@@ -442,7 +449,12 @@ mod tests {
         ];
 
         assert_eq!(
-            samples.stretch(2.0, Some([500, 500]), Interpolation::Linear),
+            samples.stretch(
+                2.0,
+                Interpolation::Linear {
+                    first_sample_after: Some([500, 500])
+                }
+            ),
             vec![
                 [10, 20],
                 [-5, -10],

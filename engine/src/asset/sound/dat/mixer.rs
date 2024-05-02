@@ -5,7 +5,7 @@ use itertools::Itertools;
 use super::{pattern_effect::*, pattern_event::*, t_instrument::*, t_song::*};
 use crate::asset::sound::{
     dat::finetune::FineTune,
-    sample::{Interpolation, Sample, SampleDataProcessing},
+    sample::{Interpolation, Sample, SampleDataProcessing, SamplePointProcessing},
 };
 
 pub trait TSongMixer {
@@ -223,25 +223,20 @@ impl<'a> Channel<'a> {
             // Generate data
             let volume_envelope = match &instrument.volume {
                 TInstrumentVolume::Envelope(envelope) => {
-                    if note.on {
-                        envelope
-                            .volume_beginning()
-                            .get(self.volume_evelope_position)
-                            .map(ToOwned::to_owned)
-                            .unwrap_or(envelope.volume_loop())
+                    let (envelope, default) = if note.on {
+                        (envelope.volume_beginning(), envelope.volume_loop())
                     } else {
-                        envelope
-                            .volume_end()
-                            .get(self.volume_evelope_position)
-                            .map(ToOwned::to_owned)
-                            .unwrap_or_default()
-                    }
+                        (envelope.volume_end(), 0.0)
+                    };
+                    envelope
+                        .get(self.volume_evelope_position)
+                        .map(ToOwned::to_owned)
+                        .unwrap_or(default)
                 }
                 TInstrumentVolume::Constant(volume) => *volume,
             };
 
             let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
-
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
 
             let mut sample = sample
@@ -254,11 +249,15 @@ impl<'a> Channel<'a> {
                 .collect::<Vec<_>>();
 
             let first_sample_after = sample.pop();
-
             let pitch_factor = duration as f32 / sample.len() as f32;
-            let mut data = sample
-                .stretch(pitch_factor, first_sample_after, Interpolation::Linear)
-                .volume(volume_scale * self.volume.clamp(0.0, 4.0));
+            let volume = volume_scale * self.volume.clamp(0.0, 4.0);
+
+            let mut data = sample.volume(volume).stretch(
+                pitch_factor,
+                Interpolation::Linear {
+                    first_sample_after: first_sample_after.map(|s| s.volume(volume)),
+                },
+            );
             data.truncate(duration);
 
             // Update
