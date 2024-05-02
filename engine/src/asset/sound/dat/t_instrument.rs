@@ -4,7 +4,7 @@ use bitflags::bitflags;
 
 use super::{convert_volume, finetune::FineTune};
 use crate::{
-    asset::{extension::*, AssetParser},
+    asset::{extension::*, sound::sample::Sample, AssetParser},
     utils::nom::*,
 };
 
@@ -225,8 +225,12 @@ pub struct TSample {
     pub panning: u8,
     pub align: u8,
     pub finetune: FineTune,
-    pub loop_length: u32,
-    pub data: Vec<i16>,
+    pub loop_length: f32,
+    pub data: Sample<i16, 1>,
+}
+
+impl TSample {
+    const SAMPLE_RATE: usize = 16_000;
 }
 
 impl AssetParser<Wildcard> for TSample {
@@ -245,10 +249,10 @@ impl AssetParser<Wildcard> for TSample {
             let (input, loop_end) = number::le_u32(input)?;
             let (input, sample_offset) = number::le_u32(input)?;
 
-            // The game uses offset for `i16`, but it's much more convenient to just use indices, so that's why `/ 2`
+            // The game uses offset for `i16`, but it's much more convenient to just use time, so that's why `/ 2` (`i16` is 2 bytes)
             let loop_end = loop_end / 2;
             let sample_offset = sample_offset / 2;
-            let loop_length = loop_length / 2;
+            let loop_length = loop_length as f32 / 2.0 / Self::SAMPLE_RATE as f32;
 
             Ok((
                 input,
@@ -260,7 +264,15 @@ impl AssetParser<Wildcard> for TSample {
                     finetune: FineTune::new(finetune),
                     // TODO(nenikitov): Look into resampling the sample to 48 KHz
                     loop_length,
-                    data: sample_data[sample_offset as usize..loop_end as usize].to_vec(),
+                    data: Sample {
+                        data: Box::new(
+                            sample_data[sample_offset as usize..loop_end as usize]
+                                .into_iter()
+                                .map(|&s| [s])
+                                .collect(),
+                        ),
+                        sample_rate: Self::SAMPLE_RATE,
+                    },
                 },
             ))
         }
@@ -268,13 +280,13 @@ impl AssetParser<Wildcard> for TSample {
 }
 
 impl TSample {
-    pub fn sample_beginning(&self) -> &[i16] {
-        &self.data[..self.data.len() - self.loop_length as usize]
+    pub fn sample_beginning(&self) -> &[[i16; 1]] {
+        &self.data[..self.data.len_seconds() - self.loop_length]
     }
 
-    pub fn sample_loop(&self) -> &[i16] {
-        if self.loop_length != 0 {
-            &self.data[self.data.len() - self.loop_length as usize..]
+    pub fn sample_loop(&self) -> &[[i16; 1]] {
+        if self.loop_length != 0.0 {
+            &self.data[self.data.len_seconds() - self.loop_length..]
         } else {
             &[]
         }

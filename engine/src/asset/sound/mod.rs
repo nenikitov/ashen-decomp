@@ -1,7 +1,7 @@
 mod dat;
 pub(crate) mod sample;
 
-use self::dat::mixer::TSongMixer;
+use self::{dat::mixer::TSongMixer, sample::Sample};
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -17,7 +17,7 @@ pub enum Sound {
 }
 
 impl Sound {
-    pub fn mix(&self) -> Vec<i16> {
+    pub fn mix(&self) -> Sample<i16, 1> {
         match self {
             Sound::Song(sound) => sound.mix(false),
             Sound::Effect(effect) => effect.mix(),
@@ -88,11 +88,7 @@ mod tests {
             .enumerate()
             .try_for_each(|(i, song)| {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
-                output_file(
-                    file,
-                    song.mix()
-                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
-                )
+                output_file(file, song.mix().to_wave())
             })?;
 
         // TODO(nenikitov): Remove this debug code
@@ -118,11 +114,7 @@ mod tests {
             .enumerate()
             .try_for_each(|(i, s)| {
                 let file = output_dir.join(format!("sample-{i}.wav"));
-                output_file(
-                    file,
-                    s.data
-                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
-                )
+                output_file(file, s.data.to_wave())
             })?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
@@ -133,12 +125,7 @@ mod tests {
             .enumerate()
             .try_for_each(|(i, effect)| {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
-                output_file(
-                    file,
-                    effect
-                        .mix()
-                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
-                )
+                output_file(file, effect.mix().to_wave())
             })?;
 
         Ok(())

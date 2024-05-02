@@ -7,7 +7,6 @@ use image::{
     },
     Frame, ImageEncoder, RgbaImage,
 };
-use itertools::Itertools;
 
 use crate::asset::{
     color_map::Color,
@@ -105,10 +104,10 @@ pub trait WaveFile {
 
 impl<S: SamplePoint, const CHANNELS: usize> WaveFile for Sample<S, CHANNELS> {
     fn to_wave(&self) -> Vec<u8> {
-        let bits_per_sample: usize = S::BITS;
+        let bits_per_sample: usize = S::SIZE_BITS;
         let bytes_per_sample: usize = bits_per_sample / 8;
 
-        let size = self.len() * CHANNELS * bytes_per_sample;
+        let size = self.len_samples() * CHANNELS * bytes_per_sample;
 
         "RIFF"
             .bytes()
@@ -126,12 +125,11 @@ impl<S: SamplePoint, const CHANNELS: usize> WaveFile for Sample<S, CHANNELS> {
             .chain(u16::to_le_bytes(bits_per_sample as u16))
             .chain("data".bytes())
             .chain(u32::to_le_bytes(size as u32))
-            .chain((0..self.data.len()).into_iter().flat_map(|i| {
+            .chain(
                 self.data
                     .iter()
-                    .flat_map(|channel| channel[i].to_le_bytes())
-                    .collect_vec()
-            }))
+                    .flat_map(|s| s.into_iter().flat_map(|s| s.to_integer_le_bytes())),
+            )
             .collect()
     }
 }

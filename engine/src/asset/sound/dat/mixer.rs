@@ -3,17 +3,17 @@ use std::{collections::HashMap, rc::Rc};
 use itertools::Itertools;
 
 use super::{pattern_effect::*, pattern_event::*, t_instrument::*, t_song::*};
-use crate::asset::sound::dat::finetune::FineTune;
-
-type SamplePoint = i16;
-type Sample = Vec<SamplePoint>;
+use crate::asset::sound::{
+    dat::finetune::FineTune,
+    sample::{Interpolation, Sample, SampleDataProcessing},
+};
 
 pub trait TSongMixer {
-    fn mix(&self, restart: bool) -> Sample;
+    fn mix(&self, restart: bool) -> Sample<i16, 1>;
 }
 
 impl TSongMixer for TSong {
-    fn mix(&self, restart: bool) -> Sample {
+    fn mix(&self, restart: bool) -> Sample<i16, 1> {
         TSongMixerUtils::mix(
             self,
             if restart {
@@ -26,18 +26,17 @@ impl TSongMixer for TSong {
 }
 
 trait TSongMixerUtils {
-    const SAMPLE_RATE: usize = 16000;
-    const CHANNEL_COUNT: usize = 1;
+    const SAMPLE_RATE: usize = 16_000;
     const VOLUME_SCALE: f32 = 0.5;
 
-    fn mix(&self, start: usize) -> Sample;
+    fn mix(&self, start: usize) -> Sample<i16, 1>;
 
     fn seconds_per_row(bpm: usize, speed: usize) -> f32;
 }
 
 impl TSongMixerUtils for TSong {
-    fn mix(&self, start: usize) -> Sample {
-        let mut m = Mixer::new();
+    fn mix(&self, start: usize) -> Sample<i16, 1> {
+        let mut song = Sample::mono(Self::SAMPLE_RATE);
 
         let mut channels: Vec<_> = (0..self.patterns[0][0].len())
             .map(|_| Channel::default())
@@ -127,7 +126,7 @@ impl TSongMixerUtils for TSong {
                         };
 
                         let data = c.tick(tick_length, Self::VOLUME_SCALE);
-                        m.add_sample(&data, offset);
+                        song.data.add_sample(&data, offset);
                     }
                 }
 
@@ -136,7 +135,7 @@ impl TSongMixerUtils for TSong {
             }
         }
 
-        m.mix()
+        song
     }
 
     fn seconds_per_row(bpm: usize, speed: usize) -> f32 {
@@ -219,7 +218,7 @@ impl<'a> Channel<'a> {
         }
     }
 
-    fn tick(&mut self, duration: usize, volume_scale: f32) -> Sample {
+    fn tick(&mut self, duration: usize, volume_scale: f32) -> Vec<[i16; 1]> {
         if let Some((note, instrument, sample)) = self.get_note_instrument_sample() {
             // Generate data
             let volume_envelope = match &instrument.volume {
@@ -245,19 +244,21 @@ impl<'a> Channel<'a> {
 
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
 
-            let mut data = sample
+            let mut sample = sample
                 .sample_beginning()
                 .iter()
                 .chain(sample.sample_loop().iter().cycle())
-                .skip(self.sample_position + 1)
-                .take(duration_scaled)
+                .skip(self.sample_position)
+                .take(duration_scaled + 1)
                 .copied()
                 .collect::<Vec<_>>();
 
-            let pitch_factor = (duration + 1) as f32 / data.len() as f32;
-            let mut data = data
-                .volume(volume_scale * self.volume.clamp(0.0, 4.0) * volume_envelope)
-                .pitch_with_time_stretch(pitch_factor, None);
+            let first_sample_after = sample.pop();
+
+            let pitch_factor = duration as f32 / sample.len() as f32;
+            let mut data = sample
+                .stretch(pitch_factor, first_sample_after, Interpolation::Linear)
+                .volume(volume_scale * self.volume.clamp(0.0, 4.0));
             data.truncate(duration);
 
             // Update
@@ -285,111 +286,5 @@ impl<'a> Channel<'a> {
 
     fn change_effect(&mut self, i: usize, effect: PatternEffect) {
         self.effects[i] = Some(self.recall_effect_with_memory(effect));
-    }
-}
-
-// TODO(nenikitov): Remove this code when new mixer is done
-
-pub struct Mixer {
-    samples: Sample,
-}
-
-impl Mixer {
-    pub fn new() -> Self {
-        Self {
-            samples: Vec::new(),
-        }
-    }
-
-    pub fn add_sample(&mut self, sample: &[i16], offset: usize) {
-        let new_len = offset + sample.len();
-        if new_len > self.samples.len() {
-            self.samples.resize(new_len, 0);
-        }
-
-        for (i, s) in sample.iter().enumerate() {
-            let i = i + offset;
-            if i < self.samples.len() {
-                self.samples[i] = self.samples[i].saturating_add(*s);
-            }
-        }
-    }
-
-    pub fn mix(self) -> Sample {
-        self.samples
-    }
-}
-
-pub trait SoundEffect {
-    fn volume(self, volume: f32) -> Self;
-    fn pitch_with_time_stretch(self, factor: f32, next_sample: Option<i16>) -> Self;
-}
-
-impl SoundEffect for Sample {
-    fn volume(self, volume: f32) -> Self {
-        self.into_iter()
-            .map(|s| (s as f32 * volume) as i16)
-            .collect()
-    }
-
-    fn pitch_with_time_stretch(self, factor: f32, next_sample: Option<i16>) -> Self {
-        // TODO(nenikitov): Look into linear interpolation
-        let len = (self.len() as f32 * factor).round() as usize;
-
-        (0..len)
-            .map(|i| {
-                let frac = i as f32 / factor;
-                let index = frac.floor() as usize;
-                let frac = frac - index as f32;
-
-                let sample_1 = self[index] as f32;
-                let sample_2 = if self.len() > index + 1 {
-                    self[index + 1]
-                } else if let Some(next_sample) = next_sample {
-                    next_sample
-                } else {
-                    self[index]
-                } as f32;
-
-                ((1.0 - frac) * sample_1 + frac * sample_2).floor() as i16
-            })
-            .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sound_effect_volume_works() {
-        assert_eq!(
-            vec![-10, 20, 40, 30, -78],
-            vec![-10, 20, 40, 30, -78].volume(1.0),
-        );
-        assert_eq!(
-            vec![-40, 80, 160, 120, -312],
-            vec![-20, 40, 80, 60, -156].volume(2.0)
-        );
-        assert_eq!(
-            vec![-10, 20, 40, 30, -78],
-            vec![-20, 40, 80, 60, -156].volume(0.5)
-        );
-    }
-
-    #[test]
-    fn pitch_with_time_stretch_works() {
-        assert_eq!(
-            vec![-10, 20, 40, 30, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(1.0, None),
-        );
-        assert_eq!(
-            vec![-10, -10, 20, 20, 40, 40, 30, 30, -78, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(2.0, None),
-        );
-        assert_eq!(
-            vec![-10, 40, -78],
-            vec![-10, 20, 40, 30, -78].pitch_with_time_stretch(0.5, None),
-        );
     }
 }

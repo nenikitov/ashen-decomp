@@ -1,12 +1,11 @@
 use std::rc::Rc;
 
 use super::{
-    mixer::Mixer,
     t_instrument::{TInstrument, TSample},
     uncompress,
 };
 use crate::{
-    asset::{extension::*, AssetParser},
+    asset::{extension::*, sound::sample::Sample, AssetParser},
     utils::nom::*,
 };
 
@@ -17,10 +16,8 @@ pub struct TEffect {
 
 // It should be separated
 impl TEffect {
-    pub fn mix(&self) -> Vec<i16> {
-        let mut m = Mixer::new();
-        m.add_sample(&self.sample.data, 0);
-        m.mix()
+    pub fn mix(&self) -> Sample<i16, 1> {
+        self.sample.data.clone()
     }
 }
 
