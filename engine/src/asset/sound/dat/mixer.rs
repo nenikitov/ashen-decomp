@@ -27,7 +27,7 @@ impl TSongMixer for TSong {
 
 trait TSongMixerUtils {
     const SAMPLE_RATE: usize = 16_000;
-    const VOLUME_SCALE: f32 = 0.5;
+    const VOLUME_SCALE: f32 = 1.0;
 
     fn mix(&self, start: usize) -> Sample<i16, 1>;
 
@@ -50,9 +50,7 @@ impl TSongMixerUtils for TSong {
         for pattern in &self.orders[start..] {
             for row in &**pattern {
                 // Update channels
-                for (c, event) in row.iter().enumerate() {
-                    let channel = &mut channels[c];
-
+                for (event, channel) in Iterator::zip(row.iter(), channels.iter_mut()) {
                     // Process note
                     if let Some(note) = event.note {
                         channel.change_note(note);
@@ -63,41 +61,55 @@ impl TSongMixerUtils for TSong {
                     if let Some(volume) = event.volume {
                         channel.change_volume(volume);
                     }
-                    for (i, effect) in event.effects.iter().enumerate() {
-                        if let Some(effect) = effect {
-                            channel.change_effect(i, *effect);
-                        }
-                    }
+
+                    let effects: Vec<_> = event
+                        .effects
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, effect)| {
+                            if let Some(effect) = effect {
+                                channel.change_effect(i, *effect);
+                                Some(i)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
 
                     // Init effects
                     // Efffects from now on have their memory initialized
-                    for effect in event.effects.iter().flatten() {
+                    for effect in effects.into_iter().map(|e| {
+                        channel.effects[e].expect("effect is initialized after assignment")
+                    }) {
                         match effect {
                             PatternEffect::Dummy => {}
                             PatternEffect::Speed(Speed::Bpm(s)) => {
-                                bpm = *s;
+                                bpm = s;
                             }
                             PatternEffect::Speed(Speed::TicksPerRow(s)) => {
-                                speed = *s;
+                                speed = s;
                             }
                             PatternEffect::Volume(Volume::Value(volume)) => {
-                                channel.volume = *volume;
+                                channel.volume = volume;
                             }
                             PatternEffect::Volume(Volume::Slide(Some(volume))) => {
-                                channel.volume_slide = *volume;
+                                channel.volume_slide = volume;
                             }
                             PatternEffect::SampleOffset(Some(offset)) => {
-                                channel.sample_position = *offset;
+                                channel.sample_position = offset;
                             }
-                            _ => (),
+                            PatternEffect::Volume(Volume::Slide(None))
+                            | PatternEffect::SampleOffset(None) => {
+                                unreachable!("effect memory should already be initialized")
+                            }
                         };
                     }
 
                     // Process repeatable effects
                     for effect in channel.effects.iter().flatten() {
                         match effect {
-                            PatternEffect::Volume(Volume::Slide(_)) => {
-                                channel.volume = channel.volume + channel.volume_slide;
+                            PatternEffect::Volume(Volume::Slide(Some(volume))) => {
+                                channel.volume += volume;
                             }
                             _ => {}
                         }
@@ -235,10 +247,10 @@ impl<'a> Channel<'a> {
                 }
                 TInstrumentVolume::Constant(volume) => *volume,
             };
+            let volume = volume_scale * volume_envelope * self.volume.clamp(0.0, 4.0);
 
             let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
-
             let mut sample = sample
                 .sample_beginning()
                 .iter()
@@ -247,10 +259,8 @@ impl<'a> Channel<'a> {
                 .take(duration_scaled + 1)
                 .copied()
                 .collect::<Vec<_>>();
-
             let first_sample_after = sample.pop();
             let pitch_factor = duration as f32 / sample.len() as f32;
-            let volume = volume_scale * self.volume.clamp(0.0, 4.0);
 
             let mut data = sample.volume(volume).stretch(
                 pitch_factor,
@@ -258,7 +268,6 @@ impl<'a> Channel<'a> {
                     first_sample_after: first_sample_after.map(|s| s.volume(volume)),
                 },
             );
-            data.truncate(duration);
 
             // Update
             self.sample_position += duration_scaled;

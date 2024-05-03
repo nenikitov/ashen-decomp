@@ -82,15 +82,6 @@ mod tests {
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 
-        sounds
-            .iter()
-            .filter(|s| matches!(s, Sound::Song(_)))
-            .enumerate()
-            .try_for_each(|(i, song)| {
-                let file = output_dir.join(format!("{i:0>2X}.wav"));
-                output_file(file, song.mix().to_wave())
-            })?;
-
         // TODO(nenikitov): Remove this debug code
         let test_music = sounds
             .iter()
@@ -98,23 +89,16 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0x1];
-        let file = output_dir.join("test.wav");
+            .collect::<Vec<_>>()[0x0];
+        dbg!(&test_music.patterns[0][0x17][2].effects);
 
-        dbg!(&test_music.patterns[5][0x32][1].effects);
-
-        // dbg!(&test_music.patterns[2]
-        //     .iter()
-        //     .map(|p| p.iter().map(|r| &r.effects).collect::<Vec<_>>())
-        //     .collect::<Vec<_>>());
-
-        test_music
-            .samples
+        sounds
             .iter()
+            .filter(|s| matches!(s, Sound::Song(_)))
             .enumerate()
-            .try_for_each(|(i, s)| {
-                let file = output_dir.join(format!("sample-{i}.wav"));
-                output_file(file, s.data.to_wave())
+            .try_for_each(|(i, song)| {
+                let file = output_dir.join(format!("{i:0>2X}.wav"));
+                output_file(file, song.mix().to_wave())
             })?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
