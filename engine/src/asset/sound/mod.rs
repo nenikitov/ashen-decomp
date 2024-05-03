@@ -89,8 +89,8 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0x0];
-        dbg!(&test_music.patterns[0][0x17][2].effects);
+            .collect::<Vec<_>>()[0x9];
+        dbg!(&test_music.patterns[0][0x29][5].effects);
 
         sounds
             .iter()

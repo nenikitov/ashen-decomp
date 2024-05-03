@@ -78,7 +78,7 @@ pub enum Interpolation<S: SamplePoint, const CHANNELS: usize> {
 
 #[derive(Debug, Clone)]
 pub struct Sample<S: SamplePoint, const CHANNELS: usize> {
-    pub data: Box<Vec<[S; CHANNELS]>>,
+    pub data: Vec<[S; CHANNELS]>,
     pub sample_rate: usize,
 }
 
@@ -165,7 +165,7 @@ impl<S: SamplePoint, const CHANNELS: usize> Sample<S, CHANNELS> {
             .stretch(sample_rate as f32 / self.sample_rate as f32, interpolation);
 
         Self {
-            data: Box::new(data),
+            data,
             sample_rate: self.sample_rate,
         }
     }
@@ -226,10 +226,8 @@ impl<S: SamplePoint, const CHANNELS: usize> SampleDataProcessing<S, CHANNELS>
         let len = (self.len() as f32 * factor).round() as usize;
 
         (0..len)
-            .into_iter()
             .map(|(i_sample)| {
                 (0..CHANNELS)
-                    .into_iter()
                     .map(|i_channel| match interpolation {
                         Interpolation::Nearest => {
                             self[(i_sample as f32 / factor).floor() as usize][i_channel]
@@ -272,7 +270,7 @@ impl<S: SamplePoint> Sample<S, 1> {
         let data = self.data.iter().map(|[s]| [*s, *s]).collect();
 
         Sample::<S, 2> {
-            data: Box::new(data),
+            data,
             sample_rate: self.sample_rate,
         }
     }
@@ -299,7 +297,7 @@ impl<S: SamplePoint> Sample<S, 2> {
             .collect_vec();
 
         Sample::<S, 1> {
-            data: Box::new(data),
+            data,
             sample_rate: self.sample_rate,
         }
     }

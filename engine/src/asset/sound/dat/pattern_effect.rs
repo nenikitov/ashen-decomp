@@ -18,6 +18,13 @@ pub enum Volume {
     Slide(Option<f32>),
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub enum PlaybackDirection {
+    #[default]
+    Forwards,
+    Backwards,
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum PatternEffectMemoryKey {
     VolumeSlide,
@@ -26,10 +33,11 @@ pub enum PatternEffectMemoryKey {
 
 #[derive(Debug, Clone, Copy)]
 pub enum PatternEffect {
-    Dummy,
+    Dummy(u8),
     Speed(Speed),
     Volume(Volume),
     SampleOffset(Option<usize>),
+    PlaybackDirection(PlaybackDirection),
 }
 
 impl PatternEffect {
@@ -88,7 +96,7 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x0A | 0x0B
                     | 0x0C | 0x0D | 0x0F | 0x14 | 0x15 | 0x16 | 0x1D | 0x1E | 0x1F | 0x20
                     | 0x21 | 0x22 | 0x24 | 0x25 | 0x2E | 0x2F | 0x30 | 0x31 | 0x32 | 0x33
-                    | 0x34 | 0x35 | 0x36 | 0x37 => PatternEffect::Dummy,
+                    | 0x34 | 0x35 => PatternEffect::Dummy(kind),
                     // TODO(nenikitov): Add support for other effects
                     // 0x00 => Self::Arpegio,
                     // 0x01 => Self::PortaUp,
@@ -123,8 +131,8 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     // 0x33 => Self::SoundControlQuad,
                     // 0x34 => Self::FilterGlobal,
                     // 0x35 => Self::FilterLocal,
-                    // 0x36 => Self::PlayForward,
-                    // 0x37 => Self::PlayBackward,
+                    0x36 => PatternEffect::PlaybackDirection(PlaybackDirection::Forwards),
+                    0x37 => PatternEffect::PlaybackDirection(PlaybackDirection::Backwards),
                     // TODO(nenikitov): Should be a `Result`
                     kind => unreachable!("Effect is outside the range {kind}"),
                 }),

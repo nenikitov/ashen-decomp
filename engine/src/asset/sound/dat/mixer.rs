@@ -82,7 +82,7 @@ impl TSongMixerUtils for TSong {
                         channel.effects[e].expect("effect is initialized after assignment")
                     }) {
                         match effect {
-                            PatternEffect::Dummy => {}
+                            PatternEffect::Dummy(_) => {}
                             PatternEffect::Speed(Speed::Bpm(s)) => {
                                 bpm = s;
                             }
@@ -92,16 +92,17 @@ impl TSongMixerUtils for TSong {
                             PatternEffect::Volume(Volume::Value(volume)) => {
                                 channel.volume = volume;
                             }
-                            PatternEffect::Volume(Volume::Slide(Some(volume))) => {
-                                channel.volume_slide = volume;
-                            }
                             PatternEffect::SampleOffset(Some(offset)) => {
                                 channel.sample_position = offset;
+                            }
+                            PatternEffect::PlaybackDirection(direction) => {
+                                channel.playback_direaction = direction
                             }
                             PatternEffect::Volume(Volume::Slide(None))
                             | PatternEffect::SampleOffset(None) => {
                                 unreachable!("effect memory should already be initialized")
                             }
+                            _ => {}
                         };
                     }
 
@@ -172,7 +173,8 @@ struct Channel<'a> {
 
     volume: f32,
     volume_evelope_position: usize,
-    volume_slide: f32,
+
+    playback_direaction: PlaybackDirection,
 }
 
 impl<'a> Channel<'a> {

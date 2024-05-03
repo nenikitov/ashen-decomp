@@ -265,12 +265,10 @@ impl AssetParser<Wildcard> for TSample {
                     // TODO(nenikitov): Look into resampling the sample to 48 KHz
                     loop_length,
                     data: Sample {
-                        data: Box::new(
-                            sample_data[sample_offset as usize..loop_end as usize]
-                                .into_iter()
-                                .map(|&s| [s])
-                                .collect(),
-                        ),
+                        data: sample_data[sample_offset as usize..loop_end as usize]
+                            .into_iter()
+                            .map(|&s| [s])
+                            .collect(),
                         sample_rate: Self::SAMPLE_RATE,
                     },
                 },
