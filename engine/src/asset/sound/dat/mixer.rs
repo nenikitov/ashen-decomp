@@ -47,10 +47,13 @@ impl TSongMixerUtils for TSong {
         let mut bpm = self.bpm as usize;
         let mut speed = self.speed as usize;
 
-        for pattern in &self.orders[start..] {
-            for row in &**pattern {
+        // TODO!(nenikitov): Remove all `enumerate`
+        for (p, pattern) in self.orders[start..].iter().enumerate() {
+            for (r, row) in pattern.iter().enumerate() {
                 // Update channels
-                for (event, channel) in Iterator::zip(row.iter(), channels.iter_mut()) {
+                for (c, (event, channel)) in
+                    Iterator::zip(row.iter(), channels.iter_mut()).enumerate()
+                {
                     // Process note
                     if let Some(note) = event.note {
                         channel.change_note(note);
@@ -95,8 +98,18 @@ impl TSongMixerUtils for TSong {
                             PatternEffect::SampleOffset(Some(offset)) => {
                                 channel.sample_position = offset;
                             }
-                            PatternEffect::PlaybackDirection(direction) => {
-                                channel.playback_direaction = direction
+                            PatternEffect::PlaybackDirection(PlaybackDirection::Forwards) => {
+                                channel.playback_direction = PlaybackDirection::Forwards
+                            }
+                            PatternEffect::PlaybackDirection(PlaybackDirection::Backwards) => {
+                                channel.playback_direction = PlaybackDirection::Backwards;
+                                if channel.sample_position == 0
+                                    && let Some((_, _, sample)) =
+                                        channel.get_note_instrument_sample()
+                                {
+                                    channel.sample_position = sample.sample_beginning().len()
+                                        + sample.sample_loop().len();
+                                }
                             }
                             PatternEffect::Volume(Volume::Slide(None))
                             | PatternEffect::SampleOffset(None) => {
@@ -174,7 +187,7 @@ struct Channel<'a> {
     volume: f32,
     volume_envelope_position: usize,
 
-    playback_direaction: PlaybackDirection,
+    playback_direction: PlaybackDirection,
 }
 
 impl<'a> Channel<'a> {
@@ -204,6 +217,7 @@ impl<'a> Channel<'a> {
         self.instrument = Some(instrument);
         self.sample_position = 0;
         self.volume_envelope_position = 0;
+        self.playback_direction = PlaybackDirection::Forwards;
     }
 
     fn change_volume(&mut self, volume: PatternEventVolume) {
@@ -253,14 +267,25 @@ impl<'a> Channel<'a> {
 
             let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
-            let mut sample = sample
-                .sample_beginning()
-                .iter()
-                .chain(sample.sample_loop().iter().cycle())
-                .skip(self.sample_position)
-                .take(duration_scaled + 1)
-                .copied()
-                .collect::<Vec<_>>();
+            let mut sample = match self.playback_direction {
+                PlaybackDirection::Forwards => sample
+                    .sample_beginning()
+                    .iter()
+                    .chain(sample.sample_loop().iter().cycle())
+                    .skip(self.sample_position)
+                    .take(duration_scaled + 1)
+                    .copied()
+                    .collect::<Vec<_>>(),
+                PlaybackDirection::Backwards => sample
+                    .sample_beginning()
+                    .iter()
+                    .chain(sample.sample_loop())
+                    .rev()
+                    .skip(self.sample_position)
+                    .take(duration_scaled + 1)
+                    .copied()
+                    .collect::<Vec<_>>(),
+            };
             let first_sample_after = sample.pop();
             let pitch_factor = duration as f32 / sample.len() as f32;
 
