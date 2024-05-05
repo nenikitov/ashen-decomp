@@ -5,7 +5,7 @@ use bitflags::bitflags;
 use super::{convert_volume, finetune::FineTune};
 use crate::{
     asset::{extension::*, sound::sample::Sample, AssetParser},
-    utils::nom::*,
+    utils::{iterator::CollectArray, nom::*},
 };
 
 // TODO(nenikitov): Double check these flags
@@ -200,9 +200,7 @@ impl AssetParser<Wildcard> for TInstrument {
                                     TInstrumentSampleKind::Predefined(samples[i as usize].clone())
                                 }
                             })
-                            .collect::<Vec<_>>()
-                            .try_into()
-                            .unwrap(),
+                            .collect_array(),
                     ),
                 },
             ))

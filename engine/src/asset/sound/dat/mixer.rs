@@ -172,7 +172,7 @@ struct Channel<'a> {
     sample_position: usize,
 
     volume: f32,
-    volume_evelope_position: usize,
+    volume_envelope_position: usize,
 
     playback_direaction: PlaybackDirection,
 }
@@ -191,7 +191,7 @@ impl<'a> Channel<'a> {
             }
             (Some(current), PatternEventNote::Off) => {
                 current.on = false;
-                self.volume_evelope_position = 0;
+                self.volume_envelope_position = 0;
             }
             (Some(current), PatternEventNote::On(target)) => {
                 current.finetune = target;
@@ -203,7 +203,7 @@ impl<'a> Channel<'a> {
     fn change_instrument(&mut self, instrument: &'a PatternEventInstrumentKind) {
         self.instrument = Some(instrument);
         self.sample_position = 0;
-        self.volume_evelope_position = 0;
+        self.volume_envelope_position = 0;
     }
 
     fn change_volume(&mut self, volume: PatternEventVolume) {
@@ -243,7 +243,7 @@ impl<'a> Channel<'a> {
                         (envelope.volume_end(), 0.0)
                     };
                     envelope
-                        .get(self.volume_evelope_position)
+                        .get(self.volume_envelope_position)
                         .map(ToOwned::to_owned)
                         .unwrap_or(default)
                 }
@@ -273,7 +273,7 @@ impl<'a> Channel<'a> {
 
             // Update
             self.sample_position += duration_scaled;
-            self.volume_evelope_position += 1;
+            self.volume_envelope_position += 1;
 
             // Return
             data

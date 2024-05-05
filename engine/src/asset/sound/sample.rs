@@ -1,9 +1,12 @@
+// TODO(nenikitov): Remove this test code
 use std::{
     fmt::Debug,
     ops::{Index, Range, RangeFrom, RangeTo},
 };
 
 use itertools::Itertools;
+
+use crate::utils::iterator::CollectArray;
 
 pub trait SamplePointConversions
 where
@@ -31,7 +34,7 @@ macro_rules! impl_sample_point_conversions_other {
             }
 
             fn to_integer_le_bytes(self) -> Vec<u8> {
-                ((self.clamp(-1.0, 1.0) * i32::MAX as f32).round() as i32)
+                ((self.clamp(-1.0, 1.0) * i32::MAX as f32) as i32)
                     .to_le_bytes()
                     .to_vec()
             }
@@ -48,7 +51,7 @@ macro_rules! impl_sample_point_conversions_integer {
             }
 
             fn from_f32(value: f32) -> Self {
-                (value * $type::MAX as f32).round() as Self
+                (value * $type::MAX as f32) as Self
             }
 
             fn to_integer_le_bytes(self) -> Vec<u8> {
@@ -187,9 +190,7 @@ impl<S: SamplePoint, const CHANNELS: usize> SamplePointProcessing<S, CHANNELS> f
         self.iter()
             .map(|sample| sample.into_f32() * volume)
             .map(S::from_f32)
-            .collect_vec()
-            .try_into()
-            .unwrap()
+            .collect_array::<CHANNELS>()
     }
 }
 
@@ -250,9 +251,7 @@ impl<S: SamplePoint, const CHANNELS: usize> SampleDataProcessing<S, CHANNELS>
                             S::from_f32((1.0 - frac) * sample_1 + frac * sample_2)
                         }
                     })
-                    .collect_vec()
-                    .try_into()
-                    .unwrap()
+                    .collect_array::<CHANNELS>()
             })
             .collect()
     }
