@@ -90,7 +90,13 @@ mod tests {
                 Sound::Effect(_) => None,
             })
             .collect::<Vec<_>>()[0x9];
-        //dbg!(&test_music.patterns[0][0x29][5].effects);
+        let effects = test_music
+            .orders
+            .iter()
+            .flat_map(|p| p.iter().flat_map(|p| p.iter().flat_map(|p| p.effects)))
+            .flatten()
+            .collect::<Vec<_>>();
+        //dbg!(effects);
 
         sounds
             .iter()

@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, AddAssign, Neg, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FineTune {
@@ -46,11 +46,25 @@ impl Add for FineTune {
     }
 }
 
+impl AddAssign for FineTune {
+    fn add_assign(&mut self, rhs: Self) {
+        self.cents = self.cents.saturating_add(rhs.cents)
+    }
+}
+
 impl Sub for FineTune {
     type Output = FineTune;
 
     fn sub(self, rhs: Self) -> Self::Output {
         FineTune::new(self.cents.saturating_sub(rhs.cents))
+    }
+}
+
+impl Neg for FineTune {
+    type Output = FineTune;
+
+    fn neg(self) -> Self::Output {
+        FineTune::new(-self.cents)
     }
 }
 

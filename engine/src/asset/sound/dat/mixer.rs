@@ -92,8 +92,17 @@ impl TSongMixerUtils for TSong {
                             PatternEffect::Speed(Speed::TicksPerRow(s)) => {
                                 speed = s;
                             }
-                            PatternEffect::Volume(Volume::Value(volume)) => {
+                            PatternEffect::Volume(Volume::Set(volume)) => {
                                 channel.volume = volume;
+                            }
+                            PatternEffect::Porta(Porta::Bump {
+                                up: _,
+                                small: _,
+                                finetune: Some(finetune),
+                            }) => {
+                                if let Some(note) = &mut channel.note {
+                                    note.finetune += finetune;
+                                }
                             }
                             PatternEffect::SampleOffset(Some(offset)) => {
                                 channel.sample_position = offset;
@@ -124,6 +133,14 @@ impl TSongMixerUtils for TSong {
                         match effect {
                             PatternEffect::Volume(Volume::Slide(Some(volume))) => {
                                 channel.volume += volume;
+                            }
+                            PatternEffect::Porta(Porta::Slide {
+                                up: _,
+                                finetune: Some(finetune),
+                            }) => {
+                                if let Some(note) = &mut channel.note {
+                                    note.finetune += *finetune;
+                                }
                             }
                             _ => {}
                         }
@@ -238,7 +255,7 @@ impl<'a> Channel<'a> {
         if let Some(note) = &self.note
             && let Some(PatternEventInstrumentKind::Predefined(instrument)) = self.instrument
             && let TInstrumentSampleKind::Predefined(sample) =
-                &instrument.samples[note.finetune.note() as usize]
+                &instrument.samples[note.finetune.note().clamp(0, 95) as usize]
         {
             Some((note, instrument, sample))
         } else {
