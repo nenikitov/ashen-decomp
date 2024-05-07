@@ -13,13 +13,6 @@ pub enum Speed {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Volume {
-    Set(f32),
-    Slide(Option<f32>),
-    Bump { up: bool, volume: Option<f32> },
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum Porta {
     Tone(Option<FineTune>),
     Slide {
@@ -31,6 +24,13 @@ pub enum Porta {
         small: bool,
         finetune: Option<FineTune>,
     },
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Volume {
+    Set(f32),
+    Slide(Option<f32>),
+    Bump { up: bool, volume: Option<f32> },
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -69,43 +69,39 @@ impl PatternEffect {
     pub fn memory_key(&self) -> Option<PatternEffectMemoryKey> {
         match self {
             PatternEffect::Porta(Porta::Tone(_)) => Some(PatternEffectMemoryKey::PortaTone),
-            PatternEffect::Porta(Porta::Slide {
-                up: true,
-                finetune: _,
-            }) => Some(PatternEffectMemoryKey::PortaSlideUp),
-            PatternEffect::Porta(Porta::Slide {
-                up: false,
-                finetune: _,
-            }) => Some(PatternEffectMemoryKey::PortaSlideDown),
+            PatternEffect::Porta(Porta::Slide { up: true, .. }) => {
+                Some(PatternEffectMemoryKey::PortaSlideUp)
+            }
+            PatternEffect::Porta(Porta::Slide { up: false, .. }) => {
+                Some(PatternEffectMemoryKey::PortaSlideDown)
+            }
             PatternEffect::Porta(Porta::Bump {
                 up: true,
                 small: false,
-                finetune: _,
+                ..
             }) => Some(PatternEffectMemoryKey::PortaBumpUp),
             PatternEffect::Porta(Porta::Bump {
                 up: false,
                 small: false,
-                finetune: _,
+                ..
             }) => Some(PatternEffectMemoryKey::PortaBumpDown),
             PatternEffect::Porta(Porta::Bump {
                 up: true,
                 small: true,
-                finetune: _,
+                ..
             }) => Some(PatternEffectMemoryKey::PortaBumpSmallUp),
             PatternEffect::Porta(Porta::Bump {
                 up: false,
                 small: true,
-                finetune: _,
+                ..
             }) => Some(PatternEffectMemoryKey::PortaBumpSmallDown),
             PatternEffect::Volume(Volume::Slide(_)) => Some(PatternEffectMemoryKey::VolumeSlide),
-            PatternEffect::Volume(Volume::Bump {
-                up: true,
-                volume: _,
-            }) => Some(PatternEffectMemoryKey::VolumeBumpUp),
-            PatternEffect::Volume(Volume::Bump {
-                up: down,
-                volume: _,
-            }) => Some(PatternEffectMemoryKey::VolumeBumpDown),
+            PatternEffect::Volume(Volume::Bump { up: true, .. }) => {
+                Some(PatternEffectMemoryKey::VolumeBumpUp)
+            }
+            PatternEffect::Volume(Volume::Bump { up: down, .. }) => {
+                Some(PatternEffectMemoryKey::VolumeBumpDown)
+            }
             PatternEffect::SampleOffset(_) => Some(PatternEffectMemoryKey::SampleOffset),
             _ => None,
         }
@@ -118,7 +114,12 @@ impl PatternEffect {
     pub fn is_empty(&self) -> bool {
         matches!(
             self,
-            PatternEffect::Volume(Volume::Slide(None)) | PatternEffect::SampleOffset(None)
+            PatternEffect::Porta(Porta::Tone(None))
+                | PatternEffect::Porta(Porta::Slide { finetune: None, .. })
+                | PatternEffect::Porta(Porta::Bump { finetune: None, .. })
+                | PatternEffect::Volume(Volume::Slide(None))
+                | PatternEffect::Volume(Volume::Bump { volume: None, .. })
+                | PatternEffect::SampleOffset(None)
         )
     }
 }
@@ -155,17 +156,17 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     0x16 => PatternEffect::Porta(Porta::Bump {
                         up: false,
                         small: false,
-                        finetune: (value != 0).then_some(FineTune::new(8 * value as i32)),
+                        finetune: (value != 0).then_some(-FineTune::new(8 * value as i32)),
                     }),
                     0x24 => PatternEffect::Porta(Porta::Bump {
                         up: true,
                         small: true,
-                        finetune: (value != 0).then_some(FineTune::new(2 * value as i32)),
+                        finetune: (value != 0).then_some(FineTune::new(2 * (value & 0xF) as i32)),
                     }),
                     0x25 => PatternEffect::Porta(Porta::Bump {
                         up: false,
                         small: true,
-                        finetune: (value != 0).then_some(FineTune::new(2 * value as i32)),
+                        finetune: (value != 0).then_some(-FineTune::new(2 * (value & 0xF) as i32)),
                     }),
                     0x09 => {
                         PatternEffect::SampleOffset((value != 0).then_some(value as usize * 256))

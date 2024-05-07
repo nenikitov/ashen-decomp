@@ -105,7 +105,7 @@ impl AssetParser<Wildcard> for Option<PatternEventInstrumentKind> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum PatternEventVolume {
     Sample,
     Value(f32),

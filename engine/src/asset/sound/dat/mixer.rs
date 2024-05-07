@@ -1,7 +1,5 @@
 use std::{collections::HashMap, rc::Rc};
 
-use itertools::Itertools;
-
 use super::{pattern_effect::*, pattern_event::*, t_instrument::*, t_song::*};
 use crate::asset::sound::{
     dat::finetune::FineTune,
@@ -92,17 +90,22 @@ impl TSongMixerUtils for TSong {
                             PatternEffect::Speed(Speed::TicksPerRow(s)) => {
                                 speed = s;
                             }
-                            PatternEffect::Volume(Volume::Set(volume)) => {
-                                channel.volume = volume;
-                            }
                             PatternEffect::Porta(Porta::Bump {
-                                up: _,
-                                small: _,
                                 finetune: Some(finetune),
+                                ..
                             }) => {
                                 if let Some(note) = &mut channel.note {
                                     note.finetune += finetune;
                                 }
+                            }
+                            PatternEffect::Volume(Volume::Set(volume)) => {
+                                channel.volume = volume;
+                            }
+                            PatternEffect::Volume(Volume::Bump {
+                                volume: Some(volume),
+                                ..
+                            }) => {
+                                channel.volume += volume;
                             }
                             PatternEffect::SampleOffset(Some(offset)) => {
                                 channel.sample_position = offset;
@@ -120,9 +123,13 @@ impl TSongMixerUtils for TSong {
                                         + sample.sample_loop().len();
                                 }
                             }
-                            PatternEffect::Volume(Volume::Slide(None))
+                            PatternEffect::Porta(Porta::Tone(None))
+                            | PatternEffect::Porta(Porta::Slide { finetune: None, .. })
+                            | PatternEffect::Porta(Porta::Bump { finetune: None, .. })
+                            | PatternEffect::Volume(Volume::Slide(None))
+                            | PatternEffect::Volume(Volume::Bump { volume: None, .. })
                             | PatternEffect::SampleOffset(None) => {
-                                unreachable!("effect memory should already be initialized")
+                                unreachable!("effect {effect:?} ({:?}) at ({p} {r} {c}) memory should already be initialized", effect.memory_key())
                             }
                             _ => {}
                         };
@@ -131,16 +138,32 @@ impl TSongMixerUtils for TSong {
                     // Process repeatable effects
                     for effect in channel.effects.iter().flatten() {
                         match effect {
-                            PatternEffect::Volume(Volume::Slide(Some(volume))) => {
-                                channel.volume += volume;
+                            PatternEffect::Porta(Porta::Tone(Some(step))) => {
+                                if let Some(note) = &mut channel.note {
+                                    note.finetune = match note.finetune.cmp(&note.finetune_initial)
+                                    {
+                                        std::cmp::Ordering::Less => FineTune::min(
+                                            note.finetune + *step,
+                                            note.finetune_initial,
+                                        ),
+                                        std::cmp::Ordering::Greater => FineTune::max(
+                                            note.finetune - *step,
+                                            note.finetune_initial,
+                                        ),
+                                        std::cmp::Ordering::Equal => note.finetune,
+                                    }
+                                }
                             }
                             PatternEffect::Porta(Porta::Slide {
-                                up: _,
                                 finetune: Some(finetune),
+                                ..
                             }) => {
                                 if let Some(note) = &mut channel.note {
                                     note.finetune += *finetune;
                                 }
+                            }
+                            PatternEffect::Volume(Volume::Slide(Some(volume))) => {
+                                channel.volume += volume;
                             }
                             _ => {}
                         }
@@ -153,11 +176,6 @@ impl TSongMixerUtils for TSong {
                 sample_length_fractional = sample_length - sample_length.floor();
                 let sample_length = sample_length as usize;
                 let tick_length = sample_length / speed;
-
-                let volumes = channels
-                    .iter()
-                    .map(|c| format!("{: >10}", c.volume))
-                    .join(" ");
 
                 for (i, c) in channels.iter_mut().enumerate() {
                     for j in 0..speed {
@@ -187,8 +205,10 @@ impl TSongMixerUtils for TSong {
     }
 }
 
+#[derive(Clone)]
 struct ChannelNote {
     finetune: FineTune,
+    finetune_initial: FineTune,
     on: bool,
 }
 
@@ -216,6 +236,7 @@ impl<'a> Channel<'a> {
             (None, PatternEventNote::On(target)) => {
                 self.note = Some(ChannelNote {
                     finetune: target,
+                    finetune_initial: target,
                     on: true,
                 });
             }
@@ -266,6 +287,8 @@ impl<'a> Channel<'a> {
     fn tick(&mut self, duration: usize, volume_scale: f32) -> Vec<[i16; 1]> {
         if let Some((note, instrument, sample)) = self.get_note_instrument_sample() {
             // Generate data
+            // TODO(nenikitov): If `volume_envelope` is `0`, this means that the sample already finished playing
+            // and there is no reason to keep `note.on`.
             let volume_envelope = match &instrument.volume {
                 TInstrumentVolume::Envelope(envelope) => {
                     let (envelope, default) = if note.on {

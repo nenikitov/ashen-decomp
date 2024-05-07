@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Neg, Sub};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord)]
 pub struct FineTune {
     cents: i32,
 }
@@ -65,6 +65,12 @@ impl Neg for FineTune {
 
     fn neg(self) -> Self::Output {
         FineTune::new(-self.cents)
+    }
+}
+
+impl PartialOrd for FineTune {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.cents.partial_cmp(&other.cents)
     }
 }
 

@@ -89,14 +89,13 @@ mod tests {
                 Sound::Song(s) => Some(s),
                 Sound::Effect(_) => None,
             })
-            .collect::<Vec<_>>()[0x9];
-        let effects = test_music
-            .orders
-            .iter()
-            .flat_map(|p| p.iter().flat_map(|p| p.iter().flat_map(|p| p.effects)))
-            .flatten()
-            .collect::<Vec<_>>();
-        //dbg!(effects);
+            .collect::<Vec<_>>()[0x1];
+        // let effects = test_music
+        //     .orders
+        //     .iter()
+        //     .flat_map(|p| p.iter().flat_map(|p| p.iter().flat_map(|p| p.effects)))
+        //     .flatten()
+        //     .collect::<Vec<_>>();
 
         sounds
             .iter()
