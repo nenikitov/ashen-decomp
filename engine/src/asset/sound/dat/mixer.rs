@@ -25,7 +25,6 @@ impl TSongMixer for TSong {
 
 trait TSongMixerUtils {
     const SAMPLE_RATE: usize = 16_000;
-    const VOLUME_SCALE: f32 = 1.0;
 
     fn mix(&self, start: usize) -> Sample<i16, 1>;
 
@@ -44,6 +43,7 @@ impl TSongMixerUtils for TSong {
         let mut sample_length_fractional = 0.0;
         let mut bpm = self.bpm as usize;
         let mut speed = self.speed as usize;
+        let mut volume_global = 1.0;
 
         // TODO!(nenikitov): Remove all `enumerate`
         for (p, pattern) in self.orders[start..].iter().enumerate() {
@@ -123,6 +123,9 @@ impl TSongMixerUtils for TSong {
                                         + sample.sample_loop().len();
                                 }
                             }
+                            PatternEffect::GlobalVolume(volume) => {
+                                volume_global = volume;
+                            }
                             PatternEffect::Porta(Porta::Tone(None))
                             | PatternEffect::Porta(Porta::Slide { finetune: None, .. })
                             | PatternEffect::Porta(Porta::Bump { finetune: None, .. })
@@ -186,7 +189,7 @@ impl TSongMixerUtils for TSong {
                             sample_length - j * tick_length
                         };
 
-                        let data = c.tick(tick_length, Self::VOLUME_SCALE);
+                        let data = c.tick(tick_length, volume_global);
                         song.data.add_sample(&data, offset);
                     }
                 }
@@ -284,7 +287,7 @@ impl<'a> Channel<'a> {
         }
     }
 
-    fn tick(&mut self, duration: usize, volume_scale: f32) -> Vec<[i16; 1]> {
+    fn tick(&mut self, duration: usize, volume_global: f32) -> Vec<[i16; 1]> {
         if let Some((note, instrument, sample)) = self.get_note_instrument_sample() {
             // Generate data
             // TODO(nenikitov): If `volume_envelope` is `0`, this means that the sample already finished playing
@@ -303,7 +306,7 @@ impl<'a> Channel<'a> {
                 }
                 TInstrumentVolume::Constant(volume) => *volume,
             };
-            let volume = volume_scale * volume_envelope * self.volume.clamp(0.0, 4.0);
+            let volume = volume_global * volume_envelope * self.volume.clamp(0.0, 4.0);
 
             let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;

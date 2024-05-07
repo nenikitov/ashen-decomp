@@ -63,6 +63,7 @@ pub enum PatternEffect {
     Porta(Porta),
     SampleOffset(Option<usize>),
     PlaybackDirection(PlaybackDirection),
+    GlobalVolume(f32),
 }
 
 impl PatternEffect {
@@ -184,12 +185,11 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                             -convert_volume(value)
                         },
                     ))),
+                    0x0F => PatternEffect::GlobalVolume(convert_volume(value)),
                     // TODO(nenikitov): Remove dummy effect
                     0x00 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x0A | 0x0B | 0x0C | 0x0D
-                    | 0x0F | 0x14 | 0x15 | 0x16 | 0x1D | 0x1E | 0x1F | 0x20 | 0x21 | 0x22
-                    | 0x2E | 0x2F | 0x30 | 0x31 | 0x32 | 0x33 | 0x34 | 0x35 => {
-                        PatternEffect::Dummy(kind)
-                    }
+                    | 0x14 | 0x15 | 0x16 | 0x1D | 0x1E | 0x1F | 0x20 | 0x21 | 0x22 | 0x2E
+                    | 0x2F | 0x30 | 0x31 | 0x32 | 0x33 | 0x34 | 0x35 => PatternEffect::Dummy(kind),
                     // TODO(nenikitov): Add support for other effects
                     // 0x00 => Self::Arpegio,
                     // 0x01 => Self::PortaUp,
@@ -204,7 +204,6 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     // 0x0B => Self::PositionJump,
                     // 0x0C => Self::Volume,
                     // 0x0D => Self::Break,
-                    // 0x0F => Self::VolumeGlobal,
                     // 0x14 => Self::Sync,
                     // 0x15 => Self::PortaFineUp,
                     // 0x16 => Self::PortaFineDown,
