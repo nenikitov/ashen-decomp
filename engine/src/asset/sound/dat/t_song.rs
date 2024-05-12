@@ -22,6 +22,80 @@ pub struct TSong {
     pub samples: Vec<Rc<TSample>>,
 }
 
+impl std::fmt::Debug for TSong {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TSong")
+            .field("bpm", &self.bpm)
+            .field("speed", &self.speed)
+            .field("restart_order", &self.restart_order)
+            .field_with("events", |f| {
+                let mut d = f.debug_map();
+                for (p, pattern) in self.orders.iter().enumerate() {
+                    d.key(&format!("P 0x{p:X}"));
+                    d.value_with(|f| {
+                        let mut d = f.debug_map();
+                        for (r, row) in pattern.iter().enumerate() {
+                            if !row.iter().any(|c| c.has_content()) {
+                                continue;
+                            }
+
+                            d.key(&format!("R 0x{r:X}"));
+                            d.value_with(|f| {
+                                let mut d = f.debug_map();
+                                for (e, event) in row.iter().enumerate() {
+                                    if !event.has_content() {
+                                        continue;
+                                    }
+
+                                    d.key(&format!("C 0x{e:X}"));
+                                    d.value_with(|f| {
+                                        let mut d = f.debug_struct("Event");
+                                        event.note.map(|note| {
+                                            d.field_with("note", |f| {
+                                                f.write_fmt(format_args!("{:?}", note))
+                                            });
+                                        });
+                                        event.volume.map(|volume| {
+                                            d.field_with("volume", |f| {
+                                                f.write_fmt(format_args!("{:?}", volume))
+                                            });
+                                        });
+                                        event.instrument.as_ref().map(|instrument| {
+                                            d.field_with("instrument", |f| match instrument {
+                                                PatternEventInstrumentKind::Special => {
+                                                    f.write_fmt(format_args!("Special"))
+                                                }
+                                                PatternEventInstrumentKind::Predefined(
+                                                    instrument,
+                                                ) => f.write_fmt(format_args!(
+                                                    "Predefined({})",
+                                                    self.instruments
+                                                        .iter()
+                                                        .position(|i| Rc::ptr_eq(i, instrument))
+                                                        .unwrap()
+                                                )),
+                                            });
+                                        });
+                                        if event.effects.iter().any(Option::is_some) {
+                                            d.field_with("effects", |f| {
+                                                f.write_fmt(format_args!("{:?}", event.effects))
+                                            });
+                                        }
+                                        d.finish()
+                                    });
+                                }
+                                d.finish()
+                            });
+                        }
+                        d.finish()
+                    });
+                }
+                d.finish()
+            })
+            .finish()
+    }
+}
+
 impl AssetParser<Wildcard> for TSong {
     type Output = Self;
 

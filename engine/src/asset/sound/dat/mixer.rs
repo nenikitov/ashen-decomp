@@ -190,7 +190,9 @@ impl TSongMixerUtils for TSong {
                         };
 
                         let data = c.tick(tick_length, volume_global);
-                        song.data.add_sample(&data, offset);
+                        if i == 0 {
+                            song.data.add_sample(&data, offset);
+                        }
                     }
                 }
 

@@ -148,6 +148,15 @@ pub struct PatternEvent {
     pub effects: [Option<PatternEffect>; 2],
 }
 
+impl PatternEvent {
+    pub fn has_content(&self) -> bool {
+        self.note.is_some()
+            || self.volume.is_some()
+            || self.instrument.is_some()
+            || self.effects.iter().any(Option::is_some)
+    }
+}
+
 impl AssetParser<Wildcard> for PatternEvent {
     type Output = Self;
 

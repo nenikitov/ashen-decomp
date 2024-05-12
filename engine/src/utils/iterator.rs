@@ -20,4 +20,3 @@ pub trait CollectArray: Sized + Iterator {
 }
 
 impl<T> CollectArray for T where T: Iterator {}
-

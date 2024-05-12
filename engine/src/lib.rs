@@ -19,6 +19,7 @@
     lazy_cell,
     let_chains,
     maybe_uninit_uninit_array_transpose,
+    debug_closure_helpers,
 )]
 
 pub mod asset;
