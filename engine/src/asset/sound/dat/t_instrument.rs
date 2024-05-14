@@ -107,14 +107,10 @@ impl AssetParser<Wildcard> for TInstrumentVolume {
                         .collect::<Vec<_>>();
                     TInstrumentVolume::Envelope(TInstrumentVolumeEnvelope {
                         data,
-                        sustain: if sustain == u16::MAX {
-                            None
-                        } else {
-                            Some((sustain - begin) as usize)
-                        },
+                        sustain: (sustain != u16::MAX).then_some((sustain - begin) as usize),
                     })
                 } else {
-                    TInstrumentVolume::Constant(0.25)
+                    TInstrumentVolume::Constant(1.0)
                 },
             ))
         }

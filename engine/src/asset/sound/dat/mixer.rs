@@ -190,9 +190,7 @@ impl TSongMixerUtils for TSong {
                         };
 
                         let data = c.tick(tick_length, volume_global);
-                        if i == 0 {
-                            song.data.add_sample(&data, offset);
-                        }
+                        song.data.add_sample(&data, offset);
                     }
                 }
 
@@ -294,7 +292,7 @@ impl<'a> Channel<'a> {
             // Generate data
             // TODO(nenikitov): If `volume_envelope` is `0`, this means that the sample already finished playing
             // and there is no reason to keep `note.on`.
-            let volume_envelope = match &instrument.volume {
+            let volume_instrument = match &instrument.volume {
                 TInstrumentVolume::Envelope(envelope) => {
                     let (envelope, default) = if note.on {
                         (envelope.volume_beginning(), envelope.volume_loop())
@@ -308,7 +306,7 @@ impl<'a> Channel<'a> {
                 }
                 TInstrumentVolume::Constant(volume) => *volume,
             };
-            let volume = volume_global * volume_envelope * self.volume.clamp(0.0, 4.0);
+            let volume = (volume_global * volume_instrument * self.volume).clamp(0.0, 4.0);
 
             let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;

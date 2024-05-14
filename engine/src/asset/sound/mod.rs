@@ -92,36 +92,27 @@ mod tests {
                     Sound::Effect(_) => None,
                 })
                 .collect::<Vec<_>>()[i];
-            // let effects = test_music
-            //     .orders
-            //     .iter()
-            //     .flat_map(|p| p.iter().flat_map(|p| p.iter().flat_map(|p| p.effects)))
-            //     .flatten()
-            //     .collect::<Vec<_>>();
-            dbg!(song);
-            let file = output_dir.join(format!("{i:0>2X}.wav"));
-            output_file(file, song.mix(false).to_wave());
         }
 
-        // sounds
-        //     .iter()
-        //     .filter(|s| matches!(s, Sound::Song(_)))
-        //     .enumerate()
-        //     .try_for_each(|(i, song)| {
-        //         let file = output_dir.join(format!("{i:0>2X}.wav"));
-        //         output_file(file, song.mix().to_wave())
-        //     })?;
-        //
-        // let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
-        //
-        // sounds
-        //     .iter()
-        //     .filter(|s| matches!(s, Sound::Effect(_)))
-        //     .enumerate()
-        //     .try_for_each(|(i, effect)| {
-        //         let file = output_dir.join(format!("{i:0>2X}.wav"));
-        //         output_file(file, effect.mix().to_wave())
-        //     })?;
+        sounds
+            .iter()
+            .filter(|s| matches!(s, Sound::Song(_)))
+            .enumerate()
+            .try_for_each(|(i, song)| {
+                let file = output_dir.join(format!("{i:0>2X}.wav"));
+                output_file(file, song.mix().to_wave())
+            })?;
+
+        let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
+
+        sounds
+            .iter()
+            .filter(|s| matches!(s, Sound::Effect(_)))
+            .enumerate()
+            .try_for_each(|(i, effect)| {
+                let file = output_dir.join(format!("{i:0>2X}.wav"));
+                output_file(file, effect.mix().to_wave())
+            })?;
 
         Ok(())
     }
