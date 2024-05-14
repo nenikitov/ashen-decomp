@@ -6,6 +6,8 @@ use crate::asset::sound::{
     sample::{Interpolation, Sample, SampleDataProcessing, SamplePointProcessing},
 };
 
+const GLOBAL_VOLUME: f32 = 0.3125;
+
 pub trait TSongMixer {
     fn mix(&self, restart: bool) -> Sample<i16, 1>;
 }
@@ -306,7 +308,8 @@ impl<'a> Channel<'a> {
                 }
                 TInstrumentVolume::Constant(volume) => *volume,
             };
-            let volume = (volume_global * volume_instrument * self.volume).clamp(0.0, 4.0);
+            let volume =
+                (GLOBAL_VOLUME * volume_global * volume_instrument * self.volume).clamp(0.0, 4.0);
 
             let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
             let duration_scaled = (duration as f64 / pitch_factor).round() as usize;
