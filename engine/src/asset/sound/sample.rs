@@ -197,6 +197,7 @@ impl<S: SamplePoint, const CHANNELS: usize> SamplePointProcessing<S, CHANNELS> f
 pub trait SampleDataProcessing<S: SamplePoint, const CHANNELS: usize> {
     fn add_sample(&mut self, other: &[[S; CHANNELS]], offset: usize);
     fn volume(&self, volume: f32) -> Self;
+    fn volume_range(&self, volume: Range<f32>) -> Self;
     fn stretch(&self, factor: f32, interpolation: Interpolation<S, CHANNELS>) -> Self;
 }
 
@@ -252,6 +253,16 @@ impl<S: SamplePoint, const CHANNELS: usize> SampleDataProcessing<S, CHANNELS>
                         }
                     })
                     .collect_array::<CHANNELS>()
+            })
+            .collect()
+    }
+
+    fn volume_range(&self, volume: Range<f32>) -> Self {
+        let len = self.iter().len();
+        self.iter()
+            .enumerate()
+            .map(|(i, samples)| {
+                samples.volume(volume.start + (i as f32 / len as f32) * (volume.end - volume.start))
             })
             .collect()
     }

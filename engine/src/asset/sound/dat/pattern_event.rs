@@ -71,14 +71,7 @@ impl AssetParser<Wildcard> for PatternEventFlags {
     }
 }
 
-#[derive(Debug)]
-pub enum PatternEventInstrumentKind {
-    // TODO(nenikitov): Figure out what instrument `255` is
-    Special,
-    Predefined(Rc<TInstrument>),
-}
-
-impl AssetParser<Wildcard> for Option<PatternEventInstrumentKind> {
+impl AssetParser<Wildcard> for Option<Option<Rc<TInstrument>>> {
     type Output = Self;
 
     type Context<'ctx> = (bool, &'ctx [Rc<TInstrument>]);
@@ -91,15 +84,7 @@ impl AssetParser<Wildcard> for Option<PatternEventInstrumentKind> {
 
             Ok((
                 input,
-                should_parse.then(|| {
-                    if instrument == 255 {
-                        PatternEventInstrumentKind::Special
-                    } else {
-                        PatternEventInstrumentKind::Predefined(
-                            instruments[instrument as usize].clone(),
-                        )
-                    }
-                }),
+                should_parse.then(|| instruments.get(instrument as usize).map(Rc::clone)),
             ))
         }
     }
@@ -140,10 +125,10 @@ impl AssetParser<Wildcard> for Option<PatternEventVolume> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PatternEvent {
     pub note: Option<PatternEventNote>,
-    pub instrument: Option<PatternEventInstrumentKind>,
+    pub instrument: Option<Option<Rc<TInstrument>>>,
     pub volume: Option<PatternEventVolume>,
     pub effects: [Option<PatternEffect>; 2],
 }
@@ -173,7 +158,7 @@ impl AssetParser<Wildcard> for PatternEvent {
                     flags.contains(PatternEventFlags::ChangeNote),
                 )(input)?;
 
-                let (input, instrument) = <Option<PatternEventInstrumentKind>>::parser((
+                let (input, instrument) = <Option<Option<Rc<TInstrument>>>>::parser((
                     (flags.contains(PatternEventFlags::ChangeInstrument)),
                     instruments,
                 ))(input)?;

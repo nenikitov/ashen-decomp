@@ -37,14 +37,6 @@ impl AssetParser<Wildcard> for TInstrumentFlags {
     }
 }
 
-// TODO(nenikitov): Maybe make it an `AssetParser`
-#[derive(Debug)]
-pub enum TInstrumentSampleKind {
-    // TODO(nenikitov): Figure out what sample `255` is
-    Special,
-    Predefined(Rc<TSample>),
-}
-
 #[derive(Debug)]
 pub struct TInstrumentVolumeEnvelope {
     data: Vec<f32>,
@@ -136,7 +128,7 @@ pub struct TInstrument {
     pub fadeout: u32,
     pub vibrato_table: u32,
 
-    pub samples: Box<[TInstrumentSampleKind; 96]>,
+    pub samples: Box<[Option<Rc<TSample>>; 96]>,
 }
 
 impl AssetParser<Wildcard> for TInstrument {
@@ -189,13 +181,7 @@ impl AssetParser<Wildcard> for TInstrument {
                     samples: Box::new(
                         sample_indexes
                             .into_iter()
-                            .map(|i| {
-                                if i == u8::MAX {
-                                    TInstrumentSampleKind::Special
-                                } else {
-                                    TInstrumentSampleKind::Predefined(samples[i as usize].clone())
-                                }
-                            })
+                            .map(|i| samples.get(i as usize).map(Rc::clone))
                             .collect_array(),
                     ),
                 },

@@ -219,7 +219,7 @@ struct ChannelNote {
 
 #[derive(Default)]
 struct Channel<'a> {
-    instrument: Option<&'a PatternEventInstrumentKind>,
+    instrument: Option<&'a Option<Rc<TInstrument>>>,
     note: Option<ChannelNote>,
     effects: [Option<PatternEffect>; 2],
     effects_memory: HashMap<PatternEffectMemoryKey, PatternEffect>,
@@ -227,6 +227,7 @@ struct Channel<'a> {
     sample_position: usize,
 
     volume: f32,
+    volume_last: f32,
     volume_envelope_position: usize,
 
     playback_direction: PlaybackDirection,
@@ -256,7 +257,7 @@ impl<'a> Channel<'a> {
         }
     }
 
-    fn change_instrument(&mut self, instrument: &'a PatternEventInstrumentKind) {
+    fn change_instrument(&mut self, instrument: &'a Option<Rc<TInstrument>>) {
         self.instrument = Some(instrument);
         self.sample_position = 0;
         self.volume_envelope_position = 0;
@@ -279,9 +280,8 @@ impl<'a> Channel<'a> {
 
     fn get_note_instrument_sample(&self) -> Option<(&ChannelNote, &Rc<TInstrument>, &Rc<TSample>)> {
         if let Some(note) = &self.note
-            && let Some(PatternEventInstrumentKind::Predefined(instrument)) = self.instrument
-            && let TInstrumentSampleKind::Predefined(sample) =
-                &instrument.samples[note.finetune.note().clamp(0, 95) as usize]
+            && let Some(Some(instrument)) = self.instrument
+            && let Some(sample) = &instrument.samples[note.finetune.note().clamp(0, 95) as usize]
         {
             Some((note, instrument, sample))
         } else {
@@ -294,19 +294,20 @@ impl<'a> Channel<'a> {
             // Generate data
             // TODO(nenikitov): If `volume_envelope` is `0`, this means that the sample already finished playing
             // and there is no reason to keep `note.on`.
-            let volume_instrument = match &instrument.volume {
+            let (volume_instrument, should_increment_volume_envelope) = match &instrument.volume {
                 TInstrumentVolume::Envelope(envelope) => {
                     let (envelope, default) = if note.on {
                         (envelope.volume_beginning(), envelope.volume_loop())
                     } else {
                         (envelope.volume_end(), 0.0)
                     };
-                    envelope
+                    let envelope = envelope
                         .get(self.volume_envelope_position)
-                        .map(ToOwned::to_owned)
-                        .unwrap_or(default)
+                        .map(ToOwned::to_owned);
+
+                    (envelope.unwrap_or(default), envelope.is_some())
                 }
-                TInstrumentVolume::Constant(volume) => *volume,
+                TInstrumentVolume::Constant(volume) => (*volume, false),
             };
             let volume =
                 (GLOBAL_VOLUME * volume_global * volume_instrument * self.volume).clamp(0.0, 4.0);
@@ -335,7 +336,8 @@ impl<'a> Channel<'a> {
             let first_sample_after = sample.pop();
             let pitch_factor = duration as f32 / sample.len() as f32;
 
-            let mut data = sample.volume(volume).stretch(
+            let mut data = sample.volume_range(self.volume_last..volume).stretch(
+                //let mut data = sample.volume(volume).stretch(
                 pitch_factor,
                 Interpolation::Linear {
                     first_sample_after: first_sample_after.map(|s| s.volume(volume)),
@@ -344,7 +346,10 @@ impl<'a> Channel<'a> {
 
             // Update
             self.sample_position += duration_scaled;
-            self.volume_envelope_position += 1;
+            if should_increment_volume_envelope {
+                self.volume_envelope_position += 1;
+            }
+            self.volume_last = volume;
 
             // Return
             data

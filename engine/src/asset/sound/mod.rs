@@ -84,7 +84,7 @@ mod tests {
 
         // TODO(nenikitov): Remove this debug code
         {
-            let i = 0xA;
+            let i = 0x3;
             let song = sounds
                 .iter()
                 .filter_map(|s| match s {
@@ -92,6 +92,7 @@ mod tests {
                     Sound::Effect(_) => None,
                 })
                 .collect::<Vec<_>>()[i];
+            dbg!(&song.patterns[0][0x28][7]);
         }
 
         sounds

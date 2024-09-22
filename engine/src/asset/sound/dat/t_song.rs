@@ -62,13 +62,9 @@ impl std::fmt::Debug for TSong {
                                         });
                                         event.instrument.as_ref().map(|instrument| {
                                             d.field_with("instrument", |f| match instrument {
-                                                PatternEventInstrumentKind::Special => {
-                                                    f.write_fmt(format_args!("Special"))
-                                                }
-                                                PatternEventInstrumentKind::Predefined(
-                                                    instrument,
-                                                ) => f.write_fmt(format_args!(
-                                                    "Predefined({})",
+                                                None => f.write_fmt(format_args!("None")),
+                                                Some(instrument) => f.write_fmt(format_args!(
+                                                    "Some({})",
                                                     self.instruments
                                                         .iter()
                                                         .position(|i| Rc::ptr_eq(i, instrument))
