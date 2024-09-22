@@ -16,7 +16,6 @@
     // Discussion about possible future alternatives:
     // https://github.com/rust-lang/rust/pull/101179
     io_error_more,
-    lazy_cell,
     let_chains,
     maybe_uninit_uninit_array_transpose,
     debug_closure_helpers,
