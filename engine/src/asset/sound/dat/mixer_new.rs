@@ -1,7 +1,8 @@
-use std::{iter::Sum, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, iter::Sum, rc::Rc};
 
 use super::{
     finetune::FineTune,
+    pattern_effect::{PatternEffect, PatternEffectMemoryKey},
     pattern_event::{PatternEventNote, PatternEventVolume},
     t_instrument::{TInstrument, TSample},
     t_song::TSong,
@@ -40,9 +41,25 @@ impl AudioSamplePoint for i16 {
     }
 }
 
+trait PatternEffectLogic {
+    fn init(&self, player: &mut Player, channel: &mut PlayerChannel);
+    fn tick(&self, player: &mut Player, channel: &mut PlayerChannel);
+}
+
+impl PatternEffectLogic for PatternEffect {
+    fn init(&self, player: &mut Player, channel: &mut PlayerChannel) {
+        todo!()
+    }
+
+    fn tick(&self, player: &mut Player, channel: &mut PlayerChannel) {
+        todo!()
+    }
+}
+
+#[derive(Default)]
 struct PlayerChannelNote {
-    finetune: FineTune,
-    finetune_initial: FineTune,
+    finetune: Option<FineTune>,
+    finetune_initial: Option<FineTune>,
     on: bool,
 }
 
@@ -50,8 +67,11 @@ struct PlayerChannelNote {
 struct PlayerChannel {
     instrument: Option<Rc<TInstrument>>,
     sample: Option<Rc<TSample>>,
-    note: Option<PlayerChannelNote>,
+    note: PlayerChannelNote,
     volume: Option<PatternEventVolume>,
+    effects: [Option<PatternEffect>; 2],
+    effects_memory: HashMap<PatternEffectMemoryKey, PatternEffect>,
+
     pos_sample: f64,
     pos_volume_envelope: usize,
 }
@@ -61,16 +81,16 @@ impl PlayerChannel {
         self.volume = Some(PatternEventVolume::Value(0.));
     }
 
-    fn note_trigger(&mut self) {
-        self.pos_sample = 0f64;
+    fn pos_reset(&mut self) {
+        self.pos_sample = 0.;
         self.pos_volume_envelope = 0;
     }
 
-    fn generate_sample<T: AudioSamplePoint>(&mut self, sample_length: f64) -> T {
+    fn generate_sample<T: AudioSamplePoint>(&mut self, step: f64) -> T {
         if let Some(instrument) = &self.instrument
             && let Some(sample) = &self.sample
             && let Some(volume) = &self.volume
-            && let Some(note) = &self.note
+            && let Some(note) = self.note.finetune
         {
             let value = sample.get(self.pos_sample).into_normalized_f32();
             let volume = match volume {
@@ -78,13 +98,61 @@ impl PlayerChannel {
                 PatternEventVolume::Value(volume) => *volume,
             };
 
-            let pitch_factor = (note.finetune + sample.finetune).pitch_factor();
-            self.pos_sample += sample_length / pitch_factor;
+            let pitch_factor = (note + sample.finetune).pitch_factor();
+            self.pos_sample += step / pitch_factor;
 
             T::from_normalized_f32(value * volume)
         } else {
             T::from_normalized_f32(0f32)
         }
+    }
+
+    fn change_instrument(&mut self, instrument: Option<Rc<TInstrument>>) {
+        if let Some(instrument) = instrument {
+            self.instrument = Some(instrument);
+            self.pos_reset();
+        } else {
+            // TODO(nenikitov): Idk honestly, figure this out
+            self.note_cut();
+            self.instrument = None;
+            self.sample = None;
+        }
+    }
+
+    fn change_note(&mut self, note: PatternEventNote) {
+        if let Some(instrument) = &self.instrument {
+            match note {
+                PatternEventNote::Off => {
+                    self.note.on = false;
+                }
+                PatternEventNote::On(note) => {
+                    self.note.finetune = Some(note);
+                    self.note.finetune_initial = Some(note);
+                    self.note.on = true;
+                    self.sample = instrument.samples[note.note() as usize].clone();
+                }
+            }
+        } else {
+            // TODO(nenikitov): Idk honestly, figure this out
+            self.note_cut();
+        }
+    }
+
+    fn change_volume(&mut self, volume: PatternEventVolume) {
+        self.volume = Some(volume);
+    }
+
+    fn change_effect(&mut self, i: usize, effect: PatternEffect) {
+        // Recall from memory
+        let effect = if let Some(key) = effect.memory_key() {
+            if !effect.is_empty() {
+                self.effects_memory.insert(key, effect);
+            }
+
+            self.effects_memory[&key]
+        } else {
+            effect
+        };
     }
 }
 
@@ -116,7 +184,7 @@ impl<'a> Player<'a> {
             pos_tick: 0,
             tempo: song.speed as usize,
             bpm: song.bpm as usize,
-            volume_global: 0.25,
+            volume_global: 0.375,
             channels: (0..song.patterns[0][0].len())
                 .map(|_| PlayerChannel::default())
                 .collect(),
@@ -127,13 +195,13 @@ impl<'a> Player<'a> {
         if self.time_in_tick <= 0f64 {
             self.tick();
         }
-        let sample_length = 1. / sample_rate as f64;
-        self.time_in_tick -= sample_length;
+        let step = 1. / sample_rate as f64;
+        self.time_in_tick -= step;
 
         let sample = self
             .channels
             .iter_mut()
-            .map(|c| c.generate_sample::<S>(sample_length))
+            .map(|c| c.generate_sample::<S>(step))
             .map(|c| c.into_normalized_f32())
             .sum::<f32>();
         S::from_normalized_f32(sample * self.volume_global)
@@ -176,42 +244,24 @@ impl<'a> Player<'a> {
 
         for (channel, event) in self.channels.iter_mut().zip(row) {
             if let Some(instrument) = &event.instrument {
-                if let Some(instrument) = instrument {
-                    channel.instrument = Some(instrument.clone());
-                } else {
-                    // TODO(nenikitov): Idk honestly, figure this out
-                    channel.note_cut();
-                    channel.instrument = None;
-                    channel.sample = None;
-                }
+                channel.change_instrument(instrument.clone());
             }
 
             if let Some(note) = &event.note {
-                if let Some(instrument) = &channel.instrument {
-                    match note {
-                        PatternEventNote::Off => {
-                            if let Some(note) = &mut channel.note {
-                                note.on = false;
-                            }
-                        }
-                        PatternEventNote::On(note) => {
-                            channel.note = Some(PlayerChannelNote {
-                                finetune: *note,
-                                finetune_initial: *note,
-                                on: true,
-                            });
-                            channel.sample = instrument.samples[note.note() as usize].clone();
-                            channel.note_trigger();
-                        }
-                    }
-                } else {
-                    // TODO(nenikitov): Idk honestly, figure this out
-                    channel.note_cut();
-                }
+                channel.change_note(note.clone());
             }
 
             if let Some(volume) = &event.volume {
-                channel.volume = Some(volume.clone());
+                channel.change_volume(volume.clone());
+            }
+
+            for (i, effect) in event.effects.iter().enumerate() {
+                if let Some(effect) = effect {
+                    channel.change_effect(i, effect.clone());
+                    // channel.effects[i]
+                    //     .expect("Effect was initialized")
+                    //     .init(self, channel);
+                }
             }
 
             // TODO(nenikitov): Do effects
@@ -225,17 +275,19 @@ pub trait TSongMixerNew {
 
 impl TSongMixerNew for TSong {
     fn mix_new(&self) -> Sample<i16, 1> {
+        const SAMPLE_RATE: usize = 16000;
+
         let mut player = Player::new(self);
 
         let samples: Vec<_> = std::iter::from_fn(|| {
-            (player.pos_loop == 0).then(|| player.generate_sample::<i16>(48000))
+            (player.pos_loop == 0).then(|| player.generate_sample::<i16>(SAMPLE_RATE))
         })
         .map(|s| [s])
         .collect();
 
         Sample {
             data: samples,
-            sample_rate: 48000,
+            sample_rate: SAMPLE_RATE,
         }
     }
 }
