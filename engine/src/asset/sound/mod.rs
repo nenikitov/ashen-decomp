@@ -1,7 +1,10 @@
 mod dat;
 pub(crate) mod sample;
 
-use self::{dat::mixer::TSongMixer, sample::Sample};
+use self::{
+    dat::{mixer::TSongMixer, mixer_new::TSongMixerNew},
+    sample::Sample,
+};
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -19,7 +22,7 @@ pub enum Sound {
 impl Sound {
     pub fn mix(&self) -> Sample<i16, 1> {
         match self {
-            Sound::Song(sound) => sound.mix(false),
+            Sound::Song(sound) => sound.mix_new(),
             Sound::Effect(effect) => effect.mix(),
         }
     }
@@ -92,7 +95,6 @@ mod tests {
                     Sound::Effect(_) => None,
                 })
                 .collect::<Vec<_>>()[i];
-            dbg!(&song.patterns[0][0x28][7]);
         }
 
         sounds
@@ -101,6 +103,7 @@ mod tests {
             .enumerate()
             .try_for_each(|(i, song)| {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
+                println!("# SONG {i}");
                 output_file(file, song.mix().to_wave())
             })?;
 

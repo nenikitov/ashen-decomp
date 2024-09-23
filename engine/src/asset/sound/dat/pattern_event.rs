@@ -31,7 +31,7 @@ impl AssetParser<Wildcard> for Option<PatternEventNote> {
                         1..=95 => PatternEventNote::On(FineTune::from_note(note as i32)),
                         96 => PatternEventNote::Off,
                         // TODO(nenikitov): Should be a `Result`
-                        _ => unreachable!("Note should be in range 0-96"),
+                        _ => unreachable!("Note should be in range 1-96"),
                     }
                 }),
             ))

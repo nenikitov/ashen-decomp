@@ -209,10 +209,6 @@ pub struct TSample {
     pub data: Sample<i16, 1>,
 }
 
-impl TSample {
-    const SAMPLE_RATE: usize = 16_000;
-}
-
 impl AssetParser<Wildcard> for TSample {
     type Output = Self;
 
@@ -258,6 +254,8 @@ impl AssetParser<Wildcard> for TSample {
 }
 
 impl TSample {
+    const SAMPLE_RATE: usize = 16_000;
+
     pub fn sample_beginning(&self) -> &[[i16; 1]] {
         &self.data[..self.data.len_seconds() - self.loop_length]
     }
@@ -266,7 +264,39 @@ impl TSample {
         if self.loop_length != 0.0 {
             &self.data[self.data.len_seconds() - self.loop_length..]
         } else {
-            &[]
+            &[[0; 1]]
+        }
+    }
+
+    // TODO(nenikitov): I think the whole `Sample` will need to be removed
+    pub fn get(&self, position: f64) -> i16 {
+        let position = Self::SAMPLE_RATE as f64 * position;
+
+        let frac = position.fract() as f32;
+        let Some(prev) = self.normalize(position as usize) else {
+            return 0;
+        };
+        let Some(next) = self.normalize(position as usize + 1) else {
+            return 0;
+        };
+
+        let prev = self.data[prev][0] as f32;
+        let next = self.data[next][0] as f32;
+
+        (prev + frac * (next - prev)) as i16
+    }
+
+    fn normalize(&self, position: usize) -> Option<usize> {
+        if position >= self.data.data.len() && self.loop_length == 0. {
+            None
+        } else {
+            let mut position = position;
+
+            while position >= self.data.data.len() {
+                position -= (self.loop_length * Self::SAMPLE_RATE as f32) as usize;
+            }
+
+            Some(position)
         }
     }
 }

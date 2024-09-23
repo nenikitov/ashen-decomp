@@ -121,7 +121,7 @@ impl<S: SamplePoint, const CHANNELS: usize> Index<f32> for Sample<S, CHANNELS> {
     type Output = [S; CHANNELS];
 
     fn index(&self, index: f32) -> &Self::Output {
-        self.data.index(self.time_to_index(index))
+        self.data.index(self.time_to_index(index as f64))
     }
 }
 
@@ -129,7 +129,7 @@ impl<S: SamplePoint, const CHANNELS: usize> Index<Range<f32>> for Sample<S, CHAN
     type Output = [[S; CHANNELS]];
 
     fn index(&self, range: Range<f32>) -> &Self::Output {
-        &self.data[self.time_to_index(range.start)..self.time_to_index(range.end)]
+        &self.data[self.time_to_index(range.start as f64)..self.time_to_index(range.end as f64)]
     }
 }
 
@@ -137,7 +137,7 @@ impl<S: SamplePoint, const CHANNELS: usize> Index<RangeFrom<f32>> for Sample<S, 
     type Output = [[S; CHANNELS]];
 
     fn index(&self, range: RangeFrom<f32>) -> &Self::Output {
-        &self.data[self.time_to_index(range.start)..]
+        &self.data[self.time_to_index(range.start as f64)..]
     }
 }
 
@@ -145,13 +145,21 @@ impl<S: SamplePoint, const CHANNELS: usize> Index<RangeTo<f32>> for Sample<S, CH
     type Output = [[S; CHANNELS]];
 
     fn index(&self, range: RangeTo<f32>) -> &Self::Output {
-        &self.data[..self.time_to_index(range.end)]
+        &self.data[..self.time_to_index(range.end as f64)]
+    }
+}
+
+impl<S: SamplePoint, const CHANNELS: usize> Index<f64> for Sample<S, CHANNELS> {
+    type Output = [S; CHANNELS];
+
+    fn index(&self, index: f64) -> &Self::Output {
+        self.data.index(self.time_to_index(index))
     }
 }
 
 impl<S: SamplePoint, const CHANNELS: usize> Sample<S, CHANNELS> {
-    fn time_to_index(&self, time: f32) -> usize {
-        (time * self.sample_rate as f32) as usize
+    fn time_to_index(&self, time: f64) -> usize {
+        (time * self.sample_rate as f64) as usize
     }
 
     pub fn len_samples(&self) -> usize {
