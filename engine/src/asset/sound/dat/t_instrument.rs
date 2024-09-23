@@ -205,7 +205,7 @@ pub struct TSample {
     pub panning: u8,
     pub align: u8,
     pub finetune: FineTune,
-    pub loop_length: f32,
+    pub loop_length: usize,
     pub data: Sample<i16, 1>,
 }
 
@@ -228,7 +228,7 @@ impl AssetParser<Wildcard> for TSample {
             // The game uses offset for `i16`, but it's much more convenient to just use time, so that's why `/ 2` (`i16` is 2 bytes)
             let loop_end = loop_end / 2;
             let sample_offset = sample_offset / 2;
-            let loop_length = loop_length as f32 / 2.0 / Self::SAMPLE_RATE as f32;
+            let loop_length = loop_length / 2;
 
             Ok((
                 input,
@@ -238,8 +238,7 @@ impl AssetParser<Wildcard> for TSample {
                     panning,
                     align,
                     finetune: FineTune::new(finetune),
-                    // TODO(nenikitov): Look into resampling the sample to 48 KHz
-                    loop_length,
+                    loop_length: loop_length as usize,
                     data: Sample {
                         data: sample_data[sample_offset as usize..loop_end as usize]
                             .into_iter()
@@ -257,12 +256,13 @@ impl TSample {
     const SAMPLE_RATE: usize = 16_000;
 
     pub fn sample_beginning(&self) -> &[[i16; 1]] {
-        &self.data[..self.data.len_seconds() - self.loop_length]
+        &self.data[..self.data.len_seconds() - (self.loop_length as f32 / Self::SAMPLE_RATE as f32)]
     }
 
     pub fn sample_loop(&self) -> &[[i16; 1]] {
-        if self.loop_length != 0.0 {
-            &self.data[self.data.len_seconds() - self.loop_length..]
+        if self.loop_length != 0 {
+            &self.data
+                [self.data.len_seconds() - (self.loop_length as f32 / Self::SAMPLE_RATE as f32)..]
         } else {
             &[[0; 1]]
         }
@@ -287,13 +287,12 @@ impl TSample {
     }
 
     fn normalize(&self, position: usize) -> Option<usize> {
-        if position >= self.data.data.len() && self.loop_length == 0. {
+        if position >= self.data.data.len() && self.loop_length == 0 {
             None
         } else {
             let mut position = position;
-
             while position >= self.data.data.len() {
-                position -= (self.loop_length * Self::SAMPLE_RATE as f32) as usize;
+                position -= self.loop_length;
             }
 
             Some(position)
