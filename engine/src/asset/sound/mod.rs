@@ -84,7 +84,7 @@ mod tests {
 
         // TODO(nenikitov): Remove this debug code
         {
-            let i = 0x3;
+            let i = 0x8;
             let song = sounds
                 .iter()
                 .filter_map(|s| match s {

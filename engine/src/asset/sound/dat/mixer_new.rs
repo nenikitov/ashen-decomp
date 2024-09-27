@@ -56,14 +56,14 @@ impl PatternEffectLogic for PatternEffect {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct PlayerChannelNote {
     finetune: Option<FineTune>,
     finetune_initial: Option<FineTune>,
     on: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct PlayerChannel {
     instrument: Option<Rc<TInstrument>>,
     sample: Option<Rc<TSample>>,
@@ -72,11 +72,21 @@ struct PlayerChannel {
     effects: [Option<PatternEffect>; 2],
     effects_memory: HashMap<PatternEffectMemoryKey, PatternEffect>,
 
+    previous: Option<(Box<Self>, f64)>,
+
     pos_sample: f64,
     pos_volume_envelope: usize,
 }
 
 impl PlayerChannel {
+    // Too large of a time and samples will audibly blend and play 2 notes at the same time, which sounds weird.
+    // Too little and transitions between notes will click.
+    // This is 800 microseconds, which amounts to
+    // - 13 samples at 16000
+    // - 35 samples at 44100
+    // - 38 samples at 48000
+    const SAMPLE_BLEND: f64 = 0.0008;
+
     fn note_cut(&mut self) {
         self.volume = Some(PatternEventVolume::Value(0.));
     }
@@ -87,7 +97,7 @@ impl PlayerChannel {
     }
 
     fn generate_sample<T: AudioSamplePoint>(&mut self, step: f64) -> T {
-        if let Some(instrument) = &self.instrument
+        let current_sample = if let Some(instrument) = &self.instrument
             && let Some(sample) = &self.sample
             && let Some(volume) = &self.volume
             && let Some(note) = self.note.finetune
@@ -103,11 +113,31 @@ impl PlayerChannel {
 
             T::from_normalized_f32(value * volume)
         } else {
-            T::from_normalized_f32(0f32)
+            T::from_normalized_f32(0.)
+        };
+
+        if let Some((previous, position)) = &mut self.previous {
+            let factor = (*position / Self::SAMPLE_BLEND).min(1.) as f32;
+            let current_sample = current_sample.into_normalized_f32();
+            let previous_sample = previous.generate_sample::<T>(step).into_normalized_f32();
+
+            *position += step;
+            if *position >= Self::SAMPLE_BLEND {
+                self.previous = None
+            }
+
+            T::from_normalized_f32(previous_sample + factor * (current_sample - previous_sample))
+        } else {
+            current_sample
         }
     }
 
     fn change_instrument(&mut self, instrument: Option<Rc<TInstrument>>) {
+        // In tracker music, every instrument change is a state reset
+        // Previous state is kept to subtly blend in notes to remove clicks.
+        self.previous = None;
+        self.previous = Some((Box::new(self.clone()), 0.));
+
         if let Some(instrument) = instrument {
             self.instrument = Some(instrument);
             self.pos_reset();
