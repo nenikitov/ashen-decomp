@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, iter::Sum, rc::Rc};
+use std::{collections::HashMap, iter::Sum, rc::Rc};
 
 use super::{
     finetune::FineTune,
@@ -158,6 +158,7 @@ impl PlayerChannel {
 
 struct Player<'a> {
     song: &'a TSong,
+    sample_rate: usize,
 
     time_in_tick: f64,
 
@@ -174,9 +175,10 @@ struct Player<'a> {
 }
 
 impl<'a> Player<'a> {
-    fn new(song: &'a TSong) -> Self {
+    fn new(song: &'a TSong, sample_rate: usize) -> Self {
         Self {
             song,
+            sample_rate,
             time_in_tick: 0.,
             pos_loop: 0,
             pos_pattern: 0,
@@ -185,17 +187,17 @@ impl<'a> Player<'a> {
             tempo: song.speed as usize,
             bpm: song.bpm as usize,
             volume_global: 0.375,
-            channels: (0..song.patterns[0][0].len())
+            channels: (0..song.orders[0][0].len())
                 .map(|_| PlayerChannel::default())
                 .collect(),
         }
     }
 
-    fn generate_sample<S: AudioSamplePoint>(&mut self, sample_rate: usize) -> S {
+    fn generate_sample<S: AudioSamplePoint>(&mut self) -> S {
         if self.time_in_tick <= 0f64 {
             self.tick();
         }
-        let step = 1. / sample_rate as f64;
+        let step = 1. / self.sample_rate as f64;
         self.time_in_tick -= step;
 
         let sample = self
@@ -218,13 +220,13 @@ impl<'a> Player<'a> {
             self.pos_tick = 0;
             self.pos_row += 1;
         }
-        if let Some(pattern) = self.song.patterns.get(self.pos_pattern)
+        if let Some(pattern) = self.song.orders.get(self.pos_pattern)
             && self.pos_row >= pattern.len()
         {
             self.pos_pattern += 1;
             self.pos_row = 0;
         };
-        if self.pos_pattern >= self.song.patterns.len() {
+        if self.pos_pattern >= self.song.orders.len() {
             self.pos_loop += 1;
             self.pos_pattern = self.song.restart_order as usize;
         }
@@ -235,7 +237,7 @@ impl<'a> Player<'a> {
     fn row(&mut self) {
         let Some(row) = self
             .song
-            .patterns
+            .orders
             .get(self.pos_pattern)
             .and_then(|p| p.get(self.pos_row))
         else {
@@ -277,17 +279,16 @@ impl TSongMixerNew for TSong {
     fn mix_new(&self) -> Sample<i16, 1> {
         const SAMPLE_RATE: usize = 16000;
 
-        let mut player = Player::new(self);
+        let mut player = Player::new(self, SAMPLE_RATE);
 
-        let samples: Vec<_> = std::iter::from_fn(|| {
-            (player.pos_loop == 0).then(|| player.generate_sample::<i16>(SAMPLE_RATE))
-        })
-        .map(|s| [s])
-        .collect();
+        let samples: Vec<_> =
+            std::iter::from_fn(|| (player.pos_loop == 0).then(|| player.generate_sample::<i16>()))
+                .map(|s| [s])
+                .collect();
 
         Sample {
             data: samples,
-            sample_rate: SAMPLE_RATE,
+            sample_rate: player.sample_rate,
         }
     }
 }

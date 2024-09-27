@@ -15,8 +15,8 @@ pub struct TSong {
     pub bpm: u8,
     pub speed: u8,
     pub restart_order: u8,
-    pub orders: Vec<Rc<Pattern>>,
     /// Reusable and repeatable sequence -> Row -> Channel
+    pub orders: Vec<Rc<Pattern>>,
     pub patterns: Vec<Rc<Pattern>>,
     pub instruments: Vec<Rc<TInstrument>>,
     pub samples: Vec<Rc<TSample>>,

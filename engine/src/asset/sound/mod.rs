@@ -1,10 +1,7 @@
 mod dat;
 pub(crate) mod sample;
 
-use self::{
-    dat::{mixer::TSongMixer, mixer_new::TSongMixerNew},
-    sample::Sample,
-};
+use self::{dat::mixer_new::TSongMixerNew, sample::Sample};
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
