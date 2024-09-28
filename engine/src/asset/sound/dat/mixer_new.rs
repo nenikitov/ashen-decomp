@@ -1,4 +1,6 @@
-use std::{collections::HashMap, iter::Sum, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
+
+use itertools::Itertools;
 
 use super::{
     finetune::FineTune,
@@ -9,7 +11,7 @@ use super::{
 };
 use crate::asset::sound::sample::Sample;
 
-trait AudioSamplePoint: Sum {
+trait AudioSamplePoint {
     type Bytes: IntoIterator<Item = u8>;
 
     fn into_normalized_f32(&self) -> f32;
@@ -81,7 +83,8 @@ struct PlayerChannel {
 impl PlayerChannel {
     // Too large of a time and samples will audibly blend and play 2 notes at the same time, which sounds weird.
     // Too little and transitions between notes will click.
-    // This is 800 microseconds, which amounts to
+    // This is 800 microseconds, which is a bit of an arbitrary value that i found sounds nice.
+    // It amounts to:
     // - 13 samples at 16000
     // - 35 samples at 44100
     // - 38 samples at 48000
@@ -117,7 +120,7 @@ impl PlayerChannel {
         };
 
         if let Some((previous, position)) = &mut self.previous {
-            let factor = (*position / Self::SAMPLE_BLEND).min(1.) as f32;
+            let factor = (*position / Self::SAMPLE_BLEND) as f32;
             let current_sample = current_sample.into_normalized_f32();
             let previous_sample = previous.generate_sample::<T>(step).into_normalized_f32();
 
@@ -135,6 +138,8 @@ impl PlayerChannel {
     fn change_instrument(&mut self, instrument: Option<Rc<TInstrument>>) {
         // In tracker music, every instrument change is a state reset
         // Previous state is kept to subtly blend in notes to remove clicks.
+
+        // Disregard previous state before `self.clone` so we don't have a fully recursive structure.
         self.previous = None;
         self.previous = Some((Box::new(self.clone()), 0.));
 
@@ -224,7 +229,7 @@ impl<'a> Player<'a> {
     }
 
     fn generate_sample<S: AudioSamplePoint>(&mut self) -> S {
-        if self.time_in_tick <= 0f64 {
+        if self.time_in_tick <= 0. {
             self.tick();
         }
         let step = 1. / self.sample_rate as f64;
@@ -253,12 +258,12 @@ impl<'a> Player<'a> {
         if let Some(pattern) = self.song.orders.get(self.pos_pattern)
             && self.pos_row >= pattern.len()
         {
-            self.pos_pattern += 1;
             self.pos_row = 0;
+            self.pos_pattern += 1;
         };
         if self.pos_pattern >= self.song.orders.len() {
-            self.pos_loop += 1;
             self.pos_pattern = self.song.restart_order as usize;
+            self.pos_loop += 1;
         }
 
         self.time_in_tick += 2.5 / (self.bpm as f64);
@@ -274,7 +279,7 @@ impl<'a> Player<'a> {
             return;
         };
 
-        for (channel, event) in self.channels.iter_mut().zip(row) {
+        for (channel, event) in self.channels.iter_mut().zip_eq(row) {
             if let Some(instrument) = &event.instrument {
                 channel.change_instrument(instrument.clone());
             }
@@ -289,10 +294,10 @@ impl<'a> Player<'a> {
 
             for (i, effect) in event.effects.iter().enumerate() {
                 if let Some(effect) = effect {
-                    channel.change_effect(i, effect.clone());
-                    // channel.effects[i]
-                    //     .expect("Effect was initialized")
-                    //     .init(self, channel);
+                    //channel.change_effect(i, effect.clone());
+                    //channel.effects[i]
+                    //    .expect("Effect was initialized")
+                    //    .init(self, channel);
                 }
             }
 
