@@ -69,7 +69,7 @@ pub enum PatternEffect {
 impl PatternEffect {
     pub fn memory_key(&self) -> Option<PatternEffectMemoryKey> {
         match self {
-            PatternEffect::Porta(Porta::Tone(_)) => Some(PatternEffectMemoryKey::PortaTone),
+            PatternEffect::Porta(Porta::Tone(..)) => Some(PatternEffectMemoryKey::PortaTone),
             PatternEffect::Porta(Porta::Slide { up: true, .. }) => {
                 Some(PatternEffectMemoryKey::PortaSlideUp)
             }
@@ -96,14 +96,14 @@ impl PatternEffect {
                 small: true,
                 ..
             }) => Some(PatternEffectMemoryKey::PortaBumpSmallDown),
-            PatternEffect::Volume(Volume::Slide(_)) => Some(PatternEffectMemoryKey::VolumeSlide),
+            PatternEffect::Volume(Volume::Slide(..)) => Some(PatternEffectMemoryKey::VolumeSlide),
             PatternEffect::Volume(Volume::Bump { up: true, .. }) => {
                 Some(PatternEffectMemoryKey::VolumeBumpUp)
             }
             PatternEffect::Volume(Volume::Bump { up: down, .. }) => {
                 Some(PatternEffectMemoryKey::VolumeBumpDown)
             }
-            PatternEffect::SampleOffset(_) => Some(PatternEffectMemoryKey::SampleOffset),
+            PatternEffect::SampleOffset(..) => Some(PatternEffectMemoryKey::SampleOffset),
             _ => None,
         }
     }
