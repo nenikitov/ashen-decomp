@@ -153,15 +153,15 @@ impl PlayerChannel {
     fn change_instrument(&mut self, instrument: Option<Rc<TInstrument>>) {
         if let Some(instrument) = instrument {
             self.instrument = Some(instrument);
+        }
 
+        if self.instrument.is_some() {
             self.trigger_note();
         } else {
-            if self.instrument.is_none() {
-                // TODO(nenikitov): Idk honestly, figure this out
-                self.note_cut();
-                self.instrument = None;
-                self.sample = None;
-            }
+            // TODO(nenikitov): Idk honestly, figure this out
+            self.note_cut();
+            self.instrument = None;
+            self.sample = None;
         }
     }
 
