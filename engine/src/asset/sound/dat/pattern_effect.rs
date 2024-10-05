@@ -33,7 +33,7 @@ pub enum Volume {
     Bump { up: bool, volume: Option<f32> },
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum PlaybackDirection {
     #[default]
     Forwards,

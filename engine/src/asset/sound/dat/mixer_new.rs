@@ -39,21 +39,6 @@ impl AudioSamplePoint for i16 {
     }
 }
 
-trait PatternEffectLogic {
-    fn init(&self, player: &mut Player, channel: &mut PlayerChannel);
-    fn tick(&self, player: &mut Player, channel: &mut PlayerChannel);
-}
-
-impl PatternEffectLogic for PatternEffect {
-    fn init(&self, player: &mut Player, channel: &mut PlayerChannel) {
-        todo!()
-    }
-
-    fn tick(&self, player: &mut Player, channel: &mut PlayerChannel) {
-        todo!()
-    }
-}
-
 #[derive(Default, Clone)]
 struct PlayerChannelNote {
     finetune: Option<FineTune>,
@@ -74,6 +59,7 @@ struct PlayerChannel {
 
     pos_sample: f64,
     pos_volume_envelope: usize,
+    direction: PlaybackDirection,
 }
 
 impl PlayerChannel {
@@ -93,19 +79,51 @@ impl PlayerChannel {
     fn pos_reset(&mut self) {
         self.pos_sample = 0.;
         self.pos_volume_envelope = 0;
+        self.direction = PlaybackDirection::Forwards;
     }
 
     fn generate_sample<T: AudioSamplePoint>(&mut self, step: f64) -> T {
         let current_sample = if let Some(instrument) = &self.instrument
             && let Some(sample) = &self.sample
             && let Some(note) = self.note.finetune
+            && self.pos_sample >= 0.
         {
             let value = sample.get(self.pos_sample).into_normalized_f32();
 
             let pitch_factor = (note + sample.finetune).pitch_factor();
-            self.pos_sample += step / pitch_factor;
+            let step = step / pitch_factor;
+            match self.direction {
+                PlaybackDirection::Forwards => {
+                    self.pos_sample += step;
+                }
+                PlaybackDirection::Backwards => {
+                    self.pos_sample -= step;
+                }
+            }
 
-            T::from_normalized_f32(value * self.volume)
+            let volume = self.volume
+                * match &instrument.volume {
+                    TInstrumentVolume::Envelope(envelope) => {
+                        if self.note.on {
+                            envelope
+                                .volume_beginning()
+                                .get(self.pos_volume_envelope)
+                                .cloned()
+                                .unwrap_or(envelope.volume_loop())
+                        } else {
+                            envelope
+                                .volume_end()
+                                .get(self.pos_volume_envelope.saturating_sub(
+                                    envelope.volume_beginning().len().saturating_sub(1),
+                                ))
+                                .cloned()
+                                .unwrap_or(0.)
+                        }
+                    }
+                    TInstrumentVolume::Constant(_) => 1.,
+                };
+
+            T::from_normalized_f32(value * volume)
         } else {
             T::from_normalized_f32(0.)
         };
@@ -191,6 +209,23 @@ impl PlayerChannel {
         };
         self.effects[i] = Some(effect);
     }
+
+    fn advance_envelopes(&mut self) {
+        if let Some(instrument) = &self.instrument
+            && let TInstrumentVolume::Envelope(envelope) = &instrument.volume
+        {
+            if (self.note.on
+                && if let Some(sustain) = envelope.sustain {
+                    self.pos_volume_envelope < sustain
+                } else {
+                    true
+                })
+                || !self.note.on
+            {
+                self.pos_volume_envelope += 1;
+            }
+        }
+    }
 }
 
 struct Player<'a> {
@@ -207,6 +242,7 @@ struct Player<'a> {
     tempo: usize,
     bpm: usize,
     volume_global: f32,
+    volume_amplification: f32,
 
     channels: Vec<PlayerChannel>,
 }
@@ -223,7 +259,8 @@ impl<'a> Player<'a> {
             pos_tick: 0,
             tempo: song.speed as usize,
             bpm: song.bpm as usize,
-            volume_global: 0.375,
+            volume_global: 1.,
+            volume_amplification: 0.25,
             channels: (0..song.orders[0][0].len())
                 .map(|_| PlayerChannel::default())
                 .collect(),
@@ -242,13 +279,71 @@ impl<'a> Player<'a> {
             .iter_mut()
             .map(|c| c.generate_sample::<S>(step))
             .map(|c| c.into_normalized_f32())
+            //.enumerate()
+            //.filter_map(|(i, s)| (i == 4).then_some(s))
             .sum::<f32>();
-        S::from_normalized_f32(sample * self.volume_global)
+        S::from_normalized_f32(sample * self.volume_global * self.volume_amplification)
     }
 
     fn tick(&mut self) {
         if self.pos_tick == 0 {
             self.row();
+        }
+
+        for channel in self.channels.iter_mut() {
+            channel.advance_envelopes();
+
+            for effect in channel.effects.iter() {
+                if let Some(effect) = effect {
+                    use PatternEffect as E;
+                    match *effect {
+                        // Tick effects
+                        E::Volume(Volume::Slide(Some(volume))) => {
+                            channel.volume = (channel.volume + volume).clamp(0., 1.);
+                        }
+                        E::Porta(Porta::Tone(Some(step))) => {
+                            if let Some(finetune_initial) = channel.note.finetune_initial {
+                                channel.note.finetune = channel.note.finetune.map(|finetune| {
+                                    use std::cmp::Ordering;
+                                    match finetune.cmp(&finetune_initial) {
+                                        Ordering::Less => {
+                                            FineTune::min(finetune + step, finetune_initial)
+                                        }
+                                        Ordering::Greater => {
+                                            FineTune::max(finetune - step, finetune_initial)
+                                        }
+                                        Ordering::Equal => finetune,
+                                    }
+                                });
+                            }
+                        }
+                        E::Porta(Porta::Slide {
+                            finetune: Some(finetune),
+                            ..
+                        }) => {
+                            channel.note.finetune = channel.note.finetune.map(|f| {
+                                (f + finetune).clamp(FineTune::new(0), FineTune::new(15488))
+                            });
+                        }
+                        // Noops - no tick
+                        E::Volume(Volume::Set(..))
+                        | E::Volume(Volume::Bump { .. })
+                        | E::Porta(Porta::Tone(..))
+                        | E::Porta(Porta::Bump { .. })
+                        | E::Speed(..)
+                        | E::GlobalVolume(..)
+                        | E::SampleOffset(..)
+                        | E::PlaybackDirection(..) => {}
+                        // TODO(nenikitov): Unemplemented
+                        E::Dummy(..) => {}
+                        // Unreachable because memory has to be initialized
+                        E::Volume(Volume::Slide(None))
+                        | E::Porta(Porta::Slide { finetune: None, .. }) => {
+                            unreachable!("Effects should have their memory initialized")
+                        }
+                    }
+                }
+            }
         }
 
         self.pos_tick += 1;
@@ -325,7 +420,14 @@ impl<'a> Player<'a> {
                         }) => {
                             channel.note.finetune = channel.note.finetune.map(|f| f + finetune);
                         }
-                        E::PlaybackDirection(..) => {}
+                        E::PlaybackDirection(direction) => {
+                            channel.direction = direction;
+                            if let Some(sample) = &channel.sample
+                                && direction == PlaybackDirection::Backwards
+                            {
+                                channel.pos_sample = sample.data.len_seconds() as f64
+                            }
+                        }
                         E::SampleOffset(Some(offset)) => {
                             // TODO(nenikitov): Remove this hardcoded value
                             channel.pos_sample = 1. / 16_000. * offset as f64;
@@ -341,57 +443,6 @@ impl<'a> Player<'a> {
                         | E::Porta(Porta::Tone(None))
                         | E::Porta(Porta::Bump { finetune: None, .. })
                         | E::SampleOffset(None) => {
-                            unreachable!("Effects should have their memory initialized")
-                        }
-                    }
-                }
-            }
-
-            // TODO(nenikitov): Do effects
-            for effect in channel.effects.iter() {
-                if let Some(effect) = effect {
-                    use PatternEffect as E;
-                    match *effect {
-                        // Tick effects
-                        E::Volume(Volume::Slide(Some(volume))) => {
-                            channel.volume = (channel.volume + volume).clamp(0., 1.);
-                        }
-                        E::Porta(Porta::Tone(Some(step))) => {
-                            if let Some(finetune_initial) = channel.note.finetune_initial {
-                                channel.note.finetune = channel.note.finetune.map(|finetune| {
-                                    use std::cmp::Ordering;
-                                    match finetune.cmp(&finetune_initial) {
-                                        Ordering::Less => {
-                                            FineTune::min(finetune + step, finetune_initial)
-                                        }
-                                        Ordering::Greater => {
-                                            FineTune::max(finetune - step, finetune_initial)
-                                        }
-                                        Ordering::Equal => finetune,
-                                    }
-                                });
-                            }
-                        }
-                        E::Porta(Porta::Slide {
-                            finetune: Some(finetune),
-                            ..
-                        }) => {
-                            channel.note.finetune = channel.note.finetune.map(|f| f + finetune);
-                        }
-                        // Noops - no tick
-                        E::Volume(Volume::Set(..))
-                        | E::Volume(Volume::Bump { .. })
-                        | E::Porta(Porta::Tone(..))
-                        | E::Porta(Porta::Bump { .. })
-                        | E::Speed(..)
-                        | E::GlobalVolume(..)
-                        | E::SampleOffset(..)
-                        | E::PlaybackDirection(..) => {}
-                        // TODO(nenikitov): Unemplemented
-                        E::Dummy(..) => {}
-                        // Unreachable because memory has to be initialized
-                        E::Volume(Volume::Slide(None))
-                        | E::Porta(Porta::Slide { finetune: None, .. }) => {
                             unreachable!("Effects should have their memory initialized")
                         }
                     }

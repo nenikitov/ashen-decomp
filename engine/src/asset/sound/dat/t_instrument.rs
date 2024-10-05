@@ -39,8 +39,8 @@ impl AssetParser<Wildcard> for TInstrumentFlags {
 
 #[derive(Debug)]
 pub struct TInstrumentVolumeEnvelope {
-    data: Vec<f32>,
-    sustain: Option<usize>,
+    pub data: Vec<f32>,
+    pub sustain: Option<usize>,
 }
 
 impl TInstrumentVolumeEnvelope {
