@@ -228,6 +228,10 @@ impl PlayerChannel {
             }
         }
     }
+
+    fn clear_effects(&mut self) {
+        self.effects = [None, None];
+    }
 }
 
 struct Player<'a> {
@@ -282,7 +286,7 @@ impl<'a> Player<'a> {
             .map(|c| c.generate_sample::<S>(step))
             .map(|c| c.into_normalized_f32())
             //.enumerate()
-            //.filter_map(|(i, s)| (i == 8).then_some(s))
+            //.filter_map(|(i, s)| (i == 4).then_some(s))
             .sum::<f32>();
         S::from_normalized_f32(sample * self.volume_global * self.volume_amplification)
     }
@@ -393,6 +397,7 @@ impl<'a> Player<'a> {
                 channel.change_volume(volume.clone());
             }
 
+            channel.clear_effects();
             for (i, effect) in event
                 .effects
                 .iter()
