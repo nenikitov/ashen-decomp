@@ -269,21 +269,23 @@ impl TSample {
     }
 
     // TODO(nenikitov): I think the whole `Sample` will need to be removed
-    pub fn get(&self, position: f64) -> i16 {
+    pub fn get(&self, position: f64) -> Option<i16> {
+        if position < 0. {
+            return None;
+        }
+
         let position = Self::SAMPLE_RATE as f64 * position;
 
         let frac = position.fract() as f32;
         let Some(prev) = self.normalize(position as usize) else {
-            return 0;
+            return None;
         };
-        let Some(next) = self.normalize(position as usize + 1) else {
-            return 0;
-        };
+        let next = self.normalize(position as usize + 1);
 
         let prev = self.data[prev][0] as f32;
-        let next = self.data[next][0] as f32;
+        let next = next.map(|next| self.data[next][0] as f32).unwrap_or(0.);
 
-        (prev + frac * (next - prev)) as i16
+        Some((prev + frac * (next - prev)) as i16)
     }
 
     fn normalize(&self, position: usize) -> Option<usize> {
