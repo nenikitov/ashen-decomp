@@ -39,7 +39,7 @@ impl AudioSamplePoint for i16 {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 struct PlayerChannelNote {
     finetune: Option<FineTune>,
     finetune_initial: Option<FineTune>,
@@ -140,22 +140,28 @@ impl PlayerChannel {
         T::from_normalized_f32(current_sample)
     }
 
-    fn change_instrument(&mut self, instrument: Option<Rc<TInstrument>>) {
-        // In tracker music, every instrument change is a state reset
+    fn trigger_note(&mut self) {
         // Previous state is kept to subtly blend in notes to remove clicks.
 
         // Disregard previous state before `self.clone` so we don't have a fully recursive structure.
         self.previous = None;
         self.previous = Some((Box::new(self.clone()), 0.));
 
+        self.pos_reset();
+    }
+
+    fn change_instrument(&mut self, instrument: Option<Rc<TInstrument>>) {
         if let Some(instrument) = instrument {
             self.instrument = Some(instrument);
-            self.pos_reset();
+
+            self.trigger_note();
         } else {
-            // TODO(nenikitov): Idk honestly, figure this out
-            self.note_cut();
-            self.instrument = None;
-            self.sample = None;
+            if self.instrument.is_none() {
+                // TODO(nenikitov): Idk honestly, figure this out
+                self.note_cut();
+                self.instrument = None;
+                self.sample = None;
+            }
         }
     }
 
@@ -276,7 +282,7 @@ impl<'a> Player<'a> {
             .map(|c| c.generate_sample::<S>(step))
             .map(|c| c.into_normalized_f32())
             //.enumerate()
-            //.filter_map(|(i, s)| (i == 4).then_some(s))
+            //.filter_map(|(i, s)| (i == 8).then_some(s))
             .sum::<f32>();
         S::from_normalized_f32(sample * self.volume_global * self.volume_amplification)
     }
