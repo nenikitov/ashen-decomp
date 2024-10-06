@@ -15,10 +15,11 @@
 #![feature(
     // Discussion about possible future alternatives:
     // https://github.com/rust-lang/rust/pull/101179
+    debug_closure_helpers,
+    duration_consts_float,
     io_error_more,
     let_chains,
     maybe_uninit_uninit_array_transpose,
-    debug_closure_helpers,
 )]
 
 pub mod asset;

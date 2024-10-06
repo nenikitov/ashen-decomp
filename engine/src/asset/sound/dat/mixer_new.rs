@@ -1,4 +1,9 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::HashMap,
+    ops::{Add, Sub},
+    rc::Rc,
+    time::Duration,
+};
 
 use itertools::Itertools;
 
@@ -52,6 +57,8 @@ struct PlayerChannel {
     sample: Option<Rc<TSample>>,
     note: PlayerChannelNote,
     volume: f32,
+    volume_target: f32,
+    volume_actual: f32,
     effects: [Option<PatternEffect>; 2],
     effects_memory: HashMap<PatternEffectMemoryKey, PatternEffect>,
     note_delay: usize,
@@ -64,17 +71,23 @@ struct PlayerChannel {
 }
 
 impl PlayerChannel {
+    // Length of a transition between the current and the next sample in seconds
     // Too large of a time and samples will audibly blend and play 2 notes at the same time, which sounds weird.
     // Too little and transitions between notes will click.
-    // This is 800 microseconds, which is a bit of an arbitrary value that i found sounds nice.
+    // Chosen value is a bit of an arbitrary value that I found sounds nice.
     // It amounts to:
     // - 13 samples at 16000
     // - 35 samples at 44100
     // - 38 samples at 48000
-    const SAMPLE_BLEND: f64 = 0.0008;
+    const SAMPLE_BLEND: f64 = Duration::from_micros(800).as_secs_f64();
+    // Maximum difference in volume between 2 audio samples
+    // Volume as in channels volume, does not account for samples
+    // A bit of an arbitrary amount too
+    const MAX_VOLUME_CHANGE: f32 = 1. / 128.;
 
     fn note_cut(&mut self) {
         self.volume = 0.;
+        self.volume_actual = 0.;
     }
 
     fn pos_reset(&mut self) {
@@ -108,17 +121,24 @@ impl PlayerChannel {
                     } else {
                         envelope
                             .volume_end()
-                            .get(self.pos_volume_envelope.saturating_sub(
-                                envelope.volume_beginning().len().saturating_sub(1),
-                            ))
+                            .get(
+                                self.pos_volume_envelope
+                                    .saturating_sub(envelope.volume_beginning().len()),
+                            )
                             .cloned()
                             .unwrap_or(0.)
                     }
                 }
                 TInstrumentVolume::Constant(_) => 1.,
             };
+            self.volume_target = volume_envelope * self.volume;
+            self.volume_actual = advance_to(
+                self.volume_actual,
+                self.volume_target,
+                Self::MAX_VOLUME_CHANGE,
+            );
 
-            value.into_normalized_f32() * volume_envelope * self.volume
+            value.into_normalized_f32() * self.volume_actual
         } else {
             0.
         };
@@ -234,6 +254,39 @@ impl PlayerChannel {
     }
 }
 
+trait MinMax {
+    fn generic_min(a: Self, b: Self) -> Self;
+    fn generic_max(a: Self, b: Self) -> Self;
+}
+
+macro_rules! impl_min_max {
+    ($($ty:tt),*) => {
+        $(impl MinMax for $ty {
+            fn generic_min(a: Self, b: Self) -> Self {
+                $ty::min(a, b)
+            }
+
+            fn generic_max(a: Self, b: Self) -> Self {
+                $ty::max(a, b)
+            }
+        })*
+    };
+}
+
+impl_min_max!(f32, FineTune);
+
+fn advance_to<T>(from: T, to: T, step: T) -> T
+where
+    T: PartialOrd + Add<Output = T> + Sub<Output = T> + MinMax,
+{
+    use std::cmp::Ordering;
+    match from.partial_cmp(&to) {
+        Some(Ordering::Less) => T::generic_min(from + step, to),
+        Some(Ordering::Greater) => T::generic_max(from - step, to),
+        Some(Ordering::Equal) | None => from,
+    }
+}
+
 struct Player<'a> {
     song: &'a TSong,
     sample_rate: usize,
@@ -286,7 +339,7 @@ impl<'a> Player<'a> {
             .map(|c| c.generate_sample::<S>(step))
             .map(|c| c.into_normalized_f32())
             //.enumerate()
-            //.filter_map(|(i, s)| (i == 4).then_some(s))
+            //.filter_map(|(i, s)| (i == 0).then_some(s))
             .sum::<f32>();
         S::from_normalized_f32(sample * self.volume_global * self.volume_amplification)
     }
@@ -308,18 +361,10 @@ impl<'a> Player<'a> {
                     }
                     E::Porta(Porta::Tone(Some(step))) => {
                         if let Some(finetune_initial) = channel.note.finetune_initial {
-                            channel.note.finetune = channel.note.finetune.map(|finetune| {
-                                use std::cmp::Ordering;
-                                match finetune.cmp(&finetune_initial) {
-                                    Ordering::Less => {
-                                        FineTune::min(finetune + step, finetune_initial)
-                                    }
-                                    Ordering::Greater => {
-                                        FineTune::max(finetune - step, finetune_initial)
-                                    }
-                                    Ordering::Equal => finetune,
-                                }
-                            });
+                            channel.note.finetune = channel
+                                .note
+                                .finetune
+                                .map(|finetune| advance_to(finetune, finetune_initial, step));
                         }
                     }
                     E::Porta(Porta::Slide {
