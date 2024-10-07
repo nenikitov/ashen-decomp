@@ -297,7 +297,7 @@ struct Player<'a> {
     pos_pattern: usize,
     pos_row: usize,
     pos_tick: usize,
-    jump: Option<(usize, usize)>,
+    jump: Option<usize>,
 
     tempo: usize,
     bpm: usize,
@@ -424,9 +424,12 @@ impl<'a> Player<'a> {
     }
 
     fn row(&mut self) {
-        if let Some((pos_pattern, pos_row)) = self.jump.take() {
+        if let Some(pos_pattern) = self.jump.take() {
+            if pos_pattern <= self.pos_pattern {
+                self.pos_loop += 1;
+            }
             self.pos_pattern = pos_pattern;
-            self.pos_row = pos_row;
+            self.pos_row = 0;
         }
 
         let Some(row) = self
@@ -470,14 +473,10 @@ impl<'a> Player<'a> {
                         self.tempo = ticks_per_row;
                     }
                     E::PatternBreak => {
-                        self.jump = Some((self.pos_pattern + 1, 0));
+                        self.jump = Some(self.pos_pattern + 1);
                     }
-                    E::PatternJump(position) => {
-                        println!(
-                            "On pat {pat:x} row {row:x} -> {position:x}",
-                            pat = self.pos_pattern,
-                            row = self.pos_row
-                        )
+                    E::PatternJump(pos_pattern) => {
+                        self.jump = Some(pos_pattern);
                     }
                     E::GlobalVolume(volume) => {
                         self.volume_global = volume;
