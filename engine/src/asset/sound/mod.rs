@@ -84,7 +84,7 @@ mod tests {
 
         // TODO(nenikitov): Remove this debug code
         {
-            let i = 0x1;
+            let i = 0xC;
             let song = sounds
                 .iter()
                 .filter_map(|s| match s {
@@ -92,7 +92,7 @@ mod tests {
                     Sound::Effect(_) => None,
                 })
                 .collect::<Vec<_>>()[i];
-            dbg!(song);
+            //dbg!(song);
         }
 
         sounds

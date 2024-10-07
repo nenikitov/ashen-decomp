@@ -297,6 +297,7 @@ struct Player<'a> {
     pos_pattern: usize,
     pos_row: usize,
     pos_tick: usize,
+    jump: Option<(usize, usize)>,
 
     tempo: usize,
     bpm: usize,
@@ -316,6 +317,7 @@ impl<'a> Player<'a> {
             pos_pattern: 0,
             pos_row: 0,
             pos_tick: 0,
+            jump: None,
             tempo: song.speed as usize,
             bpm: song.bpm as usize,
             volume_global: 1.,
@@ -380,11 +382,13 @@ impl<'a> Player<'a> {
                         channel.note_delay = channel.note_delay.saturating_sub(1);
                     }
                     // Noops - no tick
-                    E::Volume(Volume::Set(..))
+                    E::Speed(..)
+                    | E::PatternBreak
+                    | E::PatternJump(..)
+                    | E::Volume(Volume::Set(..))
                     | E::Volume(Volume::Bump { .. })
                     | E::Porta(Porta::Tone(..))
                     | E::Porta(Porta::Bump { .. })
-                    | E::Speed(..)
                     | E::GlobalVolume(..)
                     | E::SampleOffset(..)
                     | E::PlaybackDirection(..) => {}
@@ -420,6 +424,11 @@ impl<'a> Player<'a> {
     }
 
     fn row(&mut self) {
+        if let Some((pos_pattern, pos_row)) = self.jump.take() {
+            self.pos_pattern = pos_pattern;
+            self.pos_row = pos_row;
+        }
+
         let Some(row) = self
             .song
             .orders
@@ -460,6 +469,16 @@ impl<'a> Player<'a> {
                     E::Speed(Speed::TicksPerRow(ticks_per_row)) => {
                         self.tempo = ticks_per_row;
                     }
+                    E::PatternBreak => {
+                        self.jump = Some((self.pos_pattern + 1, 0));
+                    }
+                    E::PatternJump(position) => {
+                        println!(
+                            "On pat {pat:x} row {row:x} -> {position:x}",
+                            pat = self.pos_pattern,
+                            row = self.pos_row
+                        )
+                    }
                     E::GlobalVolume(volume) => {
                         self.volume_global = volume;
                     }
@@ -498,7 +517,9 @@ impl<'a> Player<'a> {
                     E::Porta(Porta::Tone(..)) => {}
                     E::Porta(Porta::Slide { .. }) => {}
                     // TODO(nenikitov): To implement
-                    E::Dummy(..) => {}
+                    E::Dummy(code) => {
+                        //println!("{code:x}");
+                    }
                     // Unreachable because memory has to be initialized
                     E::Volume(Volume::Bump { volume: None, .. })
                     | E::Porta(Porta::Tone(None))

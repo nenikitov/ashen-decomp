@@ -65,6 +65,8 @@ pub enum PatternEffect {
     PlaybackDirection(PlaybackDirection),
     GlobalVolume(f32),
     NoteDelay(usize),
+    PatternBreak,
+    PatternJump(usize),
 }
 
 impl PatternEffect {
@@ -136,62 +138,69 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
             let (input, kind) = number::le_u8(input)?;
             let (input, value) = number::le_u8(input)?;
 
+            use PatternEffect as E;
             Ok((
                 input,
                 should_parse.then_some(match kind {
-                    0x01 => PatternEffect::Porta(Porta::Slide {
+                    0x01 => E::Porta(Porta::Slide {
                         up: true,
                         finetune: (value != 0).then_some(FineTune::new(8 * value as i32)),
                     }),
-                    0x02 => PatternEffect::Porta(Porta::Slide {
+                    0x02 => E::Porta(Porta::Slide {
                         up: false,
                         finetune: (value != 0).then_some(-FineTune::new(8 * value as i32)),
                     }),
-                    0x03 => PatternEffect::Porta(Porta::Tone(
+                    0x03 => E::Porta(Porta::Tone(
                         (value != 0).then_some(FineTune::new(8 * value as i32)),
                     )),
-                    0x15 => PatternEffect::Porta(Porta::Bump {
+                    0x15 => E::Porta(Porta::Bump {
                         up: true,
                         small: false,
                         finetune: (value != 0).then_some(FineTune::new(8 * value as i32)),
                     }),
-                    0x16 => PatternEffect::Porta(Porta::Bump {
+                    0x16 => E::Porta(Porta::Bump {
                         up: false,
                         small: false,
                         finetune: (value != 0).then_some(-FineTune::new(8 * value as i32)),
                     }),
-                    0x24 => PatternEffect::Porta(Porta::Bump {
+                    0x24 => E::Porta(Porta::Bump {
                         up: true,
                         small: true,
                         finetune: (value != 0).then_some(FineTune::new(2 * (value & 0xF) as i32)),
                     }),
-                    0x25 => PatternEffect::Porta(Porta::Bump {
+                    0x25 => E::Porta(Porta::Bump {
                         up: false,
                         small: true,
                         finetune: (value != 0).then_some(-FineTune::new(2 * (value & 0xF) as i32)),
                     }),
-                    0x09 => {
-                        PatternEffect::SampleOffset((value != 0).then_some(value as usize * 256))
-                    }
-                    0x0E => PatternEffect::Speed(if value >= 0x20 {
+                    0x09 => E::SampleOffset((value != 0).then_some(value as usize * 256)),
+                    0x0E => E::Speed(if value >= 0x20 {
                         Speed::Bpm(value as usize)
                     } else {
                         Speed::TicksPerRow(value as usize)
                     }),
-                    0x0C => PatternEffect::Volume(Volume::Set(convert_volume(value))),
-                    0x0A => PatternEffect::Volume(Volume::Slide((value != 0).then_some(
-                        if value >= 16 {
-                            convert_volume(value / 16)
-                        } else {
-                            -convert_volume(value)
-                        },
-                    ))),
-                    0x0F => PatternEffect::GlobalVolume(convert_volume(value)),
-                    0x21 => PatternEffect::NoteDelay(value as usize),
+                    0x0D => E::PatternBreak,
+                    0x0B => E::PatternJump(value as usize),
+                    0x0C => E::Volume(Volume::Set(convert_volume(value))),
+                    0x0A => E::Volume(Volume::Slide((value != 0).then_some(if value >= 16 {
+                        convert_volume(value / 16)
+                    } else {
+                        -convert_volume(value)
+                    }))),
+                    0x1E => E::Volume(Volume::Bump {
+                        up: true,
+                        volume: (value != 0).then_some(convert_volume(value)),
+                    }),
+                    0x1F => E::Volume(Volume::Bump {
+                        up: false,
+                        volume: (value != 0).then_some(-convert_volume(value)),
+                    }),
+                    0x0F => E::GlobalVolume(convert_volume(value)),
+                    0x21 => E::NoteDelay(value as usize),
                     // TODO(nenikitov): Remove dummy effect
                     0x00 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x0A | 0x0B | 0x0C | 0x0D
                     | 0x14 | 0x15 | 0x16 | 0x1D | 0x1E | 0x1F | 0x20 | 0x22 | 0x2E | 0x2F
-                    | 0x30 | 0x31 | 0x32 | 0x33 | 0x34 | 0x35 => PatternEffect::Dummy(kind),
+                    | 0x30 | 0x31 | 0x32 | 0x33 | 0x34 | 0x35 => E::Dummy(kind),
                     // TODO(nenikitov): Add support for other effects
                     // 0x00 => Self::Arpegio,
                     // 0x01 => Self::PortaUp,
@@ -225,10 +234,11 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     // 0x33 => Self::SoundControlQuad,
                     // 0x34 => Self::FilterGlobal,
                     // 0x35 => Self::FilterLocal,
-                    0x36 => PatternEffect::PlaybackDirection(PlaybackDirection::Forwards),
-                    0x37 => PatternEffect::PlaybackDirection(PlaybackDirection::Backwards),
+                    0x36 => E::PlaybackDirection(PlaybackDirection::Forwards),
+                    0x37 => E::PlaybackDirection(PlaybackDirection::Backwards),
                     // TODO(nenikitov): Should be a `Result`
-                    kind => unreachable!("Effect is outside the range {kind}"),
+                    0x0..=0x37 => todo!("Ashen effect {kind} should have been implemented"),
+                    _ => unreachable!("Effect is outside the range {kind}"),
                 }),
             ))
         }
