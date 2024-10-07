@@ -1,7 +1,7 @@
 mod dat;
 pub(crate) mod sample;
 
-use self::{dat::mixer_new::TSongMixerNew, sample::Sample};
+use self::{dat::mixer::TSongMixer, sample::Sample};
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -19,7 +19,7 @@ pub enum Sound {
 impl Sound {
     pub fn mix(&self) -> Sample<i16, 1> {
         match self {
-            Sound::Song(sound) => sound.mix_new(),
+            Sound::Song(sound) => sound.mix(),
             Sound::Effect(effect) => effect.mix(),
         }
     }
@@ -84,7 +84,7 @@ mod tests {
 
         // TODO(nenikitov): Remove this debug code
         {
-            let i = 0xC;
+            let i = 0x3;
             let song = sounds
                 .iter()
                 .filter_map(|s| match s {
@@ -92,17 +92,29 @@ mod tests {
                     Sound::Effect(_) => None,
                 })
                 .collect::<Vec<_>>()[i];
+
             //dbg!(song);
         }
 
         sounds
             .iter()
-            .filter(|s| matches!(s, Sound::Song(_)))
+            .filter_map(|s| {
+                if let Sound::Song(song) = s {
+                    Some((s, song))
+                } else {
+                    None
+                }
+            })
             .enumerate()
-            .try_for_each(|(i, song)| {
+            .try_for_each(|(i, (song, t))| -> std::io::Result<()> {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
                 println!("# SONG {i}");
-                output_file(file, song.mix().to_wave())
+                output_file(file, song.mix().to_wave())?;
+
+                let file = output_dir.join(format!("{i:0>2X}.txt"));
+                output_file(file, format!("{t:#?}"))?;
+
+                Ok(())
             })?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));

@@ -42,12 +42,12 @@ impl AssetParser<Wildcard> for Option<PatternEventNote> {
 bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct PatternEventFlags: u8 {
-        const ChangeNote = 1 << 0;
+        const ChangeNote       = 1 << 0;
         const ChangeInstrument = 1 << 1;
-        const ChangeVolume = 1 << 2;
-        const ChangeEffect1 = 1 << 3;
-        const ChangeEffect2 = 1 << 4;
-        const IsEmpty = 1 << 5;
+        const ChangeVolume     = 1 << 2;
+        const ChangeEffect1    = 1 << 3;
+        const ChangeEffect2    = 1 << 4;
+        const IsEmpty          = 1 << 5;
     }
 }
 
