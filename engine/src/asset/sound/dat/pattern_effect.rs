@@ -67,6 +67,7 @@ pub enum PatternEffect {
     NoteDelay(usize),
     PatternBreak,
     PatternJump(usize),
+    RetriggerNote(usize),
 }
 
 impl PatternEffect {
@@ -181,6 +182,7 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
                     }),
                     0x0D => E::PatternBreak,
                     0x0B => E::PatternJump(value as usize),
+                    0x1D => E::RetriggerNote(value as usize),
                     0x0C => E::Volume(Volume::Set(convert_volume(value))),
                     0x0A => E::Volume(Volume::Slide((value != 0).then_some(if value >= 16 {
                         convert_volume(value / 16)

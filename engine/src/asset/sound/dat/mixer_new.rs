@@ -62,6 +62,7 @@ struct PlayerChannel {
     effects: [Option<PatternEffect>; 2],
     effects_memory: HashMap<PatternEffectMemoryKey, PatternEffect>,
     note_delay: usize,
+    retrigger: bool,
 
     previous: Option<(Box<Self>, f64)>,
 
@@ -309,7 +310,7 @@ struct Player<'a> {
 }
 
 impl<'a> Player<'a> {
-    fn new(song: &'a TSong, sample_rate: usize) -> Self {
+    fn new(song: &'a TSong, sample_rate: usize, amplification: f32) -> Self {
         Self {
             song,
             sample_rate,
@@ -323,7 +324,7 @@ impl<'a> Player<'a> {
             bpm: song.bpm as usize,
             volume_global_target: 1.,
             volume_global_actual: 0.,
-            volume_amplification: 0.25,
+            volume_amplification: amplification,
             channels: (0..song.orders[0][0].len())
                 .map(|_| PlayerChannel::default())
                 .collect(),
@@ -388,6 +389,14 @@ impl<'a> Player<'a> {
                     E::NoteDelay(_) => {
                         channel.note_delay = channel.note_delay.saturating_sub(1);
                     }
+                    E::RetriggerNote(frequency) => {
+                        if frequency != 0 && self.pos_tick != 0 && (self.pos_tick % frequency) == 0
+                        {
+                            // HACK(nenikitov): After processing all effects, retrigger will happen by callign `trigger_note` and `advance_envelopes`
+                            // Because of mutability here
+                            channel.retrigger = true;
+                        }
+                    }
                     // Noops - no tick
                     E::Speed(..)
                     | E::PatternBreak
@@ -407,6 +416,13 @@ impl<'a> Player<'a> {
                         unreachable!("Effects should have their memory initialized")
                     }
                 }
+            }
+
+            // TODO(nenikitov): Move this to the event `matchc
+            if channel.retrigger {
+                channel.trigger_note();
+                channel.advance_envelopes();
+                channel.retrigger = false;
             }
         }
 
@@ -519,12 +535,13 @@ impl<'a> Player<'a> {
                         channel.note_delay = delay;
                     }
                     // Noops - no init
-                    E::Volume(Volume::Slide(..)) => {}
-                    E::Porta(Porta::Tone(..)) => {}
-                    E::Porta(Porta::Slide { .. }) => {}
+                    E::Volume(Volume::Slide(..))
+                    | E::Porta(Porta::Tone(..))
+                    | E::Porta(Porta::Slide { .. })
+                    | E::RetriggerNote(..) => {}
                     // TODO(nenikitov): To implement
                     E::Dummy(code) => {
-                        //println!("{code:x}");
+                        println!("{code:x}");
                     }
                     // Unreachable because memory has to be initialized
                     E::Volume(Volume::Bump { volume: None, .. })
@@ -545,9 +562,10 @@ pub trait TSongMixerNew {
 
 impl TSongMixerNew for TSong {
     fn mix_new(&self) -> Sample<i16, 1> {
-        const SAMPLE_RATE: usize = 16000;
+        const SAMPLE_RATE: usize = 48000;
+        const AMPLIFICATION: f32 = 0.3125;
 
-        let mut player = Player::new(self, SAMPLE_RATE);
+        let mut player = Player::new(self, SAMPLE_RATE, AMPLIFICATION);
 
         let samples: Vec<_> =
             std::iter::from_fn(|| (player.pos_loop == 0).then(|| player.generate_sample::<i16>()))
