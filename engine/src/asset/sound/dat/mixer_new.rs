@@ -301,7 +301,8 @@ struct Player<'a> {
 
     tempo: usize,
     bpm: usize,
-    volume_global: f32,
+    volume_global_target: f32,
+    volume_global_actual: f32,
     volume_amplification: f32,
 
     channels: Vec<PlayerChannel>,
@@ -320,7 +321,8 @@ impl<'a> Player<'a> {
             jump: None,
             tempo: song.speed as usize,
             bpm: song.bpm as usize,
-            volume_global: 1.,
+            volume_global_target: 1.,
+            volume_global_actual: 0.,
             volume_amplification: 0.25,
             channels: (0..song.orders[0][0].len())
                 .map(|_| PlayerChannel::default())
@@ -343,7 +345,12 @@ impl<'a> Player<'a> {
             //.enumerate()
             //.filter_map(|(i, s)| (i == 0).then_some(s))
             .sum::<f32>();
-        S::from_normalized_f32(sample * self.volume_global * self.volume_amplification)
+        self.volume_global_actual = advance_to(
+            self.volume_global_actual,
+            self.volume_global_target,
+            PlayerChannel::MAX_VOLUME_CHANGE,
+        );
+        S::from_normalized_f32(sample * self.volume_global_actual * self.volume_amplification)
     }
 
     fn tick(&mut self) {
@@ -479,7 +486,7 @@ impl<'a> Player<'a> {
                         self.jump = Some(pos_pattern);
                     }
                     E::GlobalVolume(volume) => {
-                        self.volume_global = volume;
+                        self.volume_global_target = volume;
                     }
                     E::Volume(Volume::Set(volume)) => {
                         channel.volume = volume;
