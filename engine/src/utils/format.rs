@@ -10,7 +10,7 @@ use image::{
 
 use crate::asset::{
     color_map::Color,
-    sound::sample::{Sample, SamplePoint},
+    sound::sample::{AudioBuffer, SamplePoint},
 };
 
 pub trait PngFile {
@@ -102,7 +102,7 @@ pub trait WaveFile {
     fn to_wave(&self) -> Vec<u8>;
 }
 
-impl<S: SamplePoint, const CHANNELS: usize> WaveFile for Sample<S, CHANNELS> {
+impl<S: SamplePoint> WaveFile for AudioBuffer<S> {
     fn to_wave(&self) -> Vec<u8> {
         let bits_per_sample: usize = S::SIZE_BITS;
         let bytes_per_sample: usize = bits_per_sample / 8;

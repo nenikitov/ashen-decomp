@@ -4,7 +4,7 @@ use bitflags::bitflags;
 
 use super::{convert_volume, finetune::FineTune};
 use crate::{
-    asset::{extension::*, sound::sample::Sample, AssetParser},
+    asset::{extension::*, sound::sample::AudioBuffer, AssetParser},
     utils::{iterator::CollectArray, nom::*},
 };
 
@@ -206,7 +206,7 @@ pub struct TSample {
     pub align: u8,
     pub finetune: FineTune,
     pub loop_length: usize,
-    pub data: Sample<i16, 1>,
+    pub buffer: AudioBuffer<i16>,
 }
 
 impl AssetParser<Wildcard> for TSample {
@@ -239,11 +239,8 @@ impl AssetParser<Wildcard> for TSample {
                     align,
                     finetune: FineTune::new(finetune),
                     loop_length: loop_length as usize,
-                    data: Sample {
-                        data: sample_data[sample_offset as usize..loop_end as usize]
-                            .into_iter()
-                            .map(|&s| [s])
-                            .collect(),
+                    buffer: AudioBuffer {
+                        data: sample_data[sample_offset as usize..loop_end as usize].to_vec(),
                         sample_rate: Self::SAMPLE_RATE,
                     },
                 },
@@ -254,19 +251,6 @@ impl AssetParser<Wildcard> for TSample {
 
 impl TSample {
     const SAMPLE_RATE: usize = 16_000;
-
-    pub fn sample_beginning(&self) -> &[[i16; 1]] {
-        &self.data[..self.data.len_seconds() - (self.loop_length as f32 / Self::SAMPLE_RATE as f32)]
-    }
-
-    pub fn sample_loop(&self) -> &[[i16; 1]] {
-        if self.loop_length != 0 {
-            &self.data
-                [self.data.len_seconds() - (self.loop_length as f32 / Self::SAMPLE_RATE as f32)..]
-        } else {
-            &[[0; 1]]
-        }
-    }
 
     // TODO(nenikitov): I think the whole `Sample` will need to be removed
     pub fn get(&self, position: f64) -> Option<i16> {
@@ -282,18 +266,18 @@ impl TSample {
         };
         let next = self.normalize(position as usize + 1);
 
-        let prev = self.data[prev][0] as f32;
-        let next = next.map(|next| self.data[next][0] as f32).unwrap_or(0.);
+        let prev = self.buffer[prev] as f32;
+        let next = next.map(|next| self.buffer[next] as f32).unwrap_or(0.);
 
         Some((prev + frac * (next - prev)) as i16)
     }
 
     fn normalize(&self, position: usize) -> Option<usize> {
-        if position >= self.data.data.len() && self.loop_length == 0 {
+        if position >= self.buffer.data.len() && self.loop_length == 0 {
             None
         } else {
             let mut position = position;
-            while position >= self.data.data.len() {
+            while position >= self.buffer.data.len() {
                 position -= self.loop_length;
             }
 

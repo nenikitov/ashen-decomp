@@ -5,7 +5,7 @@ use super::{
     uncompress,
 };
 use crate::{
-    asset::{extension::*, sound::sample::Sample, AssetParser},
+    asset::{extension::*, sound::sample::AudioBuffer, AssetParser},
     utils::nom::*,
 };
 
@@ -16,8 +16,8 @@ pub struct TEffect {
 
 // It should be separated
 impl TEffect {
-    pub fn mix(&self) -> Sample<i16, 1> {
-        self.sample.data.clone()
+    pub fn mix(&self) -> AudioBuffer<i16> {
+        self.sample.buffer.clone()
     }
 }
 

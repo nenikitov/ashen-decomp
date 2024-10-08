@@ -1,7 +1,7 @@
 mod dat;
 pub(crate) mod sample;
 
-use self::{dat::mixer::TSongMixer, sample::Sample};
+use self::{dat::mixer::TSongMixer, sample::AudioBuffer};
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -17,7 +17,7 @@ pub enum Sound {
 }
 
 impl Sound {
-    pub fn mix(&self) -> Sample<i16, 1> {
+    pub fn mix(&self) -> AudioBuffer<i16> {
         match self {
             Sound::Song(sound) => sound.mix(),
             Sound::Effect(effect) => effect.mix(),

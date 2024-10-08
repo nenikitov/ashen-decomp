@@ -10,7 +10,7 @@ use itertools::Itertools;
 use super::{
     finetune::FineTune, pattern_effect::*, pattern_event::*, t_instrument::*, t_song::TSong,
 };
-use crate::asset::sound::sample::Sample;
+use crate::asset::sound::sample::AudioBuffer;
 
 trait AudioSamplePoint {
     type Bytes: IntoIterator<Item = u8>;
@@ -522,7 +522,7 @@ impl<'a> Player<'a> {
                         if let Some(sample) = &channel.sample
                             && direction == PlaybackDirection::Backwards
                         {
-                            channel.pos_sample = sample.data.len_seconds() as f64
+                            channel.pos_sample = sample.buffer.len_seconds() as f64
                         }
                     }
                     E::SampleOffset(Some(offset)) => {
@@ -551,22 +551,21 @@ impl<'a> Player<'a> {
 }
 
 pub trait TSongMixer {
-    fn mix(&self) -> Sample<i16, 1>;
+    fn mix(&self) -> AudioBuffer<i16>;
 }
 
 impl TSongMixer for TSong {
-    fn mix(&self) -> Sample<i16, 1> {
+    fn mix(&self) -> AudioBuffer<i16> {
         const SAMPLE_RATE: usize = 48000;
-        const AMPLIFICATION: f32 = 0.3125;
+        const AMPLIFICATION: f32 = 0.375;
 
         let mut player = Player::new(self, SAMPLE_RATE, AMPLIFICATION);
 
         let samples: Vec<_> =
             std::iter::from_fn(|| (player.pos_loop == 0).then(|| player.generate_sample::<i16>()))
-                .map(|s| [s])
                 .collect();
 
-        Sample {
+        AudioBuffer {
             data: samples,
             sample_rate: player.sample_rate,
         }
