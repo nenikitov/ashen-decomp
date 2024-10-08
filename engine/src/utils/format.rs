@@ -10,7 +10,7 @@ use image::{
 
 use crate::asset::{
     color_map::Color,
-    sound::sample::{AudioBuffer, SamplePoint},
+    sound::sample::{AudioBuffer, AudioSamplePoint},
 };
 
 pub trait PngFile {
@@ -98,14 +98,21 @@ where
     }
 }
 
-pub trait WaveFile {
-    fn to_wave(&self) -> Vec<u8>;
+pub trait WaveFile<S: AudioSamplePoint> {
+    fn to_wave(&self) -> Vec<u8>
+    where
+        [(); S::SIZE_BITS]:;
 }
 
-impl<S: SamplePoint> WaveFile for AudioBuffer<S> {
-    fn to_wave(&self) -> Vec<u8> {
-        let bits_per_sample: usize = S::SIZE_BITS;
-        let bytes_per_sample: usize = bits_per_sample / 8;
+impl<S: AudioSamplePoint> WaveFile<S> for AudioBuffer<S> {
+    fn to_wave(&self) -> Vec<u8>
+    where
+        [(); S::SIZE_BITS]:,
+    {
+        const CHANNELS: usize = 1;
+
+        let bytes_per_sample: usize = S::SIZE_BITS;
+        let bits_per_sample: usize = bytes_per_sample / 8;
 
         let size = self.len_samples() * CHANNELS * bytes_per_sample;
 
@@ -115,7 +122,7 @@ impl<S: SamplePoint> WaveFile for AudioBuffer<S> {
             .chain("WAVE".bytes())
             .chain("fmt ".bytes())
             .chain(u32::to_le_bytes(16))
-            .chain(u16::to_le_bytes(1))
+            .chain(u16::to_le_bytes(S::wave_format().signature()))
             .chain(u16::to_le_bytes(CHANNELS as u16))
             .chain(u32::to_le_bytes(self.sample_rate as u32))
             .chain(u32::to_le_bytes(
@@ -125,43 +132,7 @@ impl<S: SamplePoint> WaveFile for AudioBuffer<S> {
             .chain(u16::to_le_bytes(bits_per_sample as u16))
             .chain("data".bytes())
             .chain(u32::to_le_bytes(size as u32))
-            .chain(
-                self.data
-                    .iter()
-                    .flat_map(|s| s.into_iter().flat_map(|s| s.to_integer_le_bytes())),
-            )
-            .collect()
-    }
-}
-
-pub trait WaveFileOld {
-    fn to_wave(&self, sample_rate: usize, channel_count: usize) -> Vec<u8>;
-}
-
-impl WaveFileOld for Vec<i16> {
-    fn to_wave(&self, sample_rate: usize, channel_count: usize) -> Vec<u8> {
-        const BITS_PER_SAMPLE: usize = 16;
-        const BYTES_PER_SAMPLE: usize = BITS_PER_SAMPLE / 8;
-
-        let size = self.len() * BYTES_PER_SAMPLE;
-
-        "RIFF"
-            .bytes()
-            .chain(u32::to_be_bytes((36 + size) as u32))
-            .chain("WAVE".bytes())
-            .chain("fmt ".bytes())
-            .chain(u32::to_le_bytes(16))
-            .chain(u16::to_le_bytes(1))
-            .chain(u16::to_le_bytes(channel_count as u16))
-            .chain(u32::to_le_bytes(sample_rate as u32))
-            .chain(u32::to_le_bytes(
-                (sample_rate * channel_count * BYTES_PER_SAMPLE) as u32,
-            ))
-            .chain(u16::to_le_bytes((channel_count * BYTES_PER_SAMPLE) as u16))
-            .chain(u16::to_le_bytes(BITS_PER_SAMPLE as u16))
-            .chain("data".bytes())
-            .chain(u32::to_le_bytes(size as u32))
-            .chain(self.iter().flat_map(|s| s.to_le_bytes()))
+            .chain(self.data.iter().flat_map(|s| s.wave_le_bytes()))
             .collect()
     }
 }

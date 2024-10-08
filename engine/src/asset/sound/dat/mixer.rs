@@ -10,39 +10,7 @@ use itertools::Itertools;
 use super::{
     finetune::FineTune, pattern_effect::*, pattern_event::*, t_instrument::*, t_song::TSong,
 };
-use crate::asset::sound::sample::AudioBuffer;
-
-trait AudioSamplePoint {
-    type Bytes: IntoIterator<Item = u8>;
-
-    fn into_normalized_f32(&self) -> f32;
-    fn from_normalized_f32(value: f32) -> Self;
-    fn into_bytes(&self) -> Self::Bytes;
-}
-
-impl AudioSamplePoint for i16 {
-    type Bytes = [u8; 2];
-
-    fn into_normalized_f32(&self) -> f32 {
-        if *self < 0 {
-            -(*self as f32 / Self::MIN as f32)
-        } else {
-            (*self as f32 / Self::MAX as f32)
-        }
-    }
-
-    fn from_normalized_f32(value: f32) -> Self {
-        if value < 0. {
-            -(value * i16::MIN as f32) as i16
-        } else {
-            (value * i16::MAX as f32) as i16
-        }
-    }
-
-    fn into_bytes(&self) -> Self::Bytes {
-        self.to_le_bytes()
-    }
-}
+use crate::asset::sound::sample::{AudioBuffer, AudioSamplePoint};
 
 #[derive(Default, Clone, Debug)]
 struct PlayerChannelNote {
@@ -97,7 +65,7 @@ impl PlayerChannel {
         self.direction = PlaybackDirection::Forwards;
     }
 
-    fn generate_sample<T: AudioSamplePoint>(&mut self, step: f64) -> T {
+    fn generate_sample(&mut self, step: f64) -> f32 {
         let current_sample = if let Some(instrument) = &self.instrument
             && let Some(sample) = &self.sample
             && let Some(note) = self.note.finetune
@@ -146,7 +114,7 @@ impl PlayerChannel {
 
         let current_sample = if let Some((previous, position)) = &mut self.previous {
             let factor = (*position / Self::SAMPLE_BLEND) as f32;
-            let previous_sample = previous.generate_sample::<T>(step).into_normalized_f32();
+            let previous_sample = previous.generate_sample(step);
 
             *position += step;
             if *position >= Self::SAMPLE_BLEND {
@@ -158,7 +126,7 @@ impl PlayerChannel {
             current_sample
         };
 
-        T::from_normalized_f32(current_sample)
+        current_sample
     }
 
     fn trigger_note(&mut self) {
@@ -341,8 +309,7 @@ impl<'a> Player<'a> {
         let sample = self
             .channels
             .iter_mut()
-            .map(|c| c.generate_sample::<S>(step))
-            .map(|c| c.into_normalized_f32())
+            .map(|c| c.generate_sample(step))
             //.enumerate()
             //.filter_map(|(i, s)| (i == 0).then_some(s))
             .sum::<f32>();

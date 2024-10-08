@@ -10,6 +10,8 @@
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
     clippy::unreadable_literal,
+
+    incomplete_features,
 )]
 #![warn(unused_imports)]
 #![feature(
@@ -17,6 +19,7 @@
     // https://github.com/rust-lang/rust/pull/101179
     debug_closure_helpers,
     duration_consts_float,
+    generic_const_exprs,
     io_error_more,
     let_chains,
     maybe_uninit_uninit_array_transpose,
