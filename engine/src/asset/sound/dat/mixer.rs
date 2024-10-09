@@ -341,10 +341,7 @@ impl<'a> Player<'a> {
                         finetune: Some(finetune),
                         ..
                     }) => {
-                        channel.note.finetune = channel
-                            .note
-                            .finetune
-                            .map(|f| (f + finetune).clamp(FineTune::new(0), FineTune::new(15488)));
+                        channel.note.finetune = channel.note.finetune.map(|f| (f + finetune));
                     }
                     E::NoteDelay(_) => {
                         channel.note_delay = channel.note_delay.saturating_sub(1);

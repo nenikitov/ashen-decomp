@@ -270,15 +270,15 @@ impl TSample {
     }
 
     fn normalize(&self, position: usize) -> Option<usize> {
-        if position >= self.buffer.data.len() && self.loop_length == 0 {
+        if position < self.buffer.len_samples() {
+            Some(position)
+        } else if self.loop_length == 0 {
             None
         } else {
-            let mut position = position;
-            while position >= self.buffer.data.len() {
-                position -= self.loop_length;
-            }
-
-            Some(position)
+            Some(
+                self.buffer.len_samples() - self.loop_length
+                    + (position - self.buffer.len_samples()) % self.loop_length,
+            )
         }
     }
 }

@@ -20,7 +20,7 @@ impl FineTune {
         // TODO(nenikitov): This formula is from the game
         // And it's very magic.
         // Maybe simplify it or at least name constants.
-        1.0 / (2f64.powf((self.cents as f64 + 1.0) / (12.0 * FineTune::CENTS_PER_NOTE as f64))
+        1.0 / (2f64.powf((self.cents.clamp(0, 15488) as f64 + 1.0) / (12.0 * FineTune::CENTS_PER_NOTE as f64))
             * 8363.0
             // TODO(nenikitov): This is `2^20`, which is divided by `2048` and `8192` results in `1/16`
             * 1048576.0
