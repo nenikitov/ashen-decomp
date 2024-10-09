@@ -1,9 +1,6 @@
-use std::{
-    cmp::Ordering,
-    ops::{Add, AddAssign, Neg, Sub},
-};
+use std::ops::{Add, AddAssign, Neg, Sub};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FineTune {
     cents: i32,
 }
@@ -51,7 +48,7 @@ impl Add for FineTune {
 
 impl AddAssign for FineTune {
     fn add_assign(&mut self, rhs: Self) {
-        self.cents = self.cents.saturating_add(rhs.cents)
+        self.cents = self.cents.saturating_add(rhs.cents);
     }
 }
 
@@ -68,12 +65,6 @@ impl Neg for FineTune {
 
     fn neg(self) -> Self::Output {
         FineTune::new(-self.cents)
-    }
-}
-
-impl PartialOrd for FineTune {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.cents.partial_cmp(&other.cents)
     }
 }
 

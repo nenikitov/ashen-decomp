@@ -35,7 +35,7 @@ impl std::fmt::Debug for TSong {
                     d.value_with(|f| {
                         let mut d = f.debug_map();
                         for (r, row) in pattern.iter().enumerate() {
-                            if !row.iter().any(|c| c.has_content()) {
+                            if !row.iter().any(PatternEvent::has_content) {
                                 continue;
                             }
 
@@ -50,31 +50,30 @@ impl std::fmt::Debug for TSong {
                                     d.key(&format!("C 0x{e:X}"));
                                     d.value_with(|f| {
                                         let mut d = f.debug_struct("Event");
-                                        event.note.map(|note| {
-                                            d.field_with("note", |f| {
-                                                f.write_fmt(format_args!("{:?}", note))
-                                            });
-                                        });
-                                        event.volume.map(|volume| {
-                                            d.field_with("volume", |f| {
-                                                f.write_fmt(format_args!("{:?}", volume))
-                                            });
-                                        });
-                                        event.instrument.as_ref().map(|instrument| {
+                                        if let Some(note) = event.note {
+                                            d.field_with("note", |f| write!(f, "{note:?}"));
+                                        }
+                                        if let Some(volume) = event.volume {
+                                            d.field_with("volume", |f| write!(f, "{volume:?}"));
+                                        }
+                                        if let Some(instrument) = &event.instrument {
                                             d.field_with("instrument", |f| match instrument {
-                                                None => f.write_fmt(format_args!("None")),
-                                                Some(instrument) => f.write_fmt(format_args!(
-                                                    "Some({})",
-                                                    self.instruments
-                                                        .iter()
-                                                        .position(|i| Rc::ptr_eq(i, instrument))
-                                                        .unwrap()
-                                                )),
+                                                PatternEventInstrument::Ghost => write!(f, "Ghost"),
+                                                PatternEventInstrument::Instrument(instrument) => {
+                                                    write!(
+                                                        f,
+                                                        "Instrument({})",
+                                                        self.instruments
+                                                            .iter()
+                                                            .position(|i| Rc::ptr_eq(i, instrument))
+                                                            .unwrap()
+                                                    )
+                                                }
                                             });
-                                        });
+                                        }
                                         if event.effects.iter().any(Option::is_some) {
                                             d.field_with("effects", |f| {
-                                                f.write_fmt(format_args!("{:?}", event.effects))
+                                                write!(f, "{:?}", event.effects)
                                             });
                                         }
                                         d.finish()

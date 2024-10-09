@@ -85,7 +85,7 @@ impl PlayerChannel {
                         envelope
                             .volume_beginning()
                             .get(self.pos_volume_envelope)
-                            .cloned()
+                            .copied()
                             .unwrap_or(envelope.volume_loop())
                     } else {
                         envelope
@@ -94,7 +94,7 @@ impl PlayerChannel {
                                 self.pos_volume_envelope
                                     .saturating_sub(envelope.volume_beginning().len()),
                             )
-                            .cloned()
+                            .copied()
                             .unwrap_or(0.)
                     }
                 }
@@ -112,21 +112,19 @@ impl PlayerChannel {
             0.
         };
 
-        let current_sample = if let Some((previous, position)) = &mut self.previous {
+        if let Some((previous, position)) = &mut self.previous {
             let factor = (*position / Self::SAMPLE_BLEND) as f32;
             let previous_sample = previous.generate_sample(step);
 
             *position += step;
             if *position >= Self::SAMPLE_BLEND {
-                self.previous = None
+                self.previous = None;
             }
 
             previous_sample + factor * (current_sample - previous_sample)
         } else {
             current_sample
-        };
-
-        current_sample
+        }
     }
 
     fn trigger_note(&mut self) {
@@ -139,8 +137,8 @@ impl PlayerChannel {
         self.pos_reset();
     }
 
-    fn change_instrument(&mut self, instrument: Option<Rc<TInstrument>>) {
-        if let Some(instrument) = instrument {
+    fn change_instrument(&mut self, instrument: PatternEventInstrument) {
+        if let PatternEventInstrument::Instrument(instrument) = instrument {
             self.instrument = Some(instrument);
         }
 
@@ -164,7 +162,8 @@ impl PlayerChannel {
                     self.note.finetune = Some(note);
                     self.note.finetune_initial = Some(note);
                     self.note.on = true;
-                    self.sample = instrument.samples[note.note() as usize].clone();
+                    self.sample
+                        .clone_from(&instrument.samples[note.note() as usize]);
                 }
             }
         } else {
@@ -204,15 +203,12 @@ impl PlayerChannel {
     fn advance_envelopes(&mut self) {
         if let Some(instrument) = &self.instrument
             && let TInstrumentVolume::Envelope(envelope) = &instrument.volume
+            && (!self.note.on
+                || envelope
+                    .sustain
+                    .map_or(true, |s| self.pos_volume_envelope < s))
         {
-            if !self.note.on
-                || (self.note.on
-                    && envelope
-                        .sustain
-                        .map_or(true, |s| self.pos_volume_envelope < s))
-            {
-                self.pos_volume_envelope += 1;
-            }
+            self.pos_volume_envelope += 1;
         }
     }
 
@@ -322,11 +318,12 @@ impl<'a> Player<'a> {
             self.row();
         }
 
-        for channel in self.channels.iter_mut() {
+        for channel in &mut self.channels {
             channel.advance_envelopes();
 
             for effect in channel.effects.iter().flatten() {
                 use PatternEffect as E;
+
                 match *effect {
                     // Tick effects
                     E::Volume(Volume::Slide(Some(volume))) => {
@@ -364,10 +361,8 @@ impl<'a> Player<'a> {
                     E::Speed(..)
                     | E::PatternBreak
                     | E::PatternJump(..)
-                    | E::Volume(Volume::Set(..))
-                    | E::Volume(Volume::Bump { .. })
-                    | E::Porta(Porta::Tone(..))
-                    | E::Porta(Porta::Bump { .. })
+                    | E::Volume(Volume::Set(..) | Volume::Bump { .. })
+                    | E::Porta(Porta::Tone(..) | Porta::Bump { .. })
                     | E::GlobalVolume(..)
                     | E::SampleOffset(..)
                     | E::PlaybackDirection(..) => {}
@@ -445,9 +440,9 @@ impl<'a> Player<'a> {
                 .enumerate()
                 .filter_map(|(i, e)| e.map(|e| (i, e)))
             {
-                channel.change_effect(i, effect.clone());
-
                 use PatternEffect as E;
+
+                channel.change_effect(i, effect);
                 match channel.effects[i].expect("`change_effect` sets the effect") {
                     // Init effects
                     E::Speed(Speed::Bpm(bpm)) => {
@@ -485,7 +480,7 @@ impl<'a> Player<'a> {
                         if let Some(sample) = &channel.sample
                             && direction == PlaybackDirection::Backwards
                         {
-                            channel.pos_sample = sample.buffer.len_seconds() as f64
+                            channel.pos_sample = sample.buffer.len_seconds();
                         }
                     }
                     E::SampleOffset(Some(offset)) => {
@@ -497,13 +492,11 @@ impl<'a> Player<'a> {
                     }
                     // Noops - no init
                     E::Volume(Volume::Slide(..))
-                    | E::Porta(Porta::Tone(..))
-                    | E::Porta(Porta::Slide { .. })
+                    | E::Porta(Porta::Tone(..) | Porta::Slide { .. })
                     | E::RetriggerNote(..) => {}
                     // Unreachable because memory has to be initialized
                     E::Volume(Volume::Bump { volume: None, .. })
-                    | E::Porta(Porta::Tone(None))
-                    | E::Porta(Porta::Bump { finetune: None, .. })
+                    | E::Porta(Porta::Tone(None) | Porta::Bump { finetune: None, .. })
                     | E::SampleOffset(None) => {
                         unreachable!("Effects should have their memory initialized")
                     }

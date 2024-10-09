@@ -115,15 +115,19 @@ impl PatternEffect {
         self.memory_key().is_some()
     }
 
+    #[rustfmt::skip]
     pub fn is_empty(&self) -> bool {
+        use PatternEffect as E;
+
         matches!(
             self,
-            PatternEffect::Porta(Porta::Tone(None))
-                | PatternEffect::Porta(Porta::Slide { finetune: None, .. })
-                | PatternEffect::Porta(Porta::Bump { finetune: None, .. })
-                | PatternEffect::Volume(Volume::Slide(None))
-                | PatternEffect::Volume(Volume::Bump { volume: None, .. })
-                | PatternEffect::SampleOffset(None)
+            E::Porta(
+                Porta::Tone(None)
+                    | Porta::Slide { finetune: None, .. }
+                    | Porta::Bump { finetune: None, .. }
+            )
+                | E::Volume(Volume::Slide(None) | Volume::Bump { volume: None, .. })
+                | E::SampleOffset(None)
         )
     }
 }
@@ -135,10 +139,10 @@ impl AssetParser<Wildcard> for Option<PatternEffect> {
 
     fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
         move |input| {
+            use PatternEffect as E;
+
             let (input, kind) = number::le_u8(input)?;
             let (input, value) = number::le_u8(input)?;
-
-            use PatternEffect as E;
             Ok((
                 input,
                 should_parse.then(|| match kind {

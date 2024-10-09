@@ -29,9 +29,9 @@ impl AssetParser<Wildcard> for TInstrumentFlags {
             Ok((
                 input,
                 // TODO(nenikitov): Should be a `Result`
-                TInstrumentFlags::from_bits(flags).expect(&format!(
-                    "PatternEvent flags should be valid: received: {flags:b}"
-                )),
+                TInstrumentFlags::from_bits(flags).unwrap_or_else(|| {
+                    panic!("PatternEvent flags should be valid: received: {flags:b}")
+                }),
             ))
         }
     }
@@ -261,13 +261,12 @@ impl TSample {
         let position = Self::SAMPLE_RATE as f64 * position;
 
         let frac = position.fract() as f32;
-        let Some(prev) = self.normalize(position as usize) else {
-            return None;
-        };
-        let next = self.normalize(position as usize + 1);
 
+        let prev = self.normalize(position as usize)?;
         let prev = self.buffer[prev] as f32;
-        let next = next.map(|next| self.buffer[next] as f32).unwrap_or(0.);
+
+        let next = self.normalize(position as usize + 1);
+        let next = next.map_or(0., |next| self.buffer[next] as f32);
 
         Some((prev + frac * (next - prev)) as i16)
     }

@@ -18,7 +18,7 @@ impl AudioSamplePointFormat {
 pub trait AudioSamplePoint: Default + Clone + Copy {
     const SIZE_BYTES: usize = size_of::<Self>();
 
-    fn into_normalized_f32(&self) -> f32;
+    fn into_normalized_f32(self) -> f32;
     fn from_normalized_f32(value: f32) -> Self;
 
     fn wave_format() -> AudioSamplePointFormat;
@@ -26,11 +26,11 @@ pub trait AudioSamplePoint: Default + Clone + Copy {
 }
 
 impl AudioSamplePoint for i16 {
-    fn into_normalized_f32(&self) -> f32 {
-        if *self < 0 {
-            -(*self as f32 / Self::MIN as f32)
+    fn into_normalized_f32(self) -> f32 {
+        if self < 0 {
+            -(self as f32 / Self::MIN as f32)
         } else {
-            (*self as f32 / Self::MAX as f32)
+            (self as f32 / Self::MAX as f32)
         }
     }
 

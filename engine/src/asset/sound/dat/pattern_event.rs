@@ -63,15 +63,15 @@ impl AssetParser<Wildcard> for PatternEventFlags {
             Ok((
                 input,
                 // TODO(nenikitov): Should be a `Result`
-                PatternEventFlags::from_bits(flags).expect(&format!(
-                    "PatternEvent flags should be valid: received: {flags:b}"
-                )),
+                PatternEventFlags::from_bits(flags).unwrap_or_else(|| {
+                    panic!("PatternEvent flags should be valid: received: {flags:b}")
+                }),
             ))
         }
     }
 }
 
-impl AssetParser<Wildcard> for Option<Option<Rc<TInstrument>>> {
+impl AssetParser<Wildcard> for Option<PatternEventInstrument> {
     type Output = Self;
 
     type Context<'ctx> = (bool, &'ctx [Rc<TInstrument>]);
@@ -84,7 +84,10 @@ impl AssetParser<Wildcard> for Option<Option<Rc<TInstrument>>> {
 
             Ok((
                 input,
-                should_parse.then(|| instruments.get(instrument as usize).map(Rc::clone)),
+                should_parse.then(|| match instruments.get(instrument as usize) {
+                    Some(instrument) => PatternEventInstrument::Instrument(instrument.clone()),
+                    None => PatternEventInstrument::Ghost,
+                }),
             ))
         }
     }
@@ -125,10 +128,18 @@ impl AssetParser<Wildcard> for Option<PatternEventVolume> {
     }
 }
 
+#[derive(Default, Debug, Clone)]
+pub enum PatternEventInstrument {
+    #[default]
+    Ghost,
+    Instrument(Rc<TInstrument>),
+}
+
 #[derive(Default, Debug)]
 pub struct PatternEvent {
     pub note: Option<PatternEventNote>,
-    pub instrument: Option<Option<Rc<TInstrument>>>,
+    // Option<Rc<TInstrument>>
+    pub instrument: Option<PatternEventInstrument>,
     pub volume: Option<PatternEventVolume>,
     pub effects: [Option<PatternEffect>; 2],
 }
@@ -158,7 +169,7 @@ impl AssetParser<Wildcard> for PatternEvent {
                     flags.contains(PatternEventFlags::ChangeNote),
                 )(input)?;
 
-                let (input, instrument) = <Option<Option<Rc<TInstrument>>>>::parser((
+                let (input, instrument) = <Option<PatternEventInstrument>>::parser((
                     (flags.contains(PatternEventFlags::ChangeInstrument)),
                     instruments,
                 ))(input)?;
