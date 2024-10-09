@@ -65,11 +65,37 @@ impl PlayerChannel {
         self.direction = PlaybackDirection::Forwards;
     }
 
-    fn generate_sample(&mut self, step: f64) -> f32 {
-        let current_sample = if let Some(instrument) = &self.instrument
+    fn compute_volume_envelope(&self) -> Option<f32> {
+        self.instrument.as_ref().and_then(|i| match &i.volume {
+            TInstrumentVolume::Envelope(envelope) => {
+                if self.note.on {
+                    Some(
+                        envelope
+                            .volume_beginning()
+                            .get(self.pos_volume_envelope)
+                            .copied()
+                            .unwrap_or(envelope.volume_loop()),
+                    )
+                } else {
+                    envelope
+                        .volume_end()
+                        .get(
+                            self.pos_volume_envelope
+                                .saturating_sub(envelope.volume_beginning().len()),
+                        )
+                        .copied()
+                }
+            }
+            TInstrumentVolume::Constant(_) => Some(1.),
+        })
+    }
+
+    fn generate_current_sample(&mut self, step: f64) -> f32 {
+        if let Some(instrument) = &self.instrument
             && let Some(sample) = &self.sample
             && let Some(note) = self.note.finetune
             && self.note_delay == 0
+            && let Some(volume_envelope) = self.compute_volume_envelope()
             && let Some(value) = sample.get(self.pos_sample)
         {
             let pitch_factor = (note + sample.finetune).pitch_factor();
@@ -79,27 +105,6 @@ impl PlayerChannel {
                 PlaybackDirection::Backwards => -step,
             };
 
-            let volume_envelope = match &instrument.volume {
-                TInstrumentVolume::Envelope(envelope) => {
-                    if self.note.on {
-                        envelope
-                            .volume_beginning()
-                            .get(self.pos_volume_envelope)
-                            .copied()
-                            .unwrap_or(envelope.volume_loop())
-                    } else {
-                        envelope
-                            .volume_end()
-                            .get(
-                                self.pos_volume_envelope
-                                    .saturating_sub(envelope.volume_beginning().len()),
-                            )
-                            .copied()
-                            .unwrap_or(0.)
-                    }
-                }
-                TInstrumentVolume::Constant(_) => 1.,
-            };
             self.volume_target = volume_envelope * self.volume;
             self.volume_actual = advance_to(
                 self.volume_actual,
@@ -110,7 +115,11 @@ impl PlayerChannel {
             value.into_normalized_f32() * self.volume_actual
         } else {
             0.
-        };
+        }
+    }
+
+    fn generate_sample(&mut self, step: f64) -> f32 {
+        let current_sample = self.generate_current_sample(step);
 
         if let Some((previous, position)) = &mut self.previous {
             let factor = (*position / Self::SAMPLE_BLEND) as f32;
