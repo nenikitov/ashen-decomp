@@ -1,12 +1,36 @@
-use std::ops::{Add, AddAssign, Neg, Sub};
+use std::{
+    ops::{Add, AddAssign, Neg, Sub},
+    sync::LazyLock,
+};
+
+use crate::utils::iterator::CollectArray;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FineTune {
     cents: i32,
 }
 
+static PITCH_FACTORS: LazyLock<[f64; FineTune::MAX]> = LazyLock::new(|| {
+    // TODO(nenikitov): This formula is from the game
+    // And it's very magic.
+    // Maybe simplify it or at least name constants.
+    (0..FineTune::MAX)
+        .map(|i| i as f64)
+        .map(|cents| {
+            1.0 / (2f64.powf(cents / (12.0 * FineTune::CENTS_PER_NOTE as f64))
+            * 8363.0
+            // TODO(nenikitov): This is `2^20`, which is divided by `2048` and `8192` results in `1/16`
+            * 1048576.0
+                / 16000.0
+                / 2048.0
+                / 8192.0)
+        })
+        .collect_array()
+});
+
 impl FineTune {
     const CENTS_PER_NOTE: i32 = 128;
+    const MAX: usize = 15488;
 
     pub const fn new(cents: i32) -> Self {
         Self { cents }
@@ -17,16 +41,7 @@ impl FineTune {
     }
 
     pub fn pitch_factor(self) -> f64 {
-        // TODO(nenikitov): This formula is from the game
-        // And it's very magic.
-        // Maybe simplify it or at least name constants.
-        1.0 / (2f64.powf((self.cents.clamp(0, 15488) as f64 + 1.0) / (12.0 * FineTune::CENTS_PER_NOTE as f64))
-            * 8363.0
-            // TODO(nenikitov): This is `2^20`, which is divided by `2048` and `8192` results in `1/16`
-            * 1048576.0
-            / 16000.0
-            / 2048.0
-            / 8192.0)
+        PITCH_FACTORS[(self.cents as usize).clamp(0, Self::MAX)]
     }
 
     pub fn cents(self) -> i32 {
