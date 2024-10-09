@@ -1,4 +1,7 @@
-use std::ops::{Add, AddAssign, Neg, Sub};
+use std::{
+    cmp::Ordering,
+    ops::{Add, AddAssign, Neg, Sub},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord)]
 pub struct FineTune {
@@ -69,7 +72,7 @@ impl Neg for FineTune {
 }
 
 impl PartialOrd for FineTune {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.cents.partial_cmp(&other.cents)
     }
 }

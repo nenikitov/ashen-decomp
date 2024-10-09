@@ -101,18 +101,18 @@ where
 pub trait WaveFile<S: AudioSamplePoint> {
     fn to_wave(&self) -> Vec<u8>
     where
-        [(); S::SIZE_BITS]:;
+        [(); S::SIZE_BYTES]:;
 }
 
 impl<S: AudioSamplePoint> WaveFile<S> for AudioBuffer<S> {
     fn to_wave(&self) -> Vec<u8>
     where
-        [(); S::SIZE_BITS]:,
+        [(); S::SIZE_BYTES]:,
     {
         const CHANNELS: usize = 1;
 
-        let bytes_per_sample: usize = S::SIZE_BITS;
-        let bits_per_sample: usize = bytes_per_sample / 8;
+        let bytes_per_sample: usize = S::SIZE_BYTES;
+        let bits_per_sample: usize = bytes_per_sample * 8;
 
         let size = self.len_samples() * CHANNELS * bytes_per_sample;
 
