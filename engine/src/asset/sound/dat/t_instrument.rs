@@ -250,7 +250,7 @@ impl AssetParser<Wildcard> for TSample {
 }
 
 impl TSample {
-    const SAMPLE_RATE: usize = 16_000;
+    pub const SAMPLE_RATE: usize = 16_000;
 
     // TODO(nenikitov): I think the whole `Sample` will need to be removed
     pub fn get(&self, position: f64) -> Option<i16> {

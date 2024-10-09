@@ -205,13 +205,11 @@ impl PlayerChannel {
         if let Some(instrument) = &self.instrument
             && let TInstrumentVolume::Envelope(envelope) = &instrument.volume
         {
-            if (self.note.on
-                && if let Some(sustain) = envelope.sustain {
-                    self.pos_volume_envelope < sustain
-                } else {
-                    true
-                })
-                || !self.note.on
+            if !self.note.on
+                || (self.note.on
+                    && envelope
+                        .sustain
+                        .map_or(true, |s| self.pos_volume_envelope < s))
             {
                 self.pos_volume_envelope += 1;
             }
@@ -310,8 +308,6 @@ impl<'a> Player<'a> {
             .channels
             .iter_mut()
             .map(|c| c.generate_sample(step))
-            //.enumerate()
-            //.filter_map(|(i, s)| (i == 0).then_some(s))
             .sum::<f32>();
         self.volume_global_actual = advance_to(
             self.volume_global_actual,
@@ -402,7 +398,7 @@ impl<'a> Player<'a> {
         {
             self.pos_row = 0;
             self.pos_pattern += 1;
-        };
+        }
         if self.pos_pattern >= self.song.orders.len() {
             self.pos_pattern = self.song.restart_order as usize;
             self.pos_loop += 1;
@@ -434,12 +430,12 @@ impl<'a> Player<'a> {
                 channel.change_instrument(instrument.clone());
             }
 
-            if let Some(note) = &event.note {
-                channel.change_note(note.clone());
+            if let Some(note) = event.note {
+                channel.change_note(note);
             }
 
-            if let Some(volume) = &event.volume {
-                channel.change_volume(volume.clone());
+            if let Some(volume) = event.volume {
+                channel.change_volume(volume);
             }
 
             channel.clear_effects();
@@ -452,7 +448,7 @@ impl<'a> Player<'a> {
                 channel.change_effect(i, effect.clone());
 
                 use PatternEffect as E;
-                match channel.effects[i].unwrap() {
+                match channel.effects[i].expect("`change_effect` sets the effect") {
                     // Init effects
                     E::Speed(Speed::Bpm(bpm)) => {
                         self.bpm = bpm;
@@ -494,7 +490,7 @@ impl<'a> Player<'a> {
                     }
                     E::SampleOffset(Some(offset)) => {
                         // TODO(nenikitov): Remove this hardcoded value
-                        channel.pos_sample = 1. / 16_000. * offset as f64;
+                        channel.pos_sample = offset as f64 / TSample::SAMPLE_RATE as f64;
                     }
                     E::NoteDelay(delay) => {
                         channel.note_delay = delay;
@@ -528,9 +524,14 @@ impl TSongMixer for TSong {
 
         let mut player = Player::new(self, SAMPLE_RATE, AMPLIFICATION);
 
-        let samples: Vec<_> =
-            std::iter::from_fn(|| (player.pos_loop == 0).then(|| player.generate_sample::<i16>()))
-                .collect();
+        let samples: Vec<_> = std::iter::from_fn(|| {
+            if player.pos_loop == 0 {
+                Some(player.generate_sample::<i16>())
+            } else {
+                None
+            }
+        })
+        .collect();
 
         AudioBuffer {
             data: samples,
