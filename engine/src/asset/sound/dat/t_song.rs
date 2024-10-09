@@ -58,7 +58,9 @@ impl std::fmt::Debug for TSong {
                                         }
                                         if let Some(instrument) = &event.instrument {
                                             d.field_with("instrument", |f| match instrument {
-                                                PatternEventInstrument::Ghost => write!(f, "Ghost"),
+                                                PatternEventInstrument::Previous => {
+                                                    write!(f, "Previous")
+                                                }
                                                 PatternEventInstrument::Instrument(instrument) => {
                                                     write!(
                                                         f,

@@ -86,7 +86,7 @@ impl AssetParser<Wildcard> for Option<PatternEventInstrument> {
                 input,
                 should_parse.then(|| match instruments.get(instrument as usize) {
                     Some(instrument) => PatternEventInstrument::Instrument(instrument.clone()),
-                    None => PatternEventInstrument::Ghost,
+                    None => PatternEventInstrument::Previous,
                 }),
             ))
         }
@@ -131,14 +131,13 @@ impl AssetParser<Wildcard> for Option<PatternEventVolume> {
 #[derive(Default, Debug, Clone)]
 pub enum PatternEventInstrument {
     #[default]
-    Ghost,
+    Previous,
     Instrument(Rc<TInstrument>),
 }
 
 #[derive(Default, Debug)]
 pub struct PatternEvent {
     pub note: Option<PatternEventNote>,
-    // Option<Rc<TInstrument>>
     pub instrument: Option<PatternEventInstrument>,
     pub volume: Option<PatternEventVolume>,
     pub effects: [Option<PatternEffect>; 2],

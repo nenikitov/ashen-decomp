@@ -52,6 +52,5 @@ fn uncompress(bytes: &[u8]) -> Vec<i16> {
 }
 
 fn convert_volume(volume: u8) -> f32 {
-    // TODO(nenikitov): Check if the volume should be limited to `1` max
-    volume as f32 / 64.0
+    volume as f32 / 64.
 }

@@ -8,12 +8,11 @@ use crate::{
     utils::{iterator::CollectArray, nom::*},
 };
 
-// TODO(nenikitov): Double check these flags
 bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct TInstrumentFlags: u8 {
         const HasVolumeEnvelope = 1 << 0;
-        const HasPanEnvelope = 1 << 1;
+        const HasPanEnvelope    = 1 << 1;
     }
 }
 
@@ -190,7 +189,6 @@ impl AssetParser<Wildcard> for TInstrument {
     }
 }
 
-// TODO(nenikitov): I'm not sure about this flag
 bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct TSampleFlags: u8 {

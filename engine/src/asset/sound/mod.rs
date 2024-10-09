@@ -82,20 +82,6 @@ mod tests {
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 
-        // TODO(nenikitov): Remove this debug code
-        {
-            let i = 0x3;
-            let song = sounds
-                .iter()
-                .filter_map(|s| match s {
-                    Sound::Song(s) => Some(s),
-                    Sound::Effect(_) => None,
-                })
-                .collect::<Vec<_>>()[i];
-
-            //dbg!(song);
-        }
-
         sounds
             .iter()
             .filter_map(|s| {

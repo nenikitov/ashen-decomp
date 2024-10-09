@@ -103,7 +103,7 @@ impl PatternEffect {
             PatternEffect::Volume(Volume::Bump { up: true, .. }) => {
                 Some(PatternEffectMemoryKey::VolumeBumpUp)
             }
-            PatternEffect::Volume(Volume::Bump { up: down, .. }) => {
+            PatternEffect::Volume(Volume::Bump { up: false, .. }) => {
                 Some(PatternEffectMemoryKey::VolumeBumpDown)
             }
             PatternEffect::SampleOffset(..) => Some(PatternEffectMemoryKey::SampleOffset),

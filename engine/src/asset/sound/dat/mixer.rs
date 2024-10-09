@@ -484,7 +484,6 @@ impl<'a> Player<'a> {
                         }
                     }
                     E::SampleOffset(Some(offset)) => {
-                        // TODO(nenikitov): Remove this hardcoded value
                         channel.pos_sample = offset as f64 / TSample::SAMPLE_RATE as f64;
                     }
                     E::NoteDelay(delay) => {
