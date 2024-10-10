@@ -486,7 +486,9 @@ impl<'a> Player<'a> {
                         if let Some(sample) = &channel.sample
                             && direction == PlaybackDirection::Backwards
                         {
-                            channel.pos_sample = sample.buffer.len_seconds();
+                            channel.pos_sample = sample
+                                .buffer
+                                .index_to_seconds(sample.buffer.len_samples().saturating_sub(1));
                         }
                     }
                     E::SampleOffset(Some(offset)) => {
