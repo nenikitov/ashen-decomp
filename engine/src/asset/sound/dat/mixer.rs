@@ -52,22 +52,22 @@ impl PlayerChannel {
     /// Maximum difference in volume between 2 audio samples
     /// Volume as in channels volume, does not account for samples
     /// A bit of an arbitrary amount too
-    const MAX_VOLUME_CHANGE: f32 = 1. / 128.;
+    const MAX_VOLUME_CHANGE: f32 = 1.0 / 128.0;
 
     fn note_cut(&mut self) {
-        self.volume = 0.;
-        self.volume_actual = 0.;
+        self.volume = 0.0;
+        self.volume_actual = 0.0;
     }
 
     fn pos_reset(&mut self) {
-        self.pos_sample = 0.;
+        self.pos_sample = 0.0;
         self.pos_volume_envelope = 0;
         self.direction = PlaybackDirection::Forwards;
     }
 
     fn compute_volume_envelope(&self) -> Option<f32> {
-        self.instrument.as_ref().and_then(|i| match &i.volume {
-            TInstrumentVolume::Envelope(envelope) => {
+        self.instrument.as_ref().and_then(|i| {
+            if let Some(envelope) = &i.volume {
                 if self.note.on {
                     envelope
                         .volume_start()
@@ -83,8 +83,9 @@ impl PlayerChannel {
                         )
                         .copied()
                 }
+            } else {
+                Some(1.0)
             }
-            TInstrumentVolume::Constant(_) => Some(1.),
         })
     }
 
@@ -139,7 +140,7 @@ impl PlayerChannel {
 
         // Disregard previous state before `self.clone` so we don't have a fully recursive structure.
         self.previous = None;
-        self.previous = Some((Box::new(self.clone()), 0.));
+        self.previous = Some((Box::new(self.clone()), 0.0));
 
         self.pos_reset();
     }
@@ -207,7 +208,7 @@ impl PlayerChannel {
 
     fn advance_envelopes(&mut self) {
         if let Some(instrument) = &self.instrument
-            && let TInstrumentVolume::Envelope(envelope) = &instrument.volume
+            && let Some(envelope) = &instrument.volume
             && (!self.note.on
                 || envelope
                     .sustain
@@ -276,7 +277,7 @@ impl<'a> Player<'a> {
         Self {
             song,
             sample_rate,
-            time_in_tick: 0.,
+            time_in_tick: 0.0,
             pos_loop: 0,
             pos_pattern: 0,
             pos_row: 0,
@@ -284,8 +285,8 @@ impl<'a> Player<'a> {
             jump: None,
             tempo: song.speed as usize,
             bpm: song.bpm as usize,
-            volume_global_target: 1.,
-            volume_global_actual: 0.,
+            volume_global_target: 1.0,
+            volume_global_actual: 0.0,
             volume_amplification: amplification,
             channels: (0..song.orders[0][0].len())
                 .map(|_| PlayerChannel::default())
@@ -294,10 +295,10 @@ impl<'a> Player<'a> {
     }
 
     fn generate_sample<S: AudioSamplePoint>(&mut self) -> S {
-        if self.time_in_tick <= 0. {
+        if self.time_in_tick <= 0.0 {
             self.tick();
         }
-        let step = 1. / self.sample_rate as f64;
+        let step = 1.0 / self.sample_rate as f64;
         self.time_in_tick -= step;
 
         let sample = self
@@ -327,7 +328,7 @@ impl<'a> Player<'a> {
                 match *effect {
                     // Tick effects
                     E::Volume(Volume::Slide(Some(volume))) => {
-                        channel.volume = (channel.volume + volume).clamp(0., 1.);
+                        channel.volume = (channel.volume + volume).clamp(0.0, 1.0);
                     }
                     E::Porta(Porta::Tone(Some(step))) => {
                         if let Some(finetune_initial) = channel.note.finetune_initial {
@@ -464,7 +465,7 @@ impl<'a> Player<'a> {
                         volume: Some(volume),
                         ..
                     }) => {
-                        channel.volume = (channel.volume + volume).clamp(0., 1.);
+                        channel.volume = (channel.volume + volume).clamp(0.0, 1.0);
                     }
                     E::Porta(Porta::Bump {
                         finetune: Some(finetune),

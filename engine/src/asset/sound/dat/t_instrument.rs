@@ -68,13 +68,7 @@ impl TInstrumentVolumeEnvelope {
     }
 }
 
-#[derive(Debug)]
-pub enum TInstrumentVolume {
-    Envelope(TInstrumentVolumeEnvelope),
-    Constant(f32),
-}
-
-impl AssetParser<Wildcard> for TInstrumentVolume {
+impl AssetParser<Wildcard> for Option<TInstrumentVolumeEnvelope> {
     type Output = Self;
 
     type Context<'ctx> = bool;
@@ -89,20 +83,18 @@ impl AssetParser<Wildcard> for TInstrumentVolume {
 
             Ok((
                 input,
-                if has_envelope {
+                has_envelope.then(|| {
                     let data = data
                         .into_iter()
                         .skip(begin as usize)
                         .take(cmp::min(cmp::min(end, end_total), 325) as usize)
                         .map(convert_volume)
                         .collect::<Vec<_>>();
-                    TInstrumentVolume::Envelope(TInstrumentVolumeEnvelope {
+                    TInstrumentVolumeEnvelope {
                         data,
                         sustain: (sustain != u16::MAX).then_some((sustain - begin) as usize),
-                    })
-                } else {
-                    TInstrumentVolume::Constant(1.0)
-                },
+                    }
+                }),
             ))
         }
     }
@@ -112,7 +104,7 @@ impl AssetParser<Wildcard> for TInstrumentVolume {
 pub struct TInstrument {
     pub flags: TInstrumentFlags,
 
-    pub volume: TInstrumentVolume,
+    pub volume: Option<TInstrumentVolumeEnvelope>,
 
     pub pan_begin: u16,
     pub pan_end: u16,
@@ -141,10 +133,12 @@ impl AssetParser<Wildcard> for TInstrument {
 
             let (input, _) = bytes::take(1usize)(input)?;
 
-            let (input, volume_envelope) = TInstrumentVolume::parser(
+            let (input, volume_envelope) = Option::<TInstrumentVolumeEnvelope>::parser(
                 flags.contains(TInstrumentFlags::HasVolumeEnvelope),
             )(input)?;
 
+            // TODO(nenikitov): None of the instruments (except some weird one in the very first song I believe) use pan
+            // See if this is needed
             let (input, pan_begin) = number::le_u16(input)?;
             let (input, pan_end) = number::le_u16(input)?;
             let (input, pan_sustain) = number::le_u16(input)?;
@@ -153,11 +147,17 @@ impl AssetParser<Wildcard> for TInstrument {
 
             let (input, _) = bytes::take(1usize)(input)?;
 
+            // TODO(nenikitov): None of the instruments use vibrato
+            // See if this is needed
             let (input, vibrato_depth) = number::le_u8(input)?;
             let (input, vibrato_speed) = number::le_u8(input)?;
             let (input, vibrato_sweep) = number::le_u8(input)?;
 
+            // TODO(nenikitov): There is some variation (0, 256, 1024)
+            // But it's only used by effects?
             let (input, fadeout) = number::le_u32(input)?;
+            // TODO(nenikitov): There is some variation (0, 256)
+            // But it's only used by effects?
             let (input, vibrato_table) = number::le_u32(input)?;
 
             let (input, sample_indexes): (_, [_; 96]) = multi::count!(number::le_u8)(input)?;
@@ -252,7 +252,7 @@ impl TSample {
 
     // TODO(nenikitov): I think the whole `Sample` will need to be removed
     pub fn get(&self, position: f64) -> Option<i16> {
-        if position < 0. {
+        if position < 0.0 {
             return None;
         }
 
@@ -264,9 +264,9 @@ impl TSample {
         let prev = self.buffer[prev] as f32;
 
         let next = self.normalize(position as usize + 1);
-        let next = next.map_or(0., |next| self.buffer[next] as f32);
+        let next = next.map_or(0.0, |next| self.buffer[next] as f32);
 
-        Some((prev + frac * (next - prev)) as i16)
+        Some(frac.mul_add(next - prev, prev) as i16)
     }
 
     fn normalize(&self, position: usize) -> Option<usize> {

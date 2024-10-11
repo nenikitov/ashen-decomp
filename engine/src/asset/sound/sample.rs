@@ -34,7 +34,7 @@ impl AudioSamplePoint for i16 {
     }
 
     fn from_normalized_f32(value: f32) -> Self {
-        if value < 0. {
+        if value < 0.0 {
             -(value * Self::MIN as f32) as Self
         } else {
             (value * Self::MAX as f32) as Self
