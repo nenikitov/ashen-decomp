@@ -101,7 +101,7 @@ pub enum PatternEventVolume {
 
 impl Default for PatternEventVolume {
     fn default() -> Self {
-        PatternEventVolume::Value(0.)
+        PatternEventVolume::Value(0.0)
     }
 }
 
