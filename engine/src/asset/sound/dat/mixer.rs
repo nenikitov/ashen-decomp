@@ -155,7 +155,6 @@ impl PlayerChannel {
         } else {
             // TODO(nenikitov): Idk honestly, figure this out
             self.note_cut();
-            self.instrument = None;
             self.sample = None;
         }
     }
@@ -516,9 +515,9 @@ impl TSongMixer for TSong {
 
         let mut player = Player::new(self, SAMPLE_RATE, AMPLIFICATION);
 
-        let samples: Vec<_> = std::iter::from_fn(|| {
+        let samples = std::iter::from_fn(|| {
             if player.pos_loop == 0 {
-                Some(player.generate_sample::<i16>())
+                Some(player.generate_sample())
             } else {
                 None
             }
