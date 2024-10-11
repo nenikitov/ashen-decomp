@@ -40,18 +40,18 @@ struct PlayerChannel {
 }
 
 impl PlayerChannel {
-    // Length of a transition between the current and the next sample in seconds
-    // Too large of a time and samples will audibly blend and play 2 notes at the same time, which sounds weird.
-    // Too little and transitions between notes will click.
-    // Chosen value is a bit of an arbitrary value that I found sounds nice.
-    // It amounts to:
-    // - 13 samples at 16000
-    // - 35 samples at 44100
-    // - 38 samples at 48000
+    /// Length of a transition between the current and the next sample in seconds
+    /// Too large of a time and samples will audibly blend and play 2 notes at the same time, which sounds weird.
+    /// Too little and transitions between notes will click.
+    /// Chosen value is a bit of an arbitrary value that I found sounds nice.
+    /// It amounts to:
+    /// - 13 samples at 16000
+    /// - 35 samples at 44100
+    /// - 38 samples at 48000
     const SAMPLE_BLEND: f64 = Duration::from_micros(800).as_secs_f64();
-    // Maximum difference in volume between 2 audio samples
-    // Volume as in channels volume, does not account for samples
-    // A bit of an arbitrary amount too
+    /// Maximum difference in volume between 2 audio samples
+    /// Volume as in channels volume, does not account for samples
+    /// A bit of an arbitrary amount too
     const MAX_VOLUME_CHANGE: f32 = 1. / 128.;
 
     fn note_cut(&mut self) {
@@ -69,19 +69,17 @@ impl PlayerChannel {
         self.instrument.as_ref().and_then(|i| match &i.volume {
             TInstrumentVolume::Envelope(envelope) => {
                 if self.note.on {
-                    Some(
-                        envelope
-                            .volume_beginning()
-                            .get(self.pos_volume_envelope)
-                            .copied()
-                            .unwrap_or(envelope.volume_loop()),
-                    )
+                    envelope
+                        .volume_start()
+                        .get(self.pos_volume_envelope)
+                        .copied()
+                        .or_else(|| Some(envelope.volume_loop()))
                 } else {
                     envelope
                         .volume_end()
                         .get(
                             self.pos_volume_envelope
-                                .saturating_sub(envelope.volume_beginning().len()),
+                                .saturating_sub(envelope.volume_start().len()),
                         )
                         .copied()
                 }
@@ -130,7 +128,7 @@ impl PlayerChannel {
                 self.previous = None;
             }
 
-            previous_sample + factor * (current_sample - previous_sample)
+            factor.mul_add(current_sample - previous_sample, previous_sample)
         } else {
             current_sample
         }
@@ -164,9 +162,7 @@ impl PlayerChannel {
     fn change_note(&mut self, note: PatternEventNote) {
         if let Some(instrument) = &self.instrument {
             match note {
-                PatternEventNote::Off => {
-                    self.note.on = false;
-                }
+                PatternEventNote::Off => self.note.on = false,
                 PatternEventNote::On(note) => {
                     self.note.finetune = Some(note);
                     self.note.finetune_initial = Some(note);
@@ -226,35 +222,30 @@ impl PlayerChannel {
     }
 }
 
-trait MinMax {
-    fn generic_min(a: Self, b: Self) -> Self;
-    fn generic_max(a: Self, b: Self) -> Self;
-}
-
-macro_rules! impl_min_max {
-    ($($ty:tt),*) => {
-        $(impl MinMax for $ty {
-            fn generic_min(a: Self, b: Self) -> Self {
-                $ty::min(a, b)
-            }
-
-            fn generic_max(a: Self, b: Self) -> Self {
-                $ty::max(a, b)
-            }
-        })*
-    };
-}
-
-impl_min_max!(f32, FineTune);
-
 fn advance_to<T>(from: T, to: T, step: T) -> T
 where
-    T: PartialOrd + Add<Output = T> + Sub<Output = T> + MinMax,
+    T: PartialOrd + Add<Output = T> + Sub<Output = T>,
 {
     use std::cmp::Ordering;
+    fn partial_min<T: PartialOrd>(input: T, min: T) -> T {
+        if input < min {
+            min
+        } else {
+            input
+        }
+    }
+    fn partial_max<T: PartialOrd>(input: T, max: T) -> T {
+        if input > max {
+            max
+        } else {
+            input
+        }
+    }
     match from.partial_cmp(&to) {
-        Some(Ordering::Less) => T::generic_min(from + step, to),
-        Some(Ordering::Greater) => T::generic_max(from - step, to),
+        Some(Ordering::Less) => partial_max(from + step, to),
+        Some(Ordering::Greater) => partial_min(from - step, to),
+        // Calling `clamp_max` and `clamp_min` with `f32` or `f64` is "safe", because
+        // `from.partial_cmp(&to)` would return `None` if either of the values are `NAN`.
         Some(Ordering::Equal) | None => from,
     }
 }

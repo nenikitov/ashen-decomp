@@ -43,7 +43,7 @@ pub struct TInstrumentVolumeEnvelope {
 }
 
 impl TInstrumentVolumeEnvelope {
-    pub fn volume_beginning(&self) -> &[f32] {
+    pub fn volume_start(&self) -> &[f32] {
         if let Some(sustain) = self.sustain {
             &self.data[0..sustain]
         } else {

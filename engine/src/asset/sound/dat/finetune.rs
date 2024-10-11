@@ -15,9 +15,8 @@ static PITCH_FACTORS: LazyLock<[f64; FineTune::MAX]> = LazyLock::new(|| {
     // And it's very magic.
     // Maybe simplify it or at least name constants.
     (0..FineTune::MAX)
-        .map(|i| i as f64)
         .map(|cents| {
-            1.0 / (2f64.powf(cents / (12.0 * FineTune::CENTS_PER_NOTE as f64))
+            1.0 / (2f64.powf(cents as f64 / (12.0 * FineTune::CENTS_PER_NOTE as f64))
             * 8363.0
             // TODO(nenikitov): This is `2^20`, which is divided by `2048` and `8192` results in `1/16`
             * 1048576.0

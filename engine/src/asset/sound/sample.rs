@@ -1,4 +1,4 @@
-use std::{fmt::Debug, mem::size_of, ops::Index};
+use std::{fmt::Debug, ops::Index};
 
 pub enum AudioSamplePointFormat {
     Int,
