@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use super::{convert_volume, finetune::FineTune};
 use crate::{
     asset::{extension::*, AssetParser},
@@ -116,10 +114,10 @@ impl PatternEffect {
     }
 
     #[rustfmt::skip]
-    pub fn is_empty(&self) -> bool {
+    pub fn has_content(&self) -> bool {
         use PatternEffect as E;
 
-        matches!(
+        !matches!(
             self,
             E::Porta(
                 Porta::Tone(None)

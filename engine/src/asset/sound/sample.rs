@@ -52,6 +52,7 @@ impl AudioSamplePoint for i16 {
 
 #[derive(Debug, Clone)]
 pub struct AudioBuffer<S: AudioSamplePoint> {
+    // TODO(nenikitov): Make non-`pub`
     pub data: Vec<S>,
     pub sample_rate: usize,
 }

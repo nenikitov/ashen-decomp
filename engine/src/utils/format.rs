@@ -111,8 +111,8 @@ impl<S: AudioSamplePoint> WaveFile<S> for AudioBuffer<S> {
     {
         const CHANNELS: usize = 1;
 
-        let bytes_per_sample: usize = S::SIZE_BYTES;
-        let bits_per_sample: usize = bytes_per_sample * 8;
+        let bytes_per_sample = S::SIZE_BYTES;
+        let bits_per_sample = bytes_per_sample * 8;
 
         let size = self.len_samples() * CHANNELS * bytes_per_sample;
 

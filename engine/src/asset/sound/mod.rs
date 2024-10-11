@@ -92,13 +92,13 @@ mod tests {
                 }
             })
             .enumerate()
-            .try_for_each(|(i, (song, t))| -> std::io::Result<()> {
+            .try_for_each(|(i, (sound, song))| -> std::io::Result<()> {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
                 println!("# SONG {i}");
-                output_file(file, song.mix().to_wave())?;
+                output_file(file, sound.mix().to_wave())?;
 
                 let file = output_dir.join(format!("{i:0>2X}.txt"));
-                output_file(file, format!("{t:#?}"))?;
+                output_file(file, format!("{song:#?}"))?;
 
                 Ok(())
             })?;

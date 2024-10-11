@@ -14,7 +14,6 @@ pub struct TEffect {
     sample: Rc<TSample>,
 }
 
-// It should be separated
 impl TEffect {
     pub fn mix(&self) -> AudioBuffer<i16> {
         self.sample.buffer.clone()

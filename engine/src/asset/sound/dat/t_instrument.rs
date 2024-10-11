@@ -79,7 +79,7 @@ impl AssetParser<Wildcard> for Option<TInstrumentVolumeEnvelope> {
             let (input, end) = number::le_u16(input)?;
             let (input, sustain) = number::le_u16(input)?;
             let (input, end_total) = number::le_u16(input)?;
-            let (input, data) = multi::count!(number::le_u8, 325)(input)?;
+            let (input, data) = multi::count!(number::le_u8, TInstrument::ENVELOPE_SIZE)(input)?;
 
             Ok((
                 input,
@@ -87,9 +87,12 @@ impl AssetParser<Wildcard> for Option<TInstrumentVolumeEnvelope> {
                     let data = data
                         .into_iter()
                         .skip(begin as usize)
-                        .take(cmp::min(cmp::min(end, end_total), 325) as usize)
+                        .take(
+                            cmp::min(cmp::min(end, end_total), TInstrument::ENVELOPE_SIZE as u16)
+                                as usize,
+                        )
                         .map(convert_volume)
-                        .collect::<Vec<_>>();
+                        .collect();
                     TInstrumentVolumeEnvelope {
                         data,
                         sustain: (sustain != u16::MAX).then_some((sustain - begin) as usize),
@@ -110,7 +113,7 @@ pub struct TInstrument {
     pub pan_end: u16,
     pub pan_sustain: u16,
     pub pan_envelope_border: u16,
-    pub pan_envelope: Box<[u8; 325]>,
+    pub pan_envelope: Box<[u8; Self::ENVELOPE_SIZE]>,
 
     pub vibrato_depth: u8,
     pub vibrato_speed: u8,
@@ -120,6 +123,10 @@ pub struct TInstrument {
     pub vibrato_table: u32,
 
     pub samples: Box<[Option<Rc<TSample>>; 96]>,
+}
+
+impl TInstrument {
+    const ENVELOPE_SIZE: usize = 325;
 }
 
 impl AssetParser<Wildcard> for TInstrument {
@@ -203,7 +210,7 @@ pub struct TSample {
     pub panning: u8,
     pub align: u8,
     pub finetune: FineTune,
-    pub loop_length: usize,
+    pub loop_len: usize,
     pub buffer: AudioBuffer<i16>,
 }
 
@@ -236,7 +243,7 @@ impl AssetParser<Wildcard> for TSample {
                     panning,
                     align,
                     finetune: FineTune::new(finetune),
-                    loop_length: loop_length as usize,
+                    loop_len: loop_length as usize,
                     buffer: AudioBuffer {
                         data: sample_data[sample_offset as usize..loop_end as usize].to_vec(),
                         sample_rate: Self::SAMPLE_RATE,
@@ -272,12 +279,12 @@ impl TSample {
     fn normalize(&self, position: usize) -> Option<usize> {
         if position < self.buffer.len_samples() {
             Some(position)
-        } else if self.loop_length == 0 {
+        } else if self.loop_len == 0 {
             None
         } else {
             Some(
-                self.buffer.len_samples() - self.loop_length
-                    + (position - self.buffer.len_samples()) % self.loop_length,
+                self.buffer.len_samples() - self.loop_len
+                    + (position - self.buffer.len_samples()) % self.loop_len,
             )
         }
     }

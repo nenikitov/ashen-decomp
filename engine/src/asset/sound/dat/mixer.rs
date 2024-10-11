@@ -195,7 +195,7 @@ impl PlayerChannel {
     fn change_effect(&mut self, i: usize, effect: PatternEffect) {
         // Recall from memory
         let effect = if let Some(key) = effect.memory_key() {
-            if !effect.is_empty() {
+            if effect.has_content() {
                 self.effects_memory.insert(key, effect);
             }
 
