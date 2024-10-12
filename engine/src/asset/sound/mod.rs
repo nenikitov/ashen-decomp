@@ -1,5 +1,7 @@
 mod dat;
+pub(crate) mod sample;
 
+use self::{dat::mixer::TSongMixer, sample::AudioBuffer};
 use super::{extension::*, AssetParser};
 use crate::{
     asset::sound::dat::{
@@ -15,7 +17,7 @@ pub enum Sound {
 }
 
 impl Sound {
-    pub fn mix(&self) -> Vec<i16> {
+    pub fn mix(&self) -> AudioBuffer<i16> {
         match self {
             Sound::Song(sound) => sound.mix(),
             Sound::Effect(effect) => effect.mix(),
@@ -66,9 +68,10 @@ impl AssetParser<Pack> for SoundCollection {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::LazyCell, path::PathBuf};
+
     use super::*;
     use crate::utils::{format::*, test::*};
-    use std::{cell::LazyCell, path::PathBuf};
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
 
@@ -81,15 +84,23 @@ mod tests {
 
         sounds
             .iter()
-            .filter(|s| matches!(s, Sound::Song(_)))
+            .filter_map(|s| {
+                if let Sound::Song(song) = s {
+                    Some((s, song))
+                } else {
+                    None
+                }
+            })
             .enumerate()
-            .try_for_each(|(i, song)| {
+            .try_for_each(|(i, (sound, song))| -> std::io::Result<()> {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
-                output_file(
-                    file,
-                    song.mix()
-                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
-                )
+                println!("# SONG {i}");
+                output_file(file, sound.mix().to_wave())?;
+
+                let file = output_dir.join(format!("{i:0>2X}.txt"));
+                output_file(file, format!("{song:#?}"))?;
+
+                Ok(())
             })?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
@@ -100,12 +111,7 @@ mod tests {
             .enumerate()
             .try_for_each(|(i, effect)| {
                 let file = output_dir.join(format!("{i:0>2X}.wav"));
-                output_file(
-                    file,
-                    effect
-                        .mix()
-                        .to_wave(SoundCollection::SAMPLE_RATE, SoundCollection::CHANNEL_COUNT),
-                )
+                output_file(file, effect.mix().to_wave())
             })?;
 
         Ok(())

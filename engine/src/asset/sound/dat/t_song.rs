@@ -1,57 +1,95 @@
-use super::{mixer::SoundEffect, t_instrument::*, uncompress};
-use crate::{
-    asset::{extension::*, sound::dat::mixer::Mixer, AssetParser},
-    utils::nom::*,
-};
+use std::rc::Rc;
+
 use itertools::Itertools;
 
-#[derive(Debug)]
+use super::{pattern_event::*, t_instrument::*, uncompress};
+use crate::{
+    asset::{extension::*, AssetParser},
+    utils::nom::*,
+};
+
+pub type PatternRow = Vec<PatternEvent>;
+pub type Pattern = Vec<PatternRow>;
+
 pub struct TSong {
-    bpm: u8,
-    speed: u8,
-    restart_order: u8,
-    orders: Vec<u8>,
-    /// Reusable and repeatable sequence -> Row -> Channel (`None` to play nothing)
-    patterns: Vec<Vec<Vec<Option<TPattern>>>>,
-    instruments: Vec<TInstrument>,
-    samples: Vec<TSample>,
+    pub bpm: u8,
+    pub speed: u8,
+    pub restart_order: u8,
+    /// Reusable and repeatable sequence -> Row -> Channel
+    pub orders: Vec<Rc<Pattern>>,
+    pub patterns: Vec<Rc<Pattern>>,
+    pub instruments: Vec<Rc<TInstrument>>,
+    pub samples: Vec<Rc<TSample>>,
 }
 
-impl TSong {
-    pub fn mix(&self) -> Vec<i16> {
-        let mut m = Mixer::new();
+impl std::fmt::Debug for TSong {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TSong")
+            .field("bpm", &self.bpm)
+            .field("speed", &self.speed)
+            .field("restart_order", &self.restart_order)
+            .field_with("events", |f| {
+                let mut d = f.debug_map();
+                for (p, pattern) in self.orders.iter().enumerate() {
+                    d.key(&format!("P 0x{p:X}"));
+                    d.value_with(|f| {
+                        let mut d = f.debug_map();
+                        for (r, row) in pattern.iter().enumerate() {
+                            if !row.iter().any(PatternEvent::has_content) {
+                                continue;
+                            }
 
-        let mut i = 0;
-        for pattern in &self.orders {
-            let pattern = &self.patterns[*pattern as usize];
-            for row in pattern {
-                i += 1;
-                for event in row {
-                    if let Some(entry) = event
-                        && let Some(note) = entry.note
-                        // TODO(nenikitov): Find out what special instrument `0xFF` means
-                        && entry.instrument != 0xFF
-                    {
-                        let instrument = &self.instruments[entry.instrument as usize];
-                        // TODO(nenikitov): See if doing `- 1` in parsing will look nicer
-                        let sample = instrument.samples[(note - 1) as usize];
-                        // TODO(nenikitov): Find out what special sample `0xFF` means
-                        if sample != 0xFF {
-                            let sample = &self.samples[sample as usize];
-                            let data = sample.data.clone();
+                            d.key(&format!("R 0x{r:X}"));
+                            d.value_with(|f| {
+                                let mut d = f.debug_map();
+                                for (e, event) in row.iter().enumerate() {
+                                    if !event.has_content() {
+                                        continue;
+                                    }
 
-                            m.add_samples(&data.volume(Self::volume(sample.volume)), i * 1000);
+                                    d.key(&format!("C 0x{e:X}"));
+                                    d.value_with(|f| {
+                                        let mut d = f.debug_struct("Event");
+                                        if let Some(note) = event.note {
+                                            d.field_with("note", |f| write!(f, "{note:?}"));
+                                        }
+                                        if let Some(volume) = event.volume {
+                                            d.field_with("volume", |f| write!(f, "{volume:?}"));
+                                        }
+                                        if let Some(instrument) = &event.instrument {
+                                            d.field_with("instrument", |f| match instrument {
+                                                PatternEventInstrument::Previous => {
+                                                    write!(f, "Previous")
+                                                }
+                                                PatternEventInstrument::Instrument(instrument) => {
+                                                    write!(
+                                                        f,
+                                                        "Instrument({})",
+                                                        self.instruments
+                                                            .iter()
+                                                            .position(|i| Rc::ptr_eq(i, instrument))
+                                                            .unwrap()
+                                                    )
+                                                }
+                                            });
+                                        }
+                                        if event.effects.iter().any(Option::is_some) {
+                                            d.field_with("effects", |f| {
+                                                write!(f, "{:?}", event.effects)
+                                            });
+                                        }
+                                        d.finish()
+                                    });
+                                }
+                                d.finish()
+                            });
                         }
-                    }
+                        d.finish()
+                    });
                 }
-            }
-        }
-
-        m.mix()
-    }
-
-    fn volume(volume: u8) -> f32 {
-        volume as f32 / u8::MAX as f32
+                d.finish()
+            })
+            .finish()
     }
 }
 
@@ -68,9 +106,18 @@ impl AssetParser<Wildcard> for TSong {
                 (header, pointers)
             };
 
-            let (_, orders) = multi::count!(number::le_u8, header.song_length as usize)(
-                &input[pointers.orders as usize..],
-            )?;
+            let samples = uncompress(&input[pointers.sample_data as usize..]);
+            let (_, samples) = multi::count!(
+                TSample::parser(&samples),
+                header.sample_count as usize
+            )(&input[pointers.samples as usize..])?;
+            let samples = samples.into_iter().map(Rc::new).collect::<Vec<_>>();
+
+            let (_, instruments) = multi::count!(
+                TInstrument::parser(&samples),
+                header.instrument_count as usize
+            )(&input[pointers.instruments as usize..])?;
+            let instruments = instruments.into_iter().map(Rc::new).collect::<Vec<_>>();
 
             let patterns: Vec<_> = {
                 let (_, lengths) = multi::count!(number::le_u8, header.pattern_count as usize)(
@@ -87,7 +134,7 @@ impl AssetParser<Wildcard> for TSong {
                 .zip(lengths)
                 .map(|(input, length)| {
                     multi::count!(
-                        <Option<TPattern>>::parser(()),
+                        PatternEvent::parser(&instruments),
                         header.channel_count as usize * length as usize
                     )(input)
                 })
@@ -103,17 +150,15 @@ impl AssetParser<Wildcard> for TSong {
                 })
                 .collect::<std::result::Result<_, _>>()?
             };
+            let patterns = patterns.into_iter().map(Rc::new).collect::<Vec<_>>();
 
-            let (_, instruments) = multi::count!(
-                TInstrument::parser(()),
-                header.instrument_count as usize
-            )(&input[pointers.instruments as usize..])?;
-
-            let samples = uncompress(&input[pointers.sample_data as usize..]);
-            let (_, samples) = multi::count!(
-                TSample::parser(&samples),
-                header.sample_count as usize
-            )(&input[pointers.samples as usize..])?;
+            let (_, orders) = multi::count!(number::le_u8, header.song_length as usize)(
+                &input[pointers.orders as usize..],
+            )?;
+            let orders = orders
+                .into_iter()
+                .map(|o| patterns[o as usize].clone())
+                .collect::<Vec<_>>();
 
             Ok((
                 input,
@@ -214,63 +259,6 @@ impl AssetParser<Wildcard> for TSongPointers {
                     sample_data,
                 },
             ))
-        }
-    }
-}
-
-#[derive(Debug)]
-struct TPattern {
-    flags: u8,
-    note: Option<u8>,
-    instrument: u8,
-    volume: u8,
-    effect_1: u16,
-    effect_2: u16,
-}
-
-impl AssetParser<Wildcard> for TPattern {
-    type Output = Self;
-
-    type Context<'ctx> = ();
-
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
-        move |input| {
-            let (input, flags) = number::le_u8(input)?;
-            let (input, note) = number::le_u8(input)?;
-            let (input, instrument) = number::le_u8(input)?;
-            let (input, volume) = number::le_u8(input)?;
-            let (input, effect_1) = number::le_u16(input)?;
-            let (input, effect_2) = number::le_u16(input)?;
-
-            Ok((
-                input,
-                Self {
-                    flags,
-                    note: (note != 0).then_some(note),
-                    instrument,
-                    volume,
-                    effect_1,
-                    effect_2,
-                },
-            ))
-        }
-    }
-}
-
-impl AssetParser<Wildcard> for Option<TPattern> {
-    type Output = Self;
-
-    type Context<'ctx> = ();
-
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
-        move |input| {
-            let (after_flags, flags) = number::le_u8(input)?;
-            if (flags & 0x20) != 0 {
-                Ok((after_flags, None))
-            } else {
-                let (input, pattern) = TPattern::parser(())(input)?;
-                Ok((input, Some(pattern)))
-            }
         }
     }
 }

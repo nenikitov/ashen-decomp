@@ -1,6 +1,7 @@
+use std::ops::Deref;
+
 use super::{extension::*, AssetParser};
 use crate::{error, utils::nom::*};
-use std::{mem, ops::Deref};
 
 const COLORS_COUNT: usize = 256;
 const SHADES_COUNT: usize = 32;
@@ -63,7 +64,7 @@ impl AssetParser<Pack> for ColorMap {
         move |input| {
             error::ensure_bytes_length(
                 input,
-                mem::size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
+                size_of::<u32>() * COLORS_COUNT * SHADES_COUNT,
                 "Incorrect `ColorMap` format (256x32 array of 12-bit [padded to 32-bit] colors)",
             )?;
 
@@ -77,7 +78,7 @@ impl AssetParser<Pack> for ColorMap {
             let colors = {
                 let colors = colors.into_boxed_slice();
                 // Ensure the original box is not dropped.
-                let mut colors = mem::ManuallyDrop::new(colors);
+                let mut colors = std::mem::ManuallyDrop::new(colors);
                 // SAFETY: [_] and [_; N] has the same memory layout as long
                 // as the slice contains exactly N elements.
                 unsafe { Box::from_raw(colors.as_mut_ptr().cast()) }
@@ -90,9 +91,10 @@ impl AssetParser<Pack> for ColorMap {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::LazyCell;
+
     use super::*;
     use crate::utils::{format::*, test::*};
-    use std::cell::LazyCell;
 
     #[test]
     fn shade_works() -> eyre::Result<()> {

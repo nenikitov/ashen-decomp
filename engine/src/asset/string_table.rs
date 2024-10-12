@@ -32,9 +32,10 @@ impl AssetParser<Pack> for StringTable {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::LazyCell;
+
     use super::*;
     use crate::utils::test::*;
-    use std::cell::LazyCell;
 
     const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98-deflated.dat");
 

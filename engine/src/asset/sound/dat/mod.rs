@@ -1,9 +1,13 @@
-use lewton::inside_ogg::OggStreamReader;
 use std::io::Cursor;
+
+use lewton::inside_ogg::OggStreamReader;
 
 pub mod asset_header;
 pub mod chunk_header;
+pub mod finetune;
 pub mod mixer;
+pub mod pattern_effect;
+pub mod pattern_event;
 pub mod t_effect;
 mod t_instrument;
 pub mod t_song;
@@ -45,4 +49,8 @@ fn uncompress(bytes: &[u8]) -> Vec<i16> {
             .map(|sample| sample * (i16::MIN / i8::MIN as i16))
             .collect()
     }
+}
+
+fn convert_volume(volume: u8) -> f32 {
+    volume as f32 / 64.
 }
