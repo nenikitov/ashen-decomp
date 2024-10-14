@@ -1,5 +1,5 @@
 use crate::{
-    asset::{extension::*, pack_info::PackInfo, AssetParser},
+    asset::{pack_info::PackInfo, AssetParser},
     utils::nom::*,
 };
 
@@ -14,7 +14,7 @@ impl SoundAssetHeader {
     const HEADER: &'static str = "TSND";
 }
 
-impl AssetParser<Wildcard> for SoundAssetHeader {
+impl AssetParser for SoundAssetHeader {
     type Output = Self;
 
     type Context<'ctx> = ();

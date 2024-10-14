@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use super::{extension::*, AssetParser};
+use super::AssetParser;
 use crate::utils::nom::*;
 
 #[derive(Debug)]
@@ -9,7 +9,7 @@ pub struct PackInfo {
     pub size: u32,
 }
 
-impl AssetParser<Wildcard> for PackInfo {
+impl AssetParser for PackInfo {
     type Output = Self;
 
     type Context<'ctx> = ();

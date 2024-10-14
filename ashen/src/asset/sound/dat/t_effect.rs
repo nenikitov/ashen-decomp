@@ -5,7 +5,7 @@ use super::{
     uncompress,
 };
 use crate::{
-    asset::{extension::*, sound::sample::AudioBuffer, AssetParser},
+    asset::{sound::sample::AudioBuffer, AssetParser},
     utils::nom::*,
 };
 
@@ -20,7 +20,7 @@ impl TEffect {
     }
 }
 
-impl AssetParser<Wildcard> for TEffect {
+impl AssetParser for TEffect {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -50,7 +50,7 @@ struct TEffectPointers {
     sample_data: u32,
 }
 
-impl AssetParser<Wildcard> for TEffectPointers {
+impl AssetParser for TEffectPointers {
     type Output = Self;
 
     type Context<'ctx> = ();

@@ -1,7 +1,4 @@
-use crate::{
-    asset::{extension::*, AssetParser},
-    utils::nom::*,
-};
+use crate::{asset::AssetParser, utils::nom::*};
 
 pub struct ModelPoint {
     pub vertex_index: u16,
@@ -14,7 +11,7 @@ pub struct TextureDimensions {
     pub height: u32,
 }
 
-impl AssetParser<Wildcard> for ModelPoint {
+impl AssetParser for ModelPoint {
     type Output = Self;
 
     type Context<'ctx> = &'ctx TextureDimensions;
@@ -39,7 +36,7 @@ pub struct ModelTriangle {
     pub points: [ModelPoint; 3],
 }
 
-impl AssetParser<Wildcard> for ModelTriangle {
+impl AssetParser for ModelTriangle {
     type Output = Self;
 
     type Context<'ctx> = TextureDimensions;

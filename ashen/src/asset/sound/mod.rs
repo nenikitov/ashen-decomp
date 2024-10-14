@@ -2,7 +2,7 @@ mod dat;
 pub(crate) mod sample;
 
 use self::{dat::mixer::TSongMixer, sample::AudioBuffer};
-use super::{extension::*, AssetParser};
+use super::AssetParser;
 use crate::{
     asset::sound::dat::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_effect::TEffect,
@@ -32,7 +32,7 @@ impl SoundCollection {
     pub const CHANNEL_COUNT: usize = 1;
 }
 
-impl AssetParser<Pack> for SoundCollection {
+impl AssetParser for SoundCollection {
     type Output = Vec<Sound>;
 
     type Context<'ctx> = ();
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, sounds) = <SoundCollection as AssetParser<Pack>>::parser(())(&SOUND_DATA)?;
+        let (_, sounds) = <SoundCollection as AssetParser>::parser(())(&SOUND_DATA)?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 

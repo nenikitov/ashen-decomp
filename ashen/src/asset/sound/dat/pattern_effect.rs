@@ -1,8 +1,5 @@
 use super::{convert_volume, finetune::FineTune};
-use crate::{
-    asset::{extension::*, AssetParser},
-    utils::nom::*,
-};
+use crate::{asset::AssetParser, utils::nom::*};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Speed {
@@ -130,7 +127,7 @@ impl PatternEffect {
     }
 }
 
-impl AssetParser<Wildcard> for Option<PatternEffect> {
+impl AssetParser for Option<PatternEffect> {
     type Output = Self;
 
     type Context<'ctx> = bool;

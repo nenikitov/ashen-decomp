@@ -1,7 +1,4 @@
-use crate::{
-    asset::{extension::*, AssetParser},
-    utils::nom::*,
-};
+use crate::{asset::AssetParser, utils::nom::*};
 
 // TODO(nenikitov): Should probably be a fancy utility class
 // With generics for data type and dimension
@@ -12,7 +9,7 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-impl AssetParser<Wildcard> for Vec3 {
+impl AssetParser for Vec3 {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -52,7 +49,7 @@ pub struct VertexTransform {
     origin: Vec3,
 }
 
-impl AssetParser<Wildcard> for ModelVertex {
+impl AssetParser for ModelVertex {
     type Output = Self;
 
     type Context<'ctx> = VertexTransform;
@@ -97,7 +94,7 @@ pub struct ModelSpecs {
     pub frame_size: u32,
 }
 
-impl AssetParser<Wildcard> for ModelFrame {
+impl AssetParser for ModelFrame {
     type Output = Self;
 
     type Context<'ctx> = ModelSpecs;

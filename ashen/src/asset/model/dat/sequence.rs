@@ -1,13 +1,10 @@
-use crate::{
-    asset::{extension::*, AssetParser},
-    utils::nom::*,
-};
+use crate::{asset::AssetParser, utils::nom::*};
 
 pub struct ModelSequence {
     pub frames: Vec<u32>,
 }
 
-impl AssetParser<Wildcard> for ModelSequence {
+impl AssetParser for ModelSequence {
     type Output = Self;
 
     // TODO(nenikitov): Maybe refactor it to not accept full input.

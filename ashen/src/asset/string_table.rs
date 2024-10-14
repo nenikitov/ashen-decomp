@@ -1,4 +1,4 @@
-use super::{extension::*, AssetParser};
+use super::AssetParser;
 use crate::utils::nom::*;
 
 pub struct StringTable {
@@ -14,7 +14,7 @@ fn utf_16_string(input: &[u8]) -> Result<String> {
     })
 }
 
-impl AssetParser<Pack> for StringTable {
+impl AssetParser for StringTable {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -42,7 +42,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, string_table) = <StringTable as AssetParser<Pack>>::parser(())(&STRING_TABLE_DATA)?;
+        let (_, string_table) = <StringTable as AssetParser>::parser(())(&STRING_TABLE_DATA)?;
 
         output_file(
             parsed_file_path!("strings/english-uk.txt"),

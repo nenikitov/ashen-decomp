@@ -4,7 +4,6 @@ use super::size::TextureSize;
 use crate::{
     asset::{
         color_map::{Color, PaletteTexture},
-        extension::*,
         AssetParser,
     },
     utils::nom::*,
@@ -16,7 +15,7 @@ pub struct Texture {
     pub colors: Vec<Vec<u8>>,
 }
 
-impl AssetParser<Wildcard> for Texture {
+impl AssetParser for Texture {
     type Output = Self;
 
     type Context<'ctx> = TextureSize;
@@ -52,7 +51,7 @@ pub struct MippedTexture {
     pub mips: [Texture; 4],
 }
 
-impl AssetParser<Wildcard> for MippedTexture {
+impl AssetParser for MippedTexture {
     type Output = Self;
 
     type Context<'ctx> = TextureSize;

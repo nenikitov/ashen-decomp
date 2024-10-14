@@ -1,6 +1,6 @@
 use std::mem;
 
-use super::{extension::*, AssetParser};
+use super::AssetParser;
 use crate::{error, utils::nom::*};
 
 const ROWS_COUNT: usize = 256;
@@ -12,7 +12,7 @@ pub struct GammaTable {
     pub lookups: Box<[[u8; ROWS_COUNT]; COLS_COUNT]>,
 }
 
-impl AssetParser<Pack> for GammaTable {
+impl AssetParser for GammaTable {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, gamma_table) = <GammaTable as AssetParser<Pack>>::parser(())(&GAMMA_TABLE_DATA)?;
+        let (_, gamma_table) = <GammaTable as AssetParser>::parser(())(&GAMMA_TABLE_DATA)?;
 
         let gamma_table = gamma_table
             .lookups

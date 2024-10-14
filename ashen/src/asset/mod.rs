@@ -10,55 +10,7 @@ pub mod texture;
 
 use crate::utils::nom::{Input, Result};
 
-/// Definition for all available extensions that the engine can parse.
-pub mod extension {
-    #[sealed::sealed]
-    pub trait Extension: AsRef<str> + for<'str> TryFrom<&'str str> {}
-
-    #[derive(Debug, thiserror::Error)]
-    #[error("The provided extension is invalid '{}'", self.0)]
-    pub struct ExtensionMismatchError(String);
-
-    macro_rules! impl_extension {
-        ($(#[$docs:meta])+ $name:ident => $ext:literal) => {
-            $(#[$docs])+
-            pub struct $name;
-
-            impl AsRef<str> for $name {
-                fn as_ref(&self) -> &str {
-                    $ext
-                }
-            }
-
-            impl TryFrom<&str> for $name {
-                type Error = ExtensionMismatchError;
-
-                fn try_from(value: &str) -> Result<Self, Self::Error> {
-                    if value == $ext {
-                        Ok(Self)
-                    } else {
-                        Err(ExtensionMismatchError(value.to_owned()))
-                    }
-                }
-            }
-
-            #[sealed::sealed]
-            impl Extension for $name {}
-        };
-    }
-
-    impl_extension!(
-        /// Wildcard
-        Wildcard => "*"
-    );
-
-    impl_extension!(
-        /// Extension that implies that the asset comes from ashen's files (packfile).
-        Pack => "pack"
-    );
-}
-
-pub trait AssetParser<Ext>
+pub trait AssetParser
 where
     Self: Sized,
 {
