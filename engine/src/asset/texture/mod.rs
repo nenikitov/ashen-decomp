@@ -1,11 +1,10 @@
-// TODO(nenikitov): When textures are moved to a separate public module later,
-// this `pub(crate)` could be deleted
-pub(crate) mod dat;
+mod dat;
 
-use self::dat::texture::Texture;
+use dat::{offset::TextureOffset, texture::MippedTexture};
+pub use dat::{size::TextureSize, texture::Texture};
+
 use super::{extension::*, AssetParser};
 use crate::utils::{compression::decompress, nom::*};
-use dat::{offset::TextureOffset, size::TextureSize, texture::MippedTexture};
 
 pub enum TextureMipKind {
     NonMipped(Texture),
@@ -85,12 +84,13 @@ impl AssetParser<Pack> for MippedTextureCollection {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::LazyCell, path::PathBuf};
+
     use super::*;
     use crate::{
         asset::color_map::{ColorMap, PaletteTexture},
         utils::{format::*, test::*},
     };
-    use std::{cell::LazyCell, path::PathBuf};
 
     const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("4F.dat");
     const TEXTURE_INFO_DATA: LazyCell<Vec<u8>> = deflated_file!("93.dat");

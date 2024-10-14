@@ -4,3 +4,16 @@ members = [
     "ashen",
     "engine",
 ]
+
+
+[profile.perf]
+inherits = "release"
+codegen-units = 1
+incremental = false
+lto = "fat"
+opt-level = 3
+panic = "abort"
+
+[profile.release]
+debug = true
+overflow-checks = true

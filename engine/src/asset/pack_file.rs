@@ -88,9 +88,10 @@ impl PackFile {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::LazyCell, io, path::PathBuf};
+
     use super::*;
     use crate::utils::{compression::decompress, test::*};
-    use std::{cell::LazyCell, io, path::PathBuf};
 
     #[test]
     fn header_works() -> eyre::Result<()> {

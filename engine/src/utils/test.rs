@@ -24,7 +24,7 @@ macro_rules! deflated_file {
                 DEFLATED_PATH,
                 $file
             )))
-            .expect("deflated test ran")
+            .expect("deflated test ran.\nRun `cargo test -- --ingored parse_rom_packfile` before")
         })
     };
 }
@@ -58,4 +58,6 @@ where
     inner(path.as_ref(), contents.as_ref())
 }
 
-pub(crate) use {deflated_file, parsed_file_path, workspace_file_path};
+pub(crate) use deflated_file;
+pub(crate) use parsed_file_path;
+pub(crate) use workspace_file_path;

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bitflags = "2.4.2"
 const_format = "0.2.32"
 fixed = "1.24.0"
 flate2 = "1.0.28"
@@ -16,6 +17,7 @@ sealed = "0.5.0"
 thiserror = "1.0.56"
 
 [dev-dependencies]
+assert_approx_eq = "1.1.0"
 eyre = "0.6.8"
 image = "0.24.8"
 

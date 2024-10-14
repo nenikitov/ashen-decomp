@@ -1,6 +1,6 @@
 use super::{
     extension::*,
-    texture::dat::{size::TextureSize, texture::Texture},
+    texture::{Texture, TextureSize},
     AssetParser,
 };
 use crate::{asset::color_map::Color, utils::nom::*};
@@ -38,12 +38,13 @@ impl AssetParser<Pack> for Skybox {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::LazyCell;
+
     use super::*;
     use crate::{
         asset::color_map::PaletteTexture,
         utils::{format::*, test::*},
     };
-    use std::cell::LazyCell;
 
     const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated_file!("3C.dat");
 

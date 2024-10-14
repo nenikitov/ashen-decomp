@@ -1,15 +1,18 @@
 mod dat;
 
+use dat::{
+    frame::{ModelFrame, ModelSpecs},
+    header::ModelHeader,
+    sequence::ModelSequence,
+    triangle::{ModelTriangle, TextureDimensions},
+};
+
 use super::{
     extension::*,
-    texture::dat::{size::TextureSize, texture::Texture},
+    texture::{Texture, TextureSize},
     AssetParser,
 };
 use crate::utils::nom::*;
-use dat::{
-    frame::ModelFrame, frame::ModelSpecs, header::ModelHeader, sequence::ModelSequence,
-    triangle::ModelTriangle, triangle::TextureDimensions,
-};
 
 pub struct Model {
     pub texture: Texture,
@@ -69,6 +72,14 @@ impl AssetParser<Pack> for Model {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        cell::LazyCell,
+        fmt::{Display, Formatter},
+        path::PathBuf,
+    };
+
+    use itertools::Itertools;
+
     use super::{
         dat::{frame::ModelVertex, triangle::ModelPoint},
         *,
@@ -76,12 +87,6 @@ mod tests {
     use crate::{
         asset::color_map::{Color, ColorMap, PaletteTexture},
         utils::test::*,
-    };
-    use itertools::Itertools;
-    use std::{
-        cell::LazyCell,
-        fmt::{Display, Formatter},
-        path::PathBuf,
     };
 
     const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");

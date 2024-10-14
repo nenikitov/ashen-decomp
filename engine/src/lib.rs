@@ -9,15 +9,22 @@
     clippy::cast_lossless,
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::missing_fields_in_debug,
+    clippy::unreadable_literal,
+
+    incomplete_features,
 )]
 #![warn(unused_imports)]
 #![feature(
     // Discussion about possible future alternatives:
     // https://github.com/rust-lang/rust/pull/101179
-    maybe_uninit_uninit_array_transpose,
-    let_chains,
-    lazy_cell,
+    debug_closure_helpers,
+    duration_consts_float,
+    generic_const_exprs,
     io_error_more,
+    let_chains,
+    maybe_uninit_uninit_array_transpose,
 )]
 
 pub mod asset;
