@@ -31,3 +31,5 @@ pub mod asset;
 pub mod directory;
 pub mod error;
 mod utils;
+
+pub mod asset_binrw;
