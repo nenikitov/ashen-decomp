@@ -21,6 +21,7 @@
     generic_const_exprs,
     io_error_more,
     let_chains,
+    impl_trait_in_assoc_type,
     // Discussion about possible future alternatives:
     // https://github.com/rust-lang/rust/pull/101179
     maybe_uninit_uninit_array_transpose,
