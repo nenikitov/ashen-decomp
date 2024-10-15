@@ -3,7 +3,7 @@ use std::rc::Rc;
 use bitflags::bitflags;
 
 use super::{convert_volume, finetune::FineTune, pattern_effect::PatternEffect, t_instrument::*};
-use crate::{asset::AssetParser, utils::nom::*};
+use crate::{asset::Parser, utils::nom::*};
 
 #[derive(Default, PartialEq, Clone, Copy, Debug)]
 pub enum PatternEventNote {
@@ -12,7 +12,7 @@ pub enum PatternEventNote {
     On(FineTune),
 }
 
-impl AssetParser for Option<PatternEventNote> {
+impl Parser for Option<PatternEventNote> {
     type Output = Self;
 
     type Context<'ctx> = bool;
@@ -48,7 +48,7 @@ bitflags! {
     }
 }
 
-impl AssetParser for PatternEventFlags {
+impl Parser for PatternEventFlags {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -68,7 +68,7 @@ impl AssetParser for PatternEventFlags {
     }
 }
 
-impl AssetParser for Option<PatternEventInstrument> {
+impl Parser for Option<PatternEventInstrument> {
     type Output = Self;
 
     type Context<'ctx> = (bool, &'ctx [Rc<TInstrument>]);
@@ -102,7 +102,7 @@ impl Default for PatternEventVolume {
     }
 }
 
-impl AssetParser for Option<PatternEventVolume> {
+impl Parser for Option<PatternEventVolume> {
     type Output = Self;
 
     type Context<'ctx> = bool;
@@ -149,7 +149,7 @@ impl PatternEvent {
     }
 }
 
-impl AssetParser for PatternEvent {
+impl Parser for PatternEvent {
     type Output = Self;
 
     type Context<'ctx> = &'ctx [Rc<TInstrument>];

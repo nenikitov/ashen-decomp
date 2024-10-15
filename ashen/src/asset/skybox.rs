@@ -1,6 +1,6 @@
 use super::{
     texture::{Texture, TextureSize},
-    AssetParser,
+    Parser,
 };
 use crate::{asset::color_map::Color, utils::nom::*};
 
@@ -11,7 +11,7 @@ pub struct Skybox {
     pub texture: Texture,
 }
 
-impl AssetParser for Skybox {
+impl Parser for Skybox {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, skybox) = <Skybox as AssetParser>::parser(())(&SKYBOX_DATA)?;
+        let (_, skybox) = Skybox::parser(())(&SKYBOX_DATA)?;
 
         output_file(
             parsed_file_path!("skyboxes/level-1.png"),

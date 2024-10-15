@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use super::AssetParser;
+use super::Parser;
 use crate::{error, utils::nom::*};
 
 const COLORS_COUNT: usize = 256;
@@ -35,7 +35,7 @@ impl Color {
     }
 }
 
-impl AssetParser for Color {
+impl Parser for Color {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -55,7 +55,7 @@ pub struct ColorMap {
     pub shades: Box<[[Color; COLORS_COUNT]; SHADES_COUNT]>,
 }
 
-impl AssetParser for ColorMap {
+impl Parser for ColorMap {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = <ColorMap as AssetParser>::parser(())(&COLOR_MAP_DATA)?;
+        let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
 
         output_file(
             parsed_file_path!("color-map/monsters.png"),

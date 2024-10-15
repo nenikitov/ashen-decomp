@@ -1,4 +1,4 @@
-use crate::{asset::AssetParser, utils::nom::*};
+use crate::{asset::Parser, utils::nom::*};
 
 pub struct ModelHeader {
     pub triangle_count: u32,
@@ -15,7 +15,7 @@ pub struct ModelHeader {
     pub locator_nodes: [u8; 16],
 }
 
-impl AssetParser for ModelHeader {
+impl Parser for ModelHeader {
     type Output = Self;
 
     type Context<'ctx> = ();

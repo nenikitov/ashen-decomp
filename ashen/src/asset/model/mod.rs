@@ -9,7 +9,7 @@ use dat::{
 
 use super::{
     texture::{Texture, TextureSize},
-    AssetParser,
+    Parser,
 };
 use crate::utils::nom::*;
 
@@ -20,7 +20,7 @@ pub struct Model {
     pub frames: Vec<ModelFrame>,
 }
 
-impl AssetParser for Model {
+impl Parser for Model {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -94,9 +94,9 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, model) = <Model as AssetParser>::parser(())(&MODEL_DATA)?;
+        let (_, model) = Model::parser(())(&MODEL_DATA)?;
         let palette = {
-            let (_, color_map) = <ColorMap as AssetParser>::parser(())(&COLOR_MAP_DATA)?;
+            let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
             color_map.shades[15]
         };
 

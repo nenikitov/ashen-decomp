@@ -2,7 +2,7 @@ pub mod color_map;
 pub mod gamma_table;
 pub mod model;
 pub mod pack_file;
-mod pack_info;
+pub mod pack_info;
 pub mod skybox;
 pub mod sound;
 pub mod string_table;
@@ -10,7 +10,7 @@ pub mod texture;
 
 use crate::utils::nom::{Input, Result};
 
-pub trait AssetParser
+pub trait Parser
 where
     Self: Sized,
 {

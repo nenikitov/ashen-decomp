@@ -3,7 +3,7 @@ use std::rc::Rc;
 use itertools::Itertools;
 
 use super::{pattern_event::*, t_instrument::*, uncompress};
-use crate::{asset::AssetParser, utils::nom::*};
+use crate::{asset::Parser, utils::nom::*};
 
 pub type PatternRow = Vec<PatternEvent>;
 pub type Pattern = Vec<PatternRow>;
@@ -90,7 +90,7 @@ impl std::fmt::Debug for TSong {
     }
 }
 
-impl AssetParser for TSong {
+impl Parser for TSong {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -185,7 +185,7 @@ struct TSongHeader {
     bpm: u8,
 }
 
-impl AssetParser for TSongHeader {
+impl Parser for TSongHeader {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -229,7 +229,7 @@ struct TSongPointers {
     sample_data: u32,
 }
 
-impl AssetParser for TSongPointers {
+impl Parser for TSongPointers {
     type Output = Self;
 
     type Context<'ctx> = ();

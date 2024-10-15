@@ -4,7 +4,7 @@ use bitflags::bitflags;
 
 use super::{convert_volume, finetune::FineTune};
 use crate::{
-    asset::{sound::sample::AudioBuffer, AssetParser},
+    asset::{sound::sample::AudioBuffer, Parser},
     utils::{iterator::CollectArray, nom::*},
 };
 
@@ -16,7 +16,7 @@ bitflags! {
     }
 }
 
-impl AssetParser for TInstrumentFlags {
+impl Parser for TInstrumentFlags {
     type Output = Self;
 
     type Context<'ctx> = ();
@@ -68,7 +68,7 @@ impl TInstrumentVolumeEnvelope {
     }
 }
 
-impl AssetParser for Option<TInstrumentVolumeEnvelope> {
+impl Parser for Option<TInstrumentVolumeEnvelope> {
     type Output = Self;
 
     type Context<'ctx> = bool;
@@ -129,7 +129,7 @@ impl TInstrument {
     const ENVELOPE_SIZE: usize = 325;
 }
 
-impl AssetParser for TInstrument {
+impl Parser for TInstrument {
     type Output = Self;
 
     type Context<'ctx> = &'ctx [Rc<TSample>];
@@ -214,7 +214,7 @@ pub struct TSample {
     pub buffer: AudioBuffer<i16>,
 }
 
-impl AssetParser for TSample {
+impl Parser for TSample {
     type Output = Self;
 
     type Context<'ctx> = &'ctx [i16];

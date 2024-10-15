@@ -3,7 +3,7 @@ mod dat;
 use dat::{offset::TextureOffset, texture::MippedTexture};
 pub use dat::{size::TextureSize, texture::Texture};
 
-use super::AssetParser;
+use super::Parser;
 use crate::utils::{compression::decompress, nom::*};
 
 pub enum TextureMipKind {
@@ -18,7 +18,7 @@ pub enum TextureAnimationKind {
 
 pub struct TextureOffsetCollection;
 
-impl AssetParser for TextureOffsetCollection {
+impl Parser for TextureOffsetCollection {
     type Output = Vec<TextureOffset>;
 
     type Context<'ctx> = ();
@@ -34,7 +34,7 @@ impl AssetParser for TextureOffsetCollection {
 
 pub struct MippedTextureCollection;
 
-impl AssetParser for MippedTextureCollection {
+impl Parser for MippedTextureCollection {
     type Output = Vec<TextureAnimationKind>;
 
     type Context<'ctx> = &'ctx [TextureOffset];
@@ -99,12 +99,12 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = <ColorMap as AssetParser>::parser(())(&COLOR_MAP_DATA)?;
+        let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
         let color_map = &color_map.shades[15];
         let (_, offsets) =
-            <TextureOffsetCollection as AssetParser>::parser(())(&TEXTURE_INFO_DATA)?;
+            TextureOffsetCollection::parser(())(&TEXTURE_INFO_DATA)?;
         let (_, textures) =
-            <MippedTextureCollection as AssetParser>::parser(&offsets)(&TEXTURE_DATA)?;
+            MippedTextureCollection::parser(&offsets)(&TEXTURE_DATA)?;
 
         let output_dir = PathBuf::from(parsed_file_path!("textures/"));
 

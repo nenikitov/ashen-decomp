@@ -1,4 +1,4 @@
-use crate::{asset::AssetParser, utils::nom::*};
+use crate::{asset::Parser, utils::nom::*};
 
 pub struct TextureOffset {
     pub width: u16,
@@ -10,7 +10,7 @@ pub struct TextureOffset {
     pub next_animation_texture_id: u32,
 }
 
-impl AssetParser for TextureOffset {
+impl Parser for TextureOffset {
     type Context<'ctx> = ();
 
     type Output = Self;

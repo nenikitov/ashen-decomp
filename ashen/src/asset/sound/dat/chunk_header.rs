@@ -1,5 +1,5 @@
 use crate::{
-    asset::{pack_info::PackInfo, AssetParser},
+    asset::{pack_info::PackInfo, Parser},
     utils::nom::*,
 };
 
@@ -7,7 +7,7 @@ pub struct SoundChunkHeader {
     pub infos: Vec<PackInfo>,
 }
 
-impl AssetParser for SoundChunkHeader {
+impl Parser for SoundChunkHeader {
     type Output = Self;
 
     type Context<'ctx> = ();
