@@ -91,11 +91,9 @@ impl std::fmt::Debug for TSong {
 }
 
 impl Parser for TSong {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (header, pointers) = {
                 let (input, header) = TSongHeader::parser(())(input)?;
@@ -186,11 +184,9 @@ struct TSongHeader {
 }
 
 impl Parser for TSongHeader {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, song_length) = number::le_u8(input)?;
             let (input, restart_order) = number::le_u8(input)?;
@@ -230,11 +226,9 @@ struct TSongPointers {
 }
 
 impl Parser for TSongPointers {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, orders) = number::le_u32(input)?;
             let (input, patterns) = number::le_u32(input)?;

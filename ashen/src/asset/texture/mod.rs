@@ -16,14 +16,10 @@ pub enum TextureAnimationKind {
     Animated(Vec<TextureMipKind>),
 }
 
-pub struct TextureOffsetCollection;
-
-impl Parser for TextureOffsetCollection {
-    type Output = Vec<TextureOffset>;
-
+impl Parser for Vec<TextureOffset> {
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (_, offsets) = multi::many0(TextureOffset::parser(()))(input)?;
 
@@ -32,14 +28,10 @@ impl Parser for TextureOffsetCollection {
     }
 }
 
-pub struct MippedTextureCollection;
-
-impl Parser for MippedTextureCollection {
-    type Output = Vec<TextureAnimationKind>;
-
+impl Parser for Vec<TextureAnimationKind> {
     type Context<'ctx> = &'ctx [TextureOffset];
 
-    fn parser(offsets: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(offsets: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let textures = offsets
                 .iter()
@@ -102,9 +94,9 @@ mod tests {
         let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
         let color_map = &color_map.shades[15];
         let (_, offsets) =
-            TextureOffsetCollection::parser(())(&TEXTURE_INFO_DATA)?;
+            Vec::<TextureOffset>::parser(())(&TEXTURE_INFO_DATA)?;
         let (_, textures) =
-            MippedTextureCollection::parser(&offsets)(&TEXTURE_DATA)?;
+            Vec::<TextureAnimationKind>::parser(&offsets)(&TEXTURE_DATA)?;
 
         let output_dir = PathBuf::from(parsed_file_path!("textures/"));
 

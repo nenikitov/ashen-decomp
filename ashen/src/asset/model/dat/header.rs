@@ -16,11 +16,9 @@ pub struct ModelHeader {
 }
 
 impl Parser for ModelHeader {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, triangle_count) = number::le_u32(input)?;
             let (input, vertex_count) = number::le_u32(input)?;

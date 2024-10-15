@@ -25,19 +25,10 @@ impl Sound {
     }
 }
 
-pub struct SoundCollection;
-
-impl SoundCollection {
-    pub const SAMPLE_RATE: usize = 16000;
-    pub const CHANNEL_COUNT: usize = 1;
-}
-
-impl Parser for SoundCollection {
-    type Output = Vec<Sound>;
-
+impl Parser for Vec<Sound> {
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (_, header) = SoundAssetHeader::parser(())(input)?;
 
@@ -78,7 +69,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, sounds) = SoundCollection::parser(())(&SOUND_DATA)?;
+        let (_, sounds) = Vec::<Sound>::parser(())(&SOUND_DATA)?;
 
         let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
 

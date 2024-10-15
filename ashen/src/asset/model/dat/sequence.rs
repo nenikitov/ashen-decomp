@@ -5,14 +5,12 @@ pub struct ModelSequence {
 }
 
 impl Parser for ModelSequence {
-    type Output = Self;
-
     // TODO(nenikitov): Maybe refactor it to not accept full input.
     // In other asset parts, it's parent's responsability to cut input into slices
     // for asset parts to parse.
     type Context<'ctx> = Input<'ctx>;
 
-    fn parser(full_input: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(full_input: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, frame_count) = number::le_u32(input)?;
             let (input, offset) = number::le_u32(input)?;

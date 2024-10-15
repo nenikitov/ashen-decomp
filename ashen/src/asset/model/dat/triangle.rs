@@ -12,11 +12,9 @@ pub struct TextureDimensions {
 }
 
 impl Parser for ModelPoint {
-    type Output = Self;
-
     type Context<'ctx> = &'ctx TextureDimensions;
 
-    fn parser(texture_dimensions: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(texture_dimensions: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, vertex_index) = number::le_u16(input)?;
 
@@ -37,11 +35,9 @@ pub struct ModelTriangle {
 }
 
 impl Parser for ModelTriangle {
-    type Output = Self;
-
     type Context<'ctx> = TextureDimensions;
 
-    fn parser(texture_dimensions: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(texture_dimensions: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, points) = multi::count!(ModelPoint::parser(&texture_dimensions))(input)?;
 

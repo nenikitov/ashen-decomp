@@ -16,11 +16,9 @@ pub struct Texture {
 }
 
 impl Parser for Texture {
-    type Output = Self;
-
     type Context<'ctx> = TextureSize;
 
-    fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, colors) = multi::count!(number::le_u8, size.width * size.height)(input)?;
 
@@ -52,11 +50,9 @@ pub struct MippedTexture {
 }
 
 impl Parser for MippedTexture {
-    type Output = Self;
-
     type Context<'ctx> = TextureSize;
 
-    fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(size: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, mip_1) = Texture::parser(size)(input)?;
             let (input, mip_2) = Texture::parser(size / 2)(input)?;

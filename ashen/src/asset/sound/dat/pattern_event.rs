@@ -13,11 +13,9 @@ pub enum PatternEventNote {
 }
 
 impl Parser for Option<PatternEventNote> {
-    type Output = Self;
-
     type Context<'ctx> = bool;
 
-    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, note) = number::le_u8(input)?;
 
@@ -49,11 +47,9 @@ bitflags! {
 }
 
 impl Parser for PatternEventFlags {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
 
@@ -69,13 +65,9 @@ impl Parser for PatternEventFlags {
 }
 
 impl Parser for Option<PatternEventInstrument> {
-    type Output = Self;
-
     type Context<'ctx> = (bool, &'ctx [Rc<TInstrument>]);
 
-    fn parser(
-        (should_parse, instruments): Self::Context<'_>,
-    ) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((should_parse, instruments): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, instrument) = number::le_u8(input)?;
 
@@ -103,11 +95,9 @@ impl Default for PatternEventVolume {
 }
 
 impl Parser for Option<PatternEventVolume> {
-    type Output = Self;
-
     type Context<'ctx> = bool;
 
-    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, volume) = number::le_u8(input)?;
 
@@ -150,11 +140,9 @@ impl PatternEvent {
 }
 
 impl Parser for PatternEvent {
-    type Output = Self;
-
     type Context<'ctx> = &'ctx [Rc<TInstrument>];
 
-    fn parser(instruments: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(instruments: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, flags) = PatternEventFlags::parser(())(input)?;
 

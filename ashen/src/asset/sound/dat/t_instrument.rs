@@ -17,11 +17,9 @@ bitflags! {
 }
 
 impl Parser for TInstrumentFlags {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
 
@@ -69,11 +67,9 @@ impl TInstrumentVolumeEnvelope {
 }
 
 impl Parser for Option<TInstrumentVolumeEnvelope> {
-    type Output = Self;
-
     type Context<'ctx> = bool;
 
-    fn parser(has_envelope: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(has_envelope: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, begin) = number::le_u16(input)?;
             let (input, end) = number::le_u16(input)?;
@@ -130,11 +126,9 @@ impl TInstrument {
 }
 
 impl Parser for TInstrument {
-    type Output = Self;
-
     type Context<'ctx> = &'ctx [Rc<TSample>];
 
-    fn parser(samples: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(samples: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, flags) = TInstrumentFlags::parser(())(input)?;
 
@@ -215,11 +209,9 @@ pub struct TSample {
 }
 
 impl Parser for TSample {
-    type Output = Self;
-
     type Context<'ctx> = &'ctx [i16];
 
-    fn parser(sample_data: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(sample_data: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, flags) = number::le_u8(input)?;
             let (input, volume) = number::le_u8(input)?;

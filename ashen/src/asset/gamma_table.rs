@@ -13,11 +13,9 @@ pub struct GammaTable {
 }
 
 impl Parser for GammaTable {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             error::ensure_bytes_length(
                 input,

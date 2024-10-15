@@ -21,11 +21,9 @@ impl TEffect {
 }
 
 impl Parser for TEffect {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (_, pointers) = TEffectPointers::parser(())(input)?;
 
@@ -51,11 +49,9 @@ struct TEffectPointers {
 }
 
 impl Parser for TEffectPointers {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, instrument) = number::le_u32(input)?;
             let (input, sample) = number::le_u32(input)?;

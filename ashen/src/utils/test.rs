@@ -24,7 +24,7 @@ macro_rules! deflated_file {
                 DEFLATED_PATH,
                 $file
             )))
-            .expect("deflated test ran.\nRun `cargo test -- --ingored parse_rom_packfile` before")
+            .expect("deflated test ran.\nRun `cargo test -- --ignored parse_rom_packfile` before.")
         })
     };
 }

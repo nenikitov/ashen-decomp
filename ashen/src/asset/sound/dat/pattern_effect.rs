@@ -128,11 +128,9 @@ impl PatternEffect {
 }
 
 impl Parser for Option<PatternEffect> {
-    type Output = Self;
-
     type Context<'ctx> = bool;
 
-    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser(should_parse: Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             use PatternEffect as E;
 

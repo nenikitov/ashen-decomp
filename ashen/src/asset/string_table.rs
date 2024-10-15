@@ -15,11 +15,9 @@ fn utf_16_string(input: &[u8]) -> Result<String> {
 }
 
 impl Parser for StringTable {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, count) = number::le_u32(input)?;
             // TODO(Unavailable): Find out what the "catholic" characters are.

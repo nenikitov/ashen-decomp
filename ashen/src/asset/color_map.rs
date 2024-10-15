@@ -36,11 +36,9 @@ impl Color {
 }
 
 impl Parser for Color {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, color) = number::le_u32(input)?;
             Ok((input, Self::from_12_bit(color as u16)))
@@ -56,11 +54,9 @@ pub struct ColorMap {
 }
 
 impl Parser for ColorMap {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             error::ensure_bytes_length(
                 input,

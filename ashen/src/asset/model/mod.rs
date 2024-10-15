@@ -21,11 +21,9 @@ pub struct Model {
 }
 
 impl Parser for Model {
-    type Output = Self;
-
     type Context<'ctx> = ();
 
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (_, header) = ModelHeader::parser(())(input)?;
 

@@ -13,9 +13,7 @@ pub struct TextureOffset {
 impl Parser for TextureOffset {
     type Context<'ctx> = ();
 
-    type Output = Self;
-
-    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self::Output> {
+    fn parser((): Self::Context<'_>) -> impl Fn(Input) -> Result<Self> {
         move |input| {
             let (input, width) = number::le_u16(input)?;
             let (input, height) = number::le_u16(input)?;
