@@ -93,10 +93,8 @@ mod tests {
     fn parse_rom_asset() -> eyre::Result<()> {
         let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
         let color_map = &color_map.shades[15];
-        let (_, offsets) =
-            Vec::<TextureOffset>::parser(())(&TEXTURE_INFO_DATA)?;
-        let (_, textures) =
-            Vec::<TextureAnimationKind>::parser(&offsets)(&TEXTURE_DATA)?;
+        let (_, offsets) = Vec::<TextureOffset>::parser(())(&TEXTURE_INFO_DATA)?;
+        let (_, textures) = Vec::<TextureAnimationKind>::parser(&offsets)(&TEXTURE_DATA)?;
 
         let output_dir = PathBuf::from(parsed_file_path!("textures/"));
 
