@@ -57,6 +57,34 @@ where
     }
 }
 
+pub struct Pointed<T>(T)
+where
+    T: BinRead + 'static,
+    for<'a> T::Args<'a>: Clone;
+
+#[derive(binrw::NamedArgs, Clone)]
+pub struct PointedArgs<Inner: Clone> {
+    pub offset: SeekFrom,
+    pub inner: Inner,
+}
+
+impl<T> BinRead for Pointed<T>
+where
+    T: BinRead + 'static,
+    for<'a> T::Args<'a>: Clone,
+{
+    type Args<'a> = PointedArgs<T::Args<'a>>;
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        reader.seek(args.offset);
+        T::read_options(reader, endian, args.inner).map(Pointed)
+    }
+}
+
 #[binread]
 #[br(little, magic = b"PMAN")]
 #[derive(Debug)]
