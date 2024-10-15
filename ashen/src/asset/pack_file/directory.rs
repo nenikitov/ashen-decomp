@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ffi, io, path::Path};
+use std::{collections::{HashMap, VecDeque}, ffi, io, path::Path};
 
 use super::PackFile;
 
@@ -19,88 +19,160 @@ impl FileHandle {
     }
 }
 
-pub struct DirHandle<'n, 'c> {
-    name: &'n str,
-    children: &'c [FileHandle],
+pub struct DirHandle {
+    name: Box<str>,
+    children: Vec<Handle>,
 }
 
-impl DirHandle<'_, '_> {
+impl DirHandle {
     /// The directory's name.
     pub fn name(&self) -> &str {
         &self.name
     }
 }
 
-impl<'c> Iterator for DirHandle<'_, 'c> {
-    type Item = &'c FileHandle;
+// impl IntoIterator for DirHandle {
+//     type Item = FileHandle;
+//     type IntoIter = impl Iterator<Item = Self::Item>;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.children
+//             .into_iter()
+//             .flat_map(|k| match k {
+//                 Handle::File(file) => vec![file],
+//                 Handle::Dir(dir) => dir.into_iter().collect(),
+//             })
+//             .into_iter()
+//     }
+// }
 
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.children.split_first() {
-            Some((head, tail)) => {
-                self.children = tail;
-                Some(head)
-            }
-            None => None,
-        }
-    }
+// impl Iterator for DirHandle {
+//     type Item = FileHandle;
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         match self.current {
+//             Some(_) => {}
+//             None => {
+//                 self.current = self.children.pop();
+//                 self.next();
+//             }
+//         };
+//
+//         // Some(current) => match self.children.split_first() {
+//         //     Some((head, tail)) => {
+//         //         self.children = tail;
+//         //         Some(head)
+//         //     }
+//         //     None => None,
+//         todo!()
+//     }
+// }
+
+enum Handle {
+    File(FileHandle),
+    Dir(DirHandle),
 }
 
 pub struct PackfileDirectory {
-    entries: HashMap<Box<str>, Vec<FileHandle>>,
+    root: DirHandle,
 }
 
-impl PackfileDirectory {
-    pub fn new(pack: PackFile) -> Self {
-        todo!()
-    }
-
-    pub fn walk<P>(&self, path: P) -> io::Result<DirHandle>
-    where
-        P: AsRef<Path>,
-    {
-        // PERF(Unavailable): inner fn
-        let path = path.as_ref();
-        let path = path.to_str().ok_or(io::ErrorKind::InvalidFilename)?;
-
-        let (name, children) = self
-            .entries
-            .get_key_value(path)
-            .ok_or(io::ErrorKind::NotFound)?;
-
-        Ok(DirHandle { name, children })
-    }
-
-    pub fn get<P>(&self, path: P) -> io::Result<&'_ FileHandle>
-    where
-        P: AsRef<Path>,
-    {
-        // NIGHTLY: Has open PR
-        fn str_not_eq_path(str: &str, path: &Path) -> bool {
-            ffi::OsStr::new(str) != path
-        }
-
-        fn is_relative_to_root(path: &Path) -> Option<&Path> {
-            (str_not_eq_path(".", path) && str_not_eq_path("", path)).then_some(path)
-        }
-
-        // PERF(Unavailable): inner fn
-        let path = path.as_ref();
-        // NOTE: This needs to go before getting the `parent`, because this will
-        // error out if the file path terminates in `root`, a `prefix`, or if
-        // it's the empty string.
-        let name = path.file_name().ok_or(io::ErrorKind::InvalidFilename)?;
-
-        let parent = path
-            .parent()
-            .and_then(is_relative_to_root)
-            .unwrap_or(Path::new("/"));
-
-        Ok(self
-            .walk(parent)?
-            .find(|file| file.name() == name)
-            .ok_or(io::ErrorKind::NotFound)?)
-    }
-}
+// impl PackfileDirectory {
+//     pub fn new(pack: PackFile) -> Self {
+//         #[rustfmt::skip]
+//         macro_rules! bs { ($str:literal) => { $str.to_owned().into_boxed_str() }; }
+//
+//         let mut map = HashMap::new();
+//
+//         map.insert(bs!("/"), {
+//             let copyright = FileHandle {
+//                 name: bs!("copyright"),
+//                 bytes: pack.copyright.into_bytes().into_boxed_slice(),
+//             };
+//             vec![copyright]
+//         });
+//
+//         Self { entries: map }
+//     }
+//
+//     pub fn walk<P>(&self, path: P) -> io::Result<DirHandle>
+//     where
+//         P: AsRef<Path>,
+//     {
+//         // PERF(Unavailable): inner fn
+//         let path = path.as_ref();
+//         let path = path.to_str().ok_or(io::ErrorKind::InvalidFilename)?;
+//
+//         let (name, children) = self
+//             .entries
+//             .get_key_value(path)
+//             .ok_or(io::ErrorKind::NotFound)?;
+//
+//         Ok(DirHandle { name, children })
+//     }
+//
+//     pub fn get<P>(&self, path: P) -> io::Result<&'_ FileHandle>
+//     where
+//         P: AsRef<Path>,
+//     {
+//         // NIGHTLY: Has open PR
+//         fn str_not_eq_path(str: &str, path: &Path) -> bool {
+//             ffi::OsStr::new(str) != path
+//         }
+//
+//         fn is_relative_to_root(path: &Path) -> Option<&Path> {
+//             (str_not_eq_path(".", path) && str_not_eq_path("", path)).then_some(path)
+//         }
+//
+//         // PERF(Unavailable): inner fn
+//         let path = path.as_ref();
+//         // NOTE: This needs to go before getting the `parent`, because this will
+//         // error out if the file path terminates in `root`, a `prefix`, or if
+//         // it's the empty string.
+//         let name = path.file_name().ok_or(io::ErrorKind::InvalidFilename)?;
+//
+//         let parent = path
+//             .parent()
+//             .and_then(is_relative_to_root)
+//             .unwrap_or(Path::new("/"));
+//
+//         Ok(self
+//             .walk(parent)?
+//             .find(|file| file.name() == name)
+//             .ok_or(io::ErrorKind::NotFound)?)
+//     }
+// }
+//
+// #[cfg(test)]
+// mod tests {
+//     use std::cell::LazyCell;
+//
+//     use super::*;
+//     use crate::utils::test::*;
+//
+//     const ROM_DATA: LazyCell<Vec<u8>> = std::cell::LazyCell::new(|| {
+//         std::fs::read(workspace_file_path!("rom/packfile.dat")).expect("ROM is present")
+//     });
+//
+//     #[test]
+//     #[ignore = "uses Ashen ROM files"]
+//     fn packfile_directory_works() -> eyre::Result<()> {
+//         let (_, pack_file) = PackFile::new(&ROM_DATA)?;
+//
+//         let dir = PackfileDirectory::new(pack_file);
+//         let dir = dir.walk("/")?;
+//
+//         for file in dir {
+//             println!(
+//                 "name: {}; bytes: {}",
+//                 file.name(),
+//                 String::from_utf8_lossy(file.bytes())
+//             );
+//         }
+//
+//         Ok(())
+//     }
+// }
 
 // const ASSETS: [&'static str; 158] = [
 //     "misc/gamma_table",
@@ -261,4 +333,3 @@ impl PackfileDirectory {
 //     "string_table/italian",
 //     "string_table/german",
 //     "string_table/spanish",
-// ];

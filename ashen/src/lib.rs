@@ -28,6 +28,5 @@
 )]
 
 pub mod asset;
-pub mod directory;
 pub mod error;
 mod utils;

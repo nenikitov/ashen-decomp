@@ -86,6 +86,16 @@ impl PackFile {
     }
 }
 
+impl PackFile {
+    fn copyright(&self) -> &str {
+        &self.copyright
+    }
+
+    fn into_raw_copyright(self) -> [u8; Self::COPYRIGHT_LENGTH] {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{cell::LazyCell, io, path::PathBuf};
