@@ -19,11 +19,11 @@ impl FileHandle {
 }
 
 #[derive(Default, Debug)]
-struct PackFileDirectory {
+pub struct VirtualFileSystem {
     files: BTreeMap<PathBuf, FileHandle>,
 }
 
-impl PackFileDirectory {
+impl VirtualFileSystem {
     pub fn from_106_packfile(pack: PackFile) -> Option<Self> {
         let mut files = BTreeMap::new();
 
@@ -250,7 +250,7 @@ mod tests {
     fn packfile_directory_works() -> eyre::Result<()> {
         let (_, pack_file) = PackFile::new(&ROM_DATA)?;
 
-        let dir = PackFileDirectory::from_106_packfile(pack_file).unwrap();
+        let dir = VirtualFileSystem::from_106_packfile(pack_file).unwrap();
         let dir = dir.walk("/", true)?;
 
         for file in dir {

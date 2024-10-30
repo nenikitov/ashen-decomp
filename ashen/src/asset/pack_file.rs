@@ -1,6 +1,6 @@
 //! This only works with the last version of Ashen :).
 
-mod directory;
+pub mod directory;
 
 use crate::utils::nom::*;
 

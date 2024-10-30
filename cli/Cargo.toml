@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 ashen = { path = "../ashen/" }
+clap = { version = "4.5.20", features = ["derive"] }
