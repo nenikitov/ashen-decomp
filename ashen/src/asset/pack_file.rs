@@ -1,5 +1,7 @@
 //! This only works with the last version of Ashen :).
 
+pub mod directory;
+
 use crate::utils::nom::*;
 
 #[derive(Debug, PartialEq)]
@@ -8,7 +10,7 @@ struct EntryHeader {
     size: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct EntryData {
     bytes: Vec<u8>,
 }
@@ -81,6 +83,16 @@ impl PackFile {
         let entries = entry_headers.iter().map(|h| entry(input, h)).collect();
 
         Ok((&[], entries))
+    }
+}
+
+impl PackFile {
+    fn copyright(&self) -> &str {
+        &self.copyright
+    }
+
+    fn into_raw_copyright(self) -> [u8; Self::COPYRIGHT_LENGTH] {
+        todo!()
     }
 }
 

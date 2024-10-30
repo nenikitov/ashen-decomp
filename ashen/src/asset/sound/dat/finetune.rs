@@ -3,7 +3,7 @@ use std::{
     sync::LazyLock,
 };
 
-use crate::utils::iterator::CollectArray;
+use crate::utils::iterator::IterMore;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FineTune {
