@@ -15,7 +15,6 @@ dependencies = [
  "assert_approx_eq",
  "bitflags 2.4.2",
  "const_format",
- "either",
  "eyre",
  "fixed",
  "flate2",

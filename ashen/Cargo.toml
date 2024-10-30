@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 bitflags = "2.4.2"
 const_format = "0.2.32"
-either = "1.13.0"
 fixed = "1.24.0"
 flate2 = "1.0.28"
 itertools = "0.12.0"
