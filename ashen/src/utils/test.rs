@@ -5,20 +5,20 @@ pub const DEFLATED_PATH: &'static str = "output/deflated/";
 
 /// Gets a path relative to the workspace directory.
 macro_rules! workspace_file_path {
-    ($file:expr) => {
+    ($file:expr_2021) => {
         const_format::concatcp!(env!("CARGO_MANIFEST_DIR"), "/../", $file)
     };
 }
 
 macro_rules! parsed_file_path {
-    ($file:expr) => {
+    ($file:expr_2021) => {
         workspace_file_path!(const_format::concatcp!(PARSED_PATH, $file))
     };
 }
 
 /// Gets the bytes from a file on the "output/deflated" folder.
 macro_rules! deflated_file {
-    ($file:expr) => {
+    ($file:expr_2021) => {
         std::cell::LazyCell::new(|| {
             std::fs::read(workspace_file_path!(const_format::concatcp!(
                 DEFLATED_PATH,
