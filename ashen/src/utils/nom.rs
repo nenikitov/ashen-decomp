@@ -21,7 +21,7 @@ pub mod number {
     use super::Result;
 
     macro_rules! parser_for_fixed {
-        ($type: ty, $bits: expr) => {
+        ($type: ty, $bits: expr_2021) => {
             paste! {
                 pub fn [<le_$type:lower>](input: &[u8]) -> Result<$type> {
                     let (input, value) = number::complete::[<le_i$bits>](input)?;
@@ -31,7 +31,7 @@ pub mod number {
         };
     }
 
-    use fixed::types::{I16F16, I24F8, I8F24};
+    use fixed::types::{I8F24, I16F16, I24F8};
 
     parser_for_fixed!(I8F24, 32);
     parser_for_fixed!(I16F16, 32);
@@ -76,11 +76,11 @@ pub mod multi {
     #[doc(hidden)] // `macro_export` puts the macro at the root of the crate.
     macro_rules! __count {
         // [_; N] (infers N by context).
-        ($fn:expr) => {
+        ($fn:expr_2021) => {
             $crate::utils::nom::__array_count($fn)
         };
         // Vec<_> (it contains **exactly** `$count` elements).
-        ($fn:expr, $count:expr) => {
+        ($fn:expr_2021, $count:expr_2021) => {
             $crate::utils::nom::multi::count($fn, $count)
         };
     }

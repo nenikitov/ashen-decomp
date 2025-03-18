@@ -3,8 +3,8 @@ use itertools::Itertools;
 use super::size::TextureSize;
 use crate::{
     asset::{
-        color_map::{Color, PaletteTexture},
         Parser,
+        color_map::{Color, PaletteTexture},
     },
     utils::nom::*,
 };

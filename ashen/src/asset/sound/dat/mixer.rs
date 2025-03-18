@@ -228,18 +228,10 @@ where
 {
     use std::cmp::Ordering;
     fn partial_min<T: PartialOrd>(input: T, min: T) -> T {
-        if input < min {
-            min
-        } else {
-            input
-        }
+        if input < min { min } else { input }
     }
     fn partial_max<T: PartialOrd>(input: T, max: T) -> T {
-        if input > max {
-            max
-        } else {
-            input
-        }
+        if input > max { max } else { input }
     }
     match from.partial_cmp(&to) {
         Some(Ordering::Less) => partial_max(from + step, to),
