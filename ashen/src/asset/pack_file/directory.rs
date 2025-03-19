@@ -18,7 +18,7 @@ impl FileHandle {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct VirtualFileSystem {
     files: BTreeMap<PathBuf, FileHandle>,
 }
@@ -40,6 +40,7 @@ impl VirtualFileSystem {
         }
 
         touch!("/copyright", copyright);
+        touch!("/gamma_table");
         touch!("/color_map/creature");
         touch!("/color_map/creature.ghost");
         touch!("/color_map/wraith");
@@ -192,8 +193,9 @@ impl VirtualFileSystem {
         // "SPRITE_TEXTURE_INFO",
         // "TEXTURES",
         // "SPRITE_TEXTURES",
-        // "sound/sound.collection", // Should be separated into multiple files
-        pack.by_ref().skip(6);
+        pack.by_ref().skip(5);
+
+        let sound_collection = pack.next()?.bytes;
 
         touch!("/string_table/english_uk");
         touch!("/string_table/english_us");
