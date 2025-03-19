@@ -1,5 +1,3 @@
-use std::mem;
-
 use super::Parser;
 use crate::{error, utils::nom::*};
 
@@ -26,42 +24,29 @@ impl Parser for GammaTable {
             // Technically this can't never fail.
             let (input, bytes) = bytes::take(GAMMA_TABLE_LENGTH)(input)?;
 
-            // SAFETY(Unavailable): Dont transmute references!!!!!!!
-            //
+            let lookups = bytes.as_ptr() as *const [[_; ROWS_COUNT]; COLS_COUNT];
             // SAFETY: bytes::take() should return exactly `ROWS_COUNT * COLS_COUNT`
-            // bytes; also slices and arrays are guaranteed to have the same memory
-            // layout.
-            let lookups =
-                unsafe { mem::transmute_copy::<_, &[[u8; ROWS_COUNT]; COLS_COUNT]>(&bytes) };
+            // bytes (GAMMA_TABLE_LENGTH).
+            let lookups = unsafe { *lookups };
 
             Ok((
                 input,
                 Self {
-                    lookups: Box::new(*lookups),
+                    lookups: Box::new(lookups),
                 },
             ))
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::cell::LazyCell;
-
-    use super::*;
-    use crate::{
-        asset::color_map::Color,
-        utils::{format::*, test::*},
-    };
-
-    const GAMMA_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("00.dat");
-
-    #[test]
-    #[ignore = "uses Ashen ROM files"]
-    fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, gamma_table) = GammaTable::parser(())(&GAMMA_TABLE_DATA)?;
-
-        let gamma_table = gamma_table
+impl GammaTable {
+    #[cfg(feature = "conv")]
+    pub fn to_png<W>(&self, mut writer: W) -> std::io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        use crate::{asset::color_map::Color, utils::format::PngFile};
+        let bytes = self
             .lookups
             .to_vec()
             .into_iter()
@@ -74,9 +59,27 @@ mod tests {
                     })
                     .collect::<Vec<_>>()
             })
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+            .to_png();
+        writer.write_all(&bytes)
+    }
+}
 
-        output_file(parsed_file_path!("gamma-table.png"), gamma_table.to_png())?;
+#[cfg(test)]
+mod tests {
+    use std::cell::LazyCell;
+
+    use super::*;
+    use crate::utils::test::*;
+
+    const GAMMA_TABLE: LazyCell<Vec<u8>> = LazyCell::new(|| deflated_file!("00.dat"));
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_asset() -> eyre::Result<()> {
+        let (_, gamma_table) = GammaTable::parser(())(&GAMMA_TABLE)?;
+
+        output_file(PARSED_PATH.join("gamma-table.png")).and_then(|w| gamma_table.to_png(w))?;
 
         Ok(())
     }

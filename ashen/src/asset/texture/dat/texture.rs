@@ -2,11 +2,8 @@ use itertools::Itertools;
 
 use super::size::TextureSize;
 use crate::{
-    asset::{
-        Parser,
-        color_map::{Color, PaletteTexture},
-    },
-    utils::nom::*,
+    asset::{Parser, color_map::Color},
+    utils::{format::PaletteTexture, nom::*},
 };
 
 // TODO(nenikitov): Move this to a separate public module later

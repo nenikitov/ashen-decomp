@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use super::Parser;
 use crate::{error, utils::nom::*};
 
@@ -85,12 +83,23 @@ impl Parser for ColorMap {
     }
 }
 
+impl ColorMap {
+    #[cfg(feature = "conv")]
+    pub fn to_png<W>(&self, mut write: W) -> std::io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        use crate::utils::format::PngFile;
+        write.write_all(&self.shades.as_slice().to_png())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::cell::LazyCell;
 
     use super::*;
-    use crate::utils::{format::*, test::*};
+    use crate::utils::test::*;
 
     #[test]
     fn shade_works() -> eyre::Result<()> {
@@ -146,35 +155,46 @@ mod tests {
         Ok(())
     }
 
-    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
+    const COLOR_MAPS: LazyCell<Vec<(&str, Vec<u8>)>> = LazyCell::new(|| {
+        vec![
+            ("creature", deflated_file!("01.dat")),
+            ("creature-ghost", deflated_file!("02.dat")),
+            ("ghost-creature-ghost", deflated_file!("03.dat")),
+            ("pickup", deflated_file!("04.dat")),
+            ("pickup-ghost", deflated_file!("05.dat")),
+            ("jacob", deflated_file!("06.dat")),
+            ("level-ghost", deflated_file!("07.dat")),
+            ("player-hands", deflated_file!("08.dat")),
+            ("player-hands-ghost", deflated_file!("09.dat")),
+            ("level1a", deflated_file!("4F.dat")),
+            ("level1b", deflated_file!("53.dat")),
+            ("level2a", deflated_file!("57.dat")),
+            ("level2b", deflated_file!("5B.dat")),
+            ("level3a", deflated_file!("5F.dat")),
+            ("level3b", deflated_file!("63.dat")),
+            ("level4a", deflated_file!("67.dat")),
+            ("level4b", deflated_file!("6B.dat")),
+            ("level5a", deflated_file!("6F.dat")),
+            ("level5b", deflated_file!("73.dat")),
+            ("level6", deflated_file!("77.dat")),
+            ("level7", deflated_file!("7B.dat")),
+            ("level8", deflated_file!("7F.dat")),
+            ("leveldm1", deflated_file!("82.dat")),
+            ("leveldm2", deflated_file!("85.dat")),
+            ("leveldm3", deflated_file!("88.dat")),
+            ("leveldm4", deflated_file!("8B.dat")),
+        ]
+    });
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
-
-        output_file(
-            parsed_file_path!("color-map/monsters.png"),
-            color_map.shades.as_slice().to_png(),
-        )?;
+        for (name, data) in COLOR_MAPS.iter() {
+            let (_, color_map) = ColorMap::parser(())(data)?;
+            output_file(PARSED_PATH.join(format!("color-map/{name}.png")))
+                .and_then(|w| color_map.to_png(w))?;
+        }
 
         Ok(())
-    }
-}
-
-pub trait PaletteTexture {
-    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>>;
-}
-
-// impl for any 2D array like data structure.
-impl<Outer: ?Sized, Inner> PaletteTexture for Outer
-where
-    Outer: Deref<Target = [Inner]>,
-    Inner: AsRef<[u8]>,
-{
-    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>> {
-        self.iter()
-            .map(|c| c.as_ref().iter().map(|c| palette[*c as usize]).collect())
-            .collect()
     }
 }

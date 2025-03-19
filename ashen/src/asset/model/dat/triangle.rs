@@ -19,6 +19,7 @@ impl Parser for ModelPoint {
             let (input, vertex_index) = number::le_u16(input)?;
 
             let (input, u) = number::le_u16(input)?;
+            // TODO(nenikitov): Double check that this +0.5 is needed
             let u = (u as f32 + 0.5) / texture_dimensions.width as f32;
 
             let (input, v) = number::le_u16(input)?;
