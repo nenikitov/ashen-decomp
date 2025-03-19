@@ -1,5 +1,3 @@
-use std::mem;
-
 use super::Parser;
 use crate::{error, utils::nom::*};
 
@@ -26,21 +24,47 @@ impl Parser for GammaTable {
             // Technically this can't never fail.
             let (input, bytes) = bytes::take(GAMMA_TABLE_LENGTH)(input)?;
 
-            // SAFETY(Unavailable): Dont transmute references!!!!!!!
-            //
+            let lookups = bytes.as_ptr() as *const [[_; ROWS_COUNT]; COLS_COUNT];
             // SAFETY: bytes::take() should return exactly `ROWS_COUNT * COLS_COUNT`
-            // bytes; also slices and arrays are guaranteed to have the same memory
-            // layout.
-            let lookups =
-                unsafe { mem::transmute_copy::<_, &[[u8; ROWS_COUNT]; COLS_COUNT]>(&bytes) };
+            // bytes (GAMMA_TABLE_LENGTH).
+            let lookups = unsafe { *lookups };
 
             Ok((
                 input,
                 Self {
-                    lookups: Box::new(*lookups),
+                    lookups: Box::new(lookups),
                 },
             ))
         }
+    }
+}
+
+impl GammaTable {
+    // TODO(Unavailable): take a `std::io::Write` instead of a `Path`?
+    #[cfg(feature = "conv")]
+    pub fn to_png<P>(&self, path: P) -> std::io::Result<()>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        use crate::{asset::color_map::Color, utils::format::PngFile};
+
+        let bytes = self
+            .lookups
+            .to_vec()
+            .into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .map(|color| Color {
+                        r: color,
+                        g: color,
+                        b: color,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+            .to_png();
+
+        std::fs::write(path, bytes)
     }
 }
 

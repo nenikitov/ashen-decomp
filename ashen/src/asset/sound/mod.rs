@@ -8,7 +8,7 @@ use crate::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_effect::TEffect,
         t_song::TSong,
     },
-    utils::{compression::decompress, nom::*},
+    utils::{compression::decompress, format::WaveFile, nom::*},
 };
 
 pub enum Sound {
@@ -22,6 +22,15 @@ impl Sound {
             Sound::Song(sound) => sound.mix(),
             Sound::Effect(effect) => effect.mix(),
         }
+    }
+
+    // TODO(Unavailable): take a `std::io::Write` instead of a `Path`?
+    pub fn to_wave<P>(&self, path: P) -> std::io::Result<()>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        let bytes = self.mix().to_wave();
+        std::fs::write(path, bytes)
     }
 }
 
@@ -62,7 +71,7 @@ mod tests {
     use std::{cell::LazyCell, path::PathBuf};
 
     use super::*;
-    use crate::utils::{format::*, test::*};
+    use crate::utils::test::*;
 
     const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
 

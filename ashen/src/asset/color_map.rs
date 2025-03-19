@@ -85,6 +85,20 @@ impl Parser for ColorMap {
     }
 }
 
+impl ColorMap {
+    // TODO(Unavailable): take a `std::io::Write` instead of a `Path`?
+    #[cfg(feature = "conv")]
+    pub fn to_png<P>(&self, path: P) -> std::io::Result<()>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        use crate::utils::format::PngFile;
+
+        let bytes = self.shades.as_slice().to_png();
+        std::fs::write(path, bytes)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::cell::LazyCell;

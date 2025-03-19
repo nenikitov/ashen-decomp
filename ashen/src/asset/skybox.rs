@@ -33,6 +33,20 @@ impl Parser for Skybox {
     }
 }
 
+impl Skybox {
+    // TODO(Unavailable): take a `std::io::Write` instead of a `Path`?
+    #[cfg(feature = "conv")]
+    pub fn to_png<P>(&self, path: P) -> std::io::Result<()>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        use crate::{asset::color_map::PaletteTexture, utils::format::PngFile};
+
+        let bytes = self.texture.with_palette(&self.palette).to_png();
+        std::fs::write(path, bytes)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::cell::LazyCell;

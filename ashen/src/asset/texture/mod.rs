@@ -74,6 +74,8 @@ impl Parser for Vec<TextureAnimationKind> {
     }
 }
 
+// TODO(Unavailable): Conversion methods
+
 #[cfg(test)]
 mod tests {
     use std::{cell::LazyCell, path::PathBuf};
