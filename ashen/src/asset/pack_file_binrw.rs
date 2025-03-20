@@ -1,8 +1,7 @@
+use core::cell::Cell;
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use binrw::{
-    BinRead, BinResult, BinWrite, Endian, NamedArgs, binread, binrw, helpers::args_iter_with,
-};
+use binrw::{BinRead, BinResult, BinWrite, Endian, NamedArgs, binread, binrw, helpers::args_iter};
 use itertools::Itertools;
 
 #[derive(NamedArgs, Clone)]
@@ -60,71 +59,122 @@ impl BinWrite for PaddedNullString {
     }
 }
 
+#[derive(Debug, Clone)]
+struct PosMarker<T> {
+    pos: Cell<u64>,
+    value: T,
+}
+
+impl<T> BinRead for PosMarker<T>
+where
+    T: BinRead,
+{
+    type Args<'a> = T::Args<'a>;
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let pos = reader.stream_position()?;
+        T::read_options(reader, endian, args).map(|value| Self {
+            pos: Cell::new(pos),
+            value,
+        })
+    }
+}
+
+impl<T> BinWrite for PosMarker<T>
+where
+    T: BinWrite<Args<'static> = ()> + Default,
+{
+    type Args<'a> = ();
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        self.pos.set(writer.stream_position()?);
+        T::default().write_options(writer, endian, args)
+    }
+}
+
+fn args_iter_write<'a, T, Writer, Arg, It>(
+    it: It,
+) -> impl FnOnce(&T, &mut Writer, Endian, ()) -> BinResult<()>
+where
+    T: BinWrite<Args<'a> = Arg>,
+    Writer: Write + Seek,
+    Arg: Clone,
+    It: IntoIterator<Item = Arg> + Clone,
+{
+    move |current, writer, endian, ()| {
+        it.clone()
+            .into_iter()
+            .map(|arg| T::write_options(current, writer, endian, arg.clone()))
+            .collect()
+    }
+}
+
 #[binrw]
-#[br(little)]
+#[brw(little)]
 #[derive(Debug, Clone)]
 pub struct PackFileEntryHeader {
     #[br(temp, assert(_asset_kind == 0))]
     #[bw(calc(0))]
     _asset_kind: u32,
 
-    #[br(map = |x: u32| x as usize)]
-    #[bw(map = |&x| x as u32)]
-    offset: usize,
+    offset: PosMarker<u32>,
 
-    #[br(map = |x: u32| x as usize)]
-    #[bw(map = |&x| x as u32)]
-    size: usize,
+    size: PosMarker<u32>,
 
     #[br(temp, assert(_reserved == 0))]
     #[bw(calc(0))]
     _reserved: u32,
 }
 
-pub fn pack_file_entry_header_parser<R>(
-    headers: &[PackFileEntryHeader],
-) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Vec<Vec<u8>>>
-where
-    R: Read + Seek,
-{
-    move |reader, endian, ()| {
-        let before = reader.stream_position()?;
-        reader.seek(SeekFrom::Start(0))?;
+#[binrw::writer(writer, endian)]
+fn pack_file_entry_writer(this: &Vec<u8>, header: &PackFileEntryHeader) -> BinResult<()> {
+    let pos = writer.stream_position()?;
 
-        let entries = headers
-            .iter()
-            .map(|h| -> BinResult<Vec<u8>> {
-                let before = reader.stream_position()?;
-                reader.seek(SeekFrom::Current(h.offset as i64))?;
+    writer.seek(SeekFrom::Start(header.offset.pos.get() as u64));
+    (pos as u32).write_options(writer, endian, ())?;
 
-                let entry = Vec::read_options(reader, endian, binrw::args! { count: h.size })?;
+    writer.seek(SeekFrom::Start(pos));
+    this.write_options(writer, endian, ());
 
-                reader.seek(SeekFrom::Start(before))?;
-                Ok(entry)
-            })
-            .collect::<Result<_, _>>()?;
-
-        reader.seek(SeekFrom::Start(before))?;
-        Ok(entries)
-    }
+    Ok(())
 }
 
-#[binread]
-#[br(little, magic = b"PMAN")]
+#[binrw]
+#[brw(import_raw(header: PackFileEntryHeader))]
+#[derive(Debug)]
+pub struct PackFileEntry(
+    #[br(seek_before = SeekFrom::Start(header.offset.value as u64), count = header.size.value)]
+    #[bw(write_with = pack_file_entry_writer, args(&header))]
+    Vec<u8>,
+);
+
+// [Related Issue](https://github.com/jam1garner/binrw/discussions/165#discussioncomment-5729414)
+#[binrw]
+#[brw(little, magic = b"PMAN")]
 #[derive(Debug)]
 pub struct PackFile {
     #[br(temp)]
-    // #[bw(calc = entries.len() as u32)]
+    #[bw(calc = entries.len() as u32)]
     _entries_count: u32,
 
     #[brw(args { len: 56 })]
     copyright: PaddedNullString,
 
-    #[br(temp, count = _entries_count)]
-    _entries_headers: Vec<PackFileEntryHeader>,
+    #[br(count = _entries_count)]
+    _entries: Vec<PackFileEntryHeader>,
 
-    #[br(parse_with = pack_file_entry_header_parser(&_entries_headers))]
-    entries: Vec<Vec<u8>>,
+    #[br(parse_with = args_iter(_entries.clone()))]
+    #[bw(write_with = args_iter_write(_entries.clone()))]
+    entries: Vec<PackFileEntry>,
 }
 
 #[cfg(test)]
@@ -144,9 +194,12 @@ mod tests {
         let rom = PackFile::read(&mut Cursor::new(ROM_DATA.as_slice()))?;
         let (_, pack_file) = crate::asset::pack_file::PackFile::new(&ROM_DATA)?;
 
-        rom.entries.iter().zip(pack_file.entries.iter()).for_each(|(n, o)| {
-            assert_eq!(n, &o.bytes);
-        });
+        rom.entries
+            .iter()
+            .zip(pack_file.entries.iter())
+            .for_each(|(n, o)| {
+                assert_eq!(&n.0, &o.bytes);
+            });
 
         // dbg!(rom);
 
