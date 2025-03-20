@@ -3,6 +3,7 @@ pub mod gamma_table;
 pub mod gamma_table_binrw;
 pub mod model;
 pub mod pack_file;
+pub mod pack_file_binrw;
 pub mod pack_info;
 pub mod skybox;
 pub mod sound;
