@@ -1,7 +1,7 @@
 use core::cell::Cell;
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use binrw::{BinRead, BinResult, BinWrite, Endian, NamedArgs, binread, binrw, helpers::args_iter};
+use binrw::{BinRead, BinResult, BinWrite, Endian, NamedArgs, binrw, helpers::args_iter};
 use itertools::Itertools;
 
 #[derive(NamedArgs, Clone)]
@@ -59,7 +59,7 @@ impl BinWrite for PaddedNullString {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct PosMarker<T> {
     pos: Cell<u64>,
     value: T,
@@ -103,24 +103,22 @@ where
 
 fn args_iter_write<'a, T, Writer, Arg, It>(
     it: It,
-) -> impl FnOnce(&T, &mut Writer, Endian, ()) -> BinResult<()>
+) -> impl Copy + FnOnce(&Vec<T>, &mut Writer, Endian, ()) -> BinResult<()>
 where
     T: BinWrite<Args<'a> = Arg>,
     Writer: Write + Seek,
-    Arg: Clone,
-    It: IntoIterator<Item = Arg> + Clone,
+    It: IntoIterator<Item = Arg> + Copy,
 {
-    move |current, writer, endian, ()| {
-        it.clone()
-            .into_iter()
-            .map(|arg| T::write_options(current, writer, endian, arg.clone()))
+    move |elems, writer, endian, ()| {
+        itertools::zip_eq(elems.iter(), it.into_iter())
+            .map(|(e, arg)| e.write_options(writer, endian, arg))
             .collect()
     }
 }
 
 #[binrw]
 #[brw(little)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PackFileEntryHeader {
     #[br(temp, assert(_asset_kind == 0))]
     #[bw(calc(0))]
@@ -137,27 +135,28 @@ pub struct PackFileEntryHeader {
 
 #[binrw::writer(writer, endian)]
 fn pack_file_entry_writer(this: &Vec<u8>, header: &PackFileEntryHeader) -> BinResult<()> {
-    let pos = writer.stream_position()?;
+    let start = writer.stream_position()?;
 
-    writer.seek(SeekFrom::Start(header.offset.pos.get() as u64));
-    (pos as u32).write_options(writer, endian, ())?;
+    writer.seek(SeekFrom::Start(header.offset.pos.get() as u64))?;
+    (start as u32).write_options(writer, endian, ())?;
 
-    writer.seek(SeekFrom::Start(pos));
-    this.write_options(writer, endian, ());
+    writer.seek(SeekFrom::Start(header.size.pos.get() as u64))?;
+    (this.len() as u32).write_options(writer, endian, ())?;
 
-    Ok(())
+    writer.seek(SeekFrom::Start(start))?;
+    this.write_options(writer, endian, ())
 }
 
 #[binrw]
-#[brw(import_raw(header: PackFileEntryHeader))]
+#[br(import_raw(header: PackFileEntryHeader))]
+#[bw(import_raw(header: &PackFileEntryHeader))]
 #[derive(Debug)]
 pub struct PackFileEntry(
     #[br(seek_before = SeekFrom::Start(header.offset.value as u64), count = header.size.value)]
-    #[bw(write_with = pack_file_entry_writer, args(&header))]
+    #[bw(write_with = pack_file_entry_writer, args(header))]
     Vec<u8>,
 );
 
-// [Related Issue](https://github.com/jam1garner/binrw/discussions/165#discussioncomment-5729414)
 #[binrw]
 #[brw(little, magic = b"PMAN")]
 #[derive(Debug)]
@@ -169,11 +168,12 @@ pub struct PackFile {
     #[brw(args { len: 56 })]
     copyright: PaddedNullString,
 
-    #[br(count = _entries_count)]
+    #[br(temp, count = _entries_count)]
+    #[bw(calc(vec![Default::default(); entries.len()]))]
     _entries: Vec<PackFileEntryHeader>,
 
-    #[br(parse_with = args_iter(_entries.clone()))]
-    #[bw(write_with = args_iter_write(_entries.clone()))]
+    #[br(parse_with = args_iter(_entries))]
+    #[bw(write_with = args_iter_write(&_entries))]
     entries: Vec<PackFileEntry>,
 }
 
@@ -201,7 +201,13 @@ mod tests {
                 assert_eq!(&n.0, &o.bytes);
             });
 
-        // dbg!(rom);
+        let mut output = Cursor::new(vec![]);
+        rom.write(&mut output);
+
+        std::fs::write(
+            workspace_file_path!("rom/packfile.new.dat"),
+            output.into_inner(),
+        )?;
 
         Ok(())
     }
