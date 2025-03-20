@@ -1,4 +1,8 @@
-use binrw::{BinRead, BinWrite, NamedArgs, binread, binrw};
+use std::io::{Read, Seek, SeekFrom, Write};
+
+use binrw::{
+    BinRead, BinResult, BinWrite, Endian, NamedArgs, binread, binrw, helpers::args_iter_with,
+};
 use itertools::Itertools;
 
 #[derive(NamedArgs, Clone)]
@@ -12,11 +16,11 @@ struct PaddedNullString(String);
 impl BinRead for PaddedNullString {
     type Args<'a> = PaddedNullStringArgs;
 
-    fn read_options<R: std::io::Read + std::io::Seek>(
+    fn read_options<R: Read + Seek>(
         reader: &mut R,
-        endian: binrw::Endian,
+        endian: Endian,
         args: Self::Args<'_>,
-    ) -> binrw::BinResult<Self> {
+    ) -> BinResult<Self> {
         let value: Vec<u8> =
             binrw::helpers::count_with(args.len, u8::read_options)(reader, endian, ())?;
 
@@ -31,12 +35,12 @@ impl BinRead for PaddedNullString {
 impl BinWrite for PaddedNullString {
     type Args<'a> = PaddedNullStringArgs;
 
-    fn write_options<W: std::io::Write + std::io::Seek>(
+    fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        endian: binrw::Endian,
+        endian: Endian,
         args: Self::Args<'_>,
-    ) -> binrw::BinResult<()> {
+    ) -> BinResult<()> {
         let bytes = self.0.as_bytes();
 
         if bytes.len() >= args.len {
@@ -58,7 +62,7 @@ impl BinWrite for PaddedNullString {
 
 #[binrw]
 #[br(little)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PackFileEntryHeader {
     #[br(temp, assert(_asset_kind == 0))]
     #[bw(calc(0))]
@@ -77,6 +81,34 @@ pub struct PackFileEntryHeader {
     _reserved: u32,
 }
 
+pub fn pack_file_entry_header_parser<R>(
+    headers: &[PackFileEntryHeader],
+) -> impl FnOnce(&mut R, Endian, ()) -> BinResult<Vec<Vec<u8>>>
+where
+    R: Read + Seek,
+{
+    move |reader, endian, ()| {
+        let before = reader.stream_position()?;
+        reader.seek(SeekFrom::Start(0))?;
+
+        let entries = headers
+            .iter()
+            .map(|h| -> BinResult<Vec<u8>> {
+                let before = reader.stream_position()?;
+                reader.seek(SeekFrom::Current(h.offset as i64))?;
+
+                let entry = Vec::read_options(reader, endian, binrw::args! { count: h.size })?;
+
+                reader.seek(SeekFrom::Start(before))?;
+                Ok(entry)
+            })
+            .collect::<Result<_, _>>()?;
+
+        reader.seek(SeekFrom::Start(before))?;
+        Ok(entries)
+    }
+}
+
 #[binread]
 #[br(little, magic = b"PMAN")]
 #[derive(Debug)]
@@ -90,6 +122,9 @@ pub struct PackFile {
 
     #[br(temp, count = _entries_count)]
     _entries_headers: Vec<PackFileEntryHeader>,
+
+    #[br(parse_with = pack_file_entry_header_parser(&_entries_headers))]
+    entries: Vec<Vec<u8>>,
 }
 
 #[cfg(test)]
@@ -107,8 +142,13 @@ mod tests {
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
         let rom = PackFile::read(&mut Cursor::new(ROM_DATA.as_slice()))?;
+        let (_, pack_file) = crate::asset::pack_file::PackFile::new(&ROM_DATA)?;
 
-        dbg!(rom);
+        rom.entries.iter().zip(pack_file.entries.iter()).for_each(|(n, o)| {
+            assert_eq!(n, &o.bytes);
+        });
+
+        // dbg!(rom);
 
         Ok(())
     }

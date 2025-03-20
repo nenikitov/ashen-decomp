@@ -10,13 +10,13 @@ struct EntryHeader {
 
 #[derive(Debug, PartialEq)]
 pub struct EntryData {
-    bytes: Vec<u8>,
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct PackFile {
-    copyright: String,
-    entries: Vec<EntryData>,
+    pub copyright: String,
+    pub entries: Vec<EntryData>,
 }
 
 impl PackFile {
