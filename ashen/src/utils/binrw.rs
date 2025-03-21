@@ -4,6 +4,7 @@ use std::{
 };
 
 use derive_more::{Debug, Deref};
+use glam::Vec3;
 use itertools::Itertools;
 use num::{Bounded, NumCast, Zero};
 
@@ -31,6 +32,55 @@ where
         + PartialOrd
         + for<'a> BinRead<Args<'a> = ()>
         + for<'a> BinWrite<Args<'a> = ()>;
+
+#[derive(Debug, Deref, Clone)]
+pub struct ColorU16(Vec3);
+
+impl BinRead for ColorU16 {
+    type Args<'a> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let pos = reader.stream_position()?;
+        let color = u16::read_options(reader, endian, ())?;
+        if color > 0xFFF {
+            return Err(Error::AssertFail {
+                pos,
+                message: "12 bit color outside the range".to_string(),
+            });
+        }
+
+        macro_rules! isolate {
+            ($offset: expr) => {
+                ((color & (0xFu16 << 4 * $offset)) >> 4 * $offset) as f32 / 15.0
+            };
+        }
+
+        Ok(Self(Vec3::new(isolate!(2), isolate!(1), isolate!(0))))
+    }
+}
+
+impl BinWrite for ColorU16 {
+    type Args<'a> = ();
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        macro_rules! isolate {
+            ($channel: ident, $offset: expr) => {
+                ((self.$channel.clamp(0.0, 1.0) * 15.0) as u16) << 4 * $offset
+            };
+        }
+
+        (isolate!(x, 2) | isolate!(y, 1) | isolate!(z, 0)).write_options(writer, endian, ())
+    }
+}
 
 #[derive(NamedArgs, Clone)]
 pub struct PaddedNullStringArgs {

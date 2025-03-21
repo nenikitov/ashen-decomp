@@ -1,6 +1,4 @@
-use std::ops::Deref;
-
-use binrw::{BinRead, BinWrite, binrw};
+use crate::utils::binrw::*;
 use glam::Vec3;
 
 const LEN_ROWS: usize = 256;

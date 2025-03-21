@@ -18,6 +18,8 @@ where
     }
 
     fn from_normalized_f32(value: f32) -> Self {
+        let value = value.clamp(-1.0, 1.0);
+
         if value >= 0.0 {
             T::from((value * T::max_value().to_f32().unwrap()).floor()).unwrap()
         } else {
