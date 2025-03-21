@@ -1,4 +1,5 @@
 pub mod color_map;
+pub mod color_map_binrw;
 pub mod gamma_table;
 pub mod gamma_table_binrw;
 pub mod model;

@@ -1,120 +1,6 @@
-use core::cell::Cell;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::SeekFrom;
 
-use binrw::{BinRead, BinResult, BinWrite, Endian, NamedArgs, binrw, helpers::args_iter};
-use itertools::Itertools;
-
-#[derive(NamedArgs, Clone)]
-struct PaddedNullStringArgs {
-    len: usize,
-}
-
-#[derive(Debug)]
-struct PaddedNullString(String);
-
-impl BinRead for PaddedNullString {
-    type Args<'a> = PaddedNullStringArgs;
-
-    fn read_options<R: Read + Seek>(
-        reader: &mut R,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<Self> {
-        let value: Vec<u8> =
-            binrw::helpers::count_with(args.len, u8::read_options)(reader, endian, ())?;
-
-        let value = String::from_utf8_lossy(&value)
-            .trim_end_matches('\0')
-            .to_string();
-
-        Ok(Self(value))
-    }
-}
-
-impl BinWrite for PaddedNullString {
-    type Args<'a> = PaddedNullStringArgs;
-
-    fn write_options<W: Write + Seek>(
-        &self,
-        writer: &mut W,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<()> {
-        let bytes = self.0.as_bytes();
-
-        if bytes.len() >= args.len {
-            return Err(binrw::Error::Io(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "string too large to fit into specified length",
-            )));
-        }
-
-        bytes.write_options(writer, endian, ())?;
-        std::iter::repeat(0u8)
-            .take(args.len - bytes.len())
-            .collect_vec()
-            .write_options(writer, endian, ())?;
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct PosMarker<T> {
-    pos: Cell<u64>,
-    value: T,
-}
-
-impl<T> BinRead for PosMarker<T>
-where
-    T: BinRead,
-{
-    type Args<'a> = T::Args<'a>;
-
-    fn read_options<R: Read + Seek>(
-        reader: &mut R,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<Self> {
-        let pos = reader.stream_position()?;
-        T::read_options(reader, endian, args).map(|value| Self {
-            pos: Cell::new(pos),
-            value,
-        })
-    }
-}
-
-impl<T> BinWrite for PosMarker<T>
-where
-    T: BinWrite<Args<'static> = ()> + Default,
-{
-    type Args<'a> = ();
-
-    fn write_options<W: Write + Seek>(
-        &self,
-        writer: &mut W,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<()> {
-        self.pos.set(writer.stream_position()?);
-        T::default().write_options(writer, endian, args)
-    }
-}
-
-fn args_iter_write<'a, T, Writer, Arg, It>(
-    it: It,
-) -> impl Copy + FnOnce(&Vec<T>, &mut Writer, Endian, ()) -> BinResult<()>
-where
-    T: BinWrite<Args<'a> = Arg>,
-    Writer: Write + Seek,
-    It: IntoIterator<Item = Arg> + Copy,
-{
-    move |elems, writer, endian, ()| {
-        itertools::zip_eq(elems.iter(), it.into_iter())
-            .map(|(e, arg)| e.write_options(writer, endian, arg))
-            .collect()
-    }
-}
+use crate::utils::binrw::*;
 
 #[binrw]
 #[brw(little)]
@@ -134,7 +20,7 @@ pub struct PackFileEntryHeader {
 }
 
 #[binrw::writer(writer, endian)]
-fn pack_file_entry_writer(this: &Vec<u8>, header: &PackFileEntryHeader) -> BinResult<()> {
+fn pack_file_entry_write_and_update_header(this: &Vec<u8>, header: &PackFileEntryHeader) -> BinResult<()> {
     let start = writer.stream_position()?;
 
     writer.seek(SeekFrom::Start(header.offset.pos.get() as u64))?;
@@ -153,7 +39,7 @@ fn pack_file_entry_writer(this: &Vec<u8>, header: &PackFileEntryHeader) -> BinRe
 #[derive(Debug)]
 pub struct PackFileEntry(
     #[br(seek_before = SeekFrom::Start(header.offset.value as u64), count = header.size.value)]
-    #[bw(write_with = pack_file_entry_writer, args(header))]
+    #[bw(write_with = pack_file_entry_write_and_update_header, args(header))]
     Vec<u8>,
 );
 
