@@ -3,7 +3,7 @@ use std::{
     io::{Read, Seek, Write},
 };
 
-use derive_more::{Debug, Deref};
+use derive_more::{Debug, Deref, From, Into};
 use glam::Vec3;
 use itertools::Itertools;
 use num::{Bounded, NumCast, Zero};
@@ -15,16 +15,8 @@ use crate::utils::math::IntoFromNormalizedF32;
 pub use binrw::{*, helpers::*};
 
 #[binrw]
-#[derive(Debug, Deref)]
-pub struct NormalizedF32<T>(
-    #[deref]
-    #[br(map = |x: T| x.into_normalized_f32())]
-    #[bw(map = |x| T::from_normalized_f32(*x))]
-    f32,
-    #[debug(ignore)]
-    #[ignore]
-    std::marker::PhantomData<T>,
-)
+#[derive(Debug)]
+pub struct NormalizedF32<T>(T)
 where
     T: Bounded
         + NumCast
@@ -35,7 +27,38 @@ where
         + for<'a> BinRead<Args<'a> = ()>
         + for<'a> BinWrite<Args<'a> = ()>;
 
-#[derive(Debug, Deref, Clone)]
+impl<T> From<f32> for NormalizedF32<T>
+where
+    T: Bounded
+        + NumCast
+        + Zero
+        + PartialOrd
+        + Ord
+        + Copy
+        + for<'a> BinRead<Args<'a> = ()>
+        + for<'a> BinWrite<Args<'a> = ()>,
+{
+    fn from(value: f32) -> Self {
+        Self(T::from_normalized_f32(value))
+    }
+}
+impl<T> Into<f32> for NormalizedF32<T>
+where
+    T: Bounded
+        + NumCast
+        + Zero
+        + PartialOrd
+        + Ord
+        + Copy
+        + for<'a> BinRead<Args<'a> = ()>
+        + for<'a> BinWrite<Args<'a> = ()>,
+{
+    fn into(self) -> f32 {
+        self.0.into_normalized_f32()
+    }
+}
+
+#[derive(Debug, Deref, Clone, From, Into)]
 pub struct ColorU16(Vec3);
 
 impl BinRead for ColorU16 {
@@ -82,38 +105,6 @@ impl BinWrite for ColorU16 {
         }
 
         (isolate!(x, 2) | isolate!(y, 1) | isolate!(z, 0)).write_options(writer, endian, ())
-    }
-}
-
-#[derive(Debug, Deref, Clone)]
-pub struct ColorU32(Vec3);
-
-impl BinRead for ColorU32 {
-    type Args<'a> = ();
-
-    fn read_options<R: Read + Seek>(
-        reader: &mut R,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<Self> {
-        let color = ColorU16::read_options(reader, endian, ())?;
-        u16::read_options(reader, endian, ())?;
-
-        Ok(Self(*color))
-    }
-}
-
-impl BinWrite for ColorU32 {
-    type Args<'a> = ();
-
-    fn write_options<W: Write + Seek>(
-        &self,
-        writer: &mut W,
-        endian: Endian,
-        args: Self::Args<'_>,
-    ) -> BinResult<()> {
-        ColorU16(**self).write_options(writer, endian, ())?;
-        0u16.write_options(writer, endian, ())
     }
 }
 
@@ -211,6 +202,68 @@ where
     ) -> BinResult<()> {
         self.pos.set(writer.stream_position()?);
         T::default().write_options(writer, endian, args)
+    }
+}
+
+pub fn map_vec_parse<F, Reader, T, O, Arg>(
+    map: F,
+) -> impl Fn(&mut Reader, Endian, VecArgs<Arg>) -> BinResult<Vec<O>>
+where
+    F: Fn(T) -> O,
+    Reader: Read + Seek,
+    T: for<'a> BinRead<Args<'a> = Arg>,
+    Arg: Clone,
+{
+    move |reader, endian, VecArgs { count, inner }| {
+        (0..count)
+            .into_iter()
+            .map(|_| Ok(map(T::read_options(reader, endian, inner.clone())?)))
+            .collect()
+    }
+}
+
+pub fn map_vec2_parse<F, Reader, T, O, Arg>(
+    map: F,
+) -> impl Fn(&mut Reader, Endian, VecArgs<VecArgs<Arg>>) -> BinResult<Vec<Vec<O>>>
+where
+    F: Copy + Fn(T) -> O,
+    Reader: Read + Seek,
+    T: for<'a> BinRead<Args<'a> = Arg>,
+    Arg: Clone,
+{
+    move |reader, endian, VecArgs { count, inner }| {
+        (0..count)
+            .into_iter()
+            .map(|_| map_vec_parse(map)(reader, endian, inner.clone()))
+            .collect()
+    }
+}
+
+pub fn map_vec_write<F, Writer, T, O>(
+    map: F,
+) -> impl Copy + Fn(&Vec<T>, &mut Writer, Endian, ()) -> BinResult<()>
+where
+    F: Copy + Fn(&T) -> O,
+    Writer: Write + Seek,
+    O: for<'a> BinWrite<Args<'a> = ()>,
+{
+    move |vec, writer, endian, ()| {
+        vec.iter()
+            .try_for_each(|e| map(e).write_options(writer, endian, ()))
+    }
+}
+
+pub fn map_vec2_write<F, Writer, T, O>(
+    map: F,
+) -> impl Copy + Fn(&Vec<Vec<T>>, &mut Writer, Endian, ()) -> BinResult<()>
+where
+    F: Copy + Fn(&T) -> O,
+    Writer: Write + Seek,
+    O: for<'a> BinWrite<Args<'a> = ()>,
+{
+    move |vec, writer, endian, ()| {
+        vec.iter()
+            .try_for_each(|e| map_vec_write(map)(e, writer, endian, ()))
     }
 }
 

@@ -1,3 +1,5 @@
+use glam::Vec3;
+
 use crate::utils::binrw::*;
 
 const LEN_ROWS: usize = 256;
@@ -7,11 +9,12 @@ const LEN_COLS: usize = 32;
 #[brw(little)]
 #[derive(Debug)]
 pub struct ColorMap {
-    #[br(args {
-        count: LEN_ROWS,
-        inner: binrw::args! { count: LEN_COLS, inner: () },
-    })]
-    shades: Vec<Vec<ColorU32>>,
+    #[br(
+        args { count: LEN_ROWS, inner: binrw::args! { count: LEN_COLS, inner: () }},
+        parse_with = map_vec2_parse(|(x, _): (ColorU16, u16)| x.into())
+    )]
+    #[bw(write_with = map_vec2_write(|x| (ColorU16::from(*x), 0u16) ))]
+    shades: Vec<Vec<Vec3>>,
 }
 
 #[cfg(test)]

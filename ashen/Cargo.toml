@@ -7,7 +7,7 @@ edition = "2024"
 binrw = "0.14.1"
 bitflags = "2.4.2"
 const_format = "0.2.32"
-derive_more = { version = "2.0.1", features = ["debug", "deref"] }
+derive_more = { version = "2.0.1", features = ["debug", "deref", "from", "into"] }
 fixed = "1.24.0"
 flate2 = "1.0.28"
 glam = "0.30.0"

@@ -7,12 +7,12 @@ const LEN_COLS: usize = 101;
 #[brw(little)]
 #[derive(Debug)]
 pub struct GammaTable {
-    #[br(args {
-        count: LEN_ROWS,
-        inner: binrw::args! { count: LEN_COLS, inner: () },
-    })]
-    #[bw()]
-    pub gamma: Vec<Vec<NormalizedF32<u8>>>,
+    #[br(
+        args { count: LEN_ROWS, inner: binrw::args! { count: LEN_COLS, inner: () }},
+        parse_with = map_vec2_parse(|x: NormalizedF32<u8>| x.into())
+    )]
+    #[bw(write_with = map_vec2_write(|x| <NormalizedF32<u8>>::from(*x) ))]
+    pub gamma: Vec<Vec<f32>>,
 }
 
 #[cfg(test)]
