@@ -30,6 +30,8 @@ where
         + NumCast
         + Zero
         + PartialOrd
+        + Ord
+        + Copy
         + for<'a> BinRead<Args<'a> = ()>
         + for<'a> BinWrite<Args<'a> = ()>;
 
@@ -55,7 +57,8 @@ impl BinRead for ColorU16 {
 
         macro_rules! isolate {
             ($offset: expr) => {
-                ((color & (0xFu16 << 4 * $offset)) >> 4 * $offset) as f32 / 15.0
+                ((color & (0xFu16 << 4 * $offset)) >> 4 * $offset)
+                    .into_normalized_f32_between(0, 15, true)
             };
         }
 
@@ -74,11 +77,43 @@ impl BinWrite for ColorU16 {
     ) -> BinResult<()> {
         macro_rules! isolate {
             ($channel: ident, $offset: expr) => {
-                ((self.$channel.clamp(0.0, 1.0) * 15.0) as u16) << 4 * $offset
+                u16::from_normalized_f32_between(self.$channel, 0, 15, true) << 4 * $offset
             };
         }
 
         (isolate!(x, 2) | isolate!(y, 1) | isolate!(z, 0)).write_options(writer, endian, ())
+    }
+}
+
+#[derive(Debug, Deref, Clone)]
+pub struct ColorU32(Vec3);
+
+impl BinRead for ColorU32 {
+    type Args<'a> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let color = ColorU16::read_options(reader, endian, ())?;
+        u16::read_options(reader, endian, ())?;
+
+        Ok(Self(*color))
+    }
+}
+
+impl BinWrite for ColorU32 {
+    type Args<'a> = ();
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        ColorU16(**self).write_options(writer, endian, ())?;
+        0u16.write_options(writer, endian, ())
     }
 }
 
