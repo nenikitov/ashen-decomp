@@ -113,7 +113,7 @@ pub struct PaddedNullStringArgs {
     len: usize,
 }
 
-#[derive(Debug, Deref)]
+#[derive(Debug, Deref, Into, From)]
 pub struct PaddedNullString(String);
 
 impl BinRead for PaddedNullString {

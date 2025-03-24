@@ -2,6 +2,8 @@ use std::io::SeekFrom;
 
 use crate::utils::binrw::*;
 
+const LEN_COPYRIGHT: usize = 56;
+
 #[binrw]
 #[brw(little)]
 #[derive(Debug, Clone, Default)]
@@ -20,7 +22,10 @@ pub struct PackFileEntryHeader {
 }
 
 #[binrw::writer(writer, endian)]
-fn pack_file_entry_write_and_update_header(this: &Vec<u8>, header: &PackFileEntryHeader) -> BinResult<()> {
+fn pack_file_entry_write_and_update_header(
+    this: &Vec<u8>,
+    header: &PackFileEntryHeader,
+) -> BinResult<()> {
     let start = writer.stream_position()?;
 
     writer.seek(SeekFrom::Start(header.offset.pos.get() as u64))?;
@@ -51,8 +56,10 @@ pub struct PackFile {
     #[bw(calc = entries.len() as u32)]
     _entries_count: u32,
 
-    #[brw(args { len: 56 })]
-    copyright: PaddedNullString,
+    #[brw(args { len: LEN_COPYRIGHT })]
+    #[br(map = PaddedNullString::into)]
+    #[bw(map = |x| PaddedNullString::from(x.to_owned()))]
+    copyright: String,
 
     #[br(temp, count = _entries_count)]
     #[bw(calc(vec![Default::default(); entries.len()]))]

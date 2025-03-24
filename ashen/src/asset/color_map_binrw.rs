@@ -13,7 +13,10 @@ pub struct ColorMap {
         args { count: LEN_ROWS, inner: binrw::args! { count: LEN_COLS, inner: () }},
         parse_with = map_vec2_parse(|(x, _): (ColorU16, u16)| x.into())
     )]
-    #[bw(write_with = map_vec2_write(|x| (ColorU16::from(*x), 0u16) ))]
+    #[bw(
+        assert(shades.len() == LEN_ROWS && shades[0].len() == LEN_COLS),
+        write_with = map_vec2_write(|&x| (ColorU16::from(x), 0u16))
+    )]
     shades: Vec<Vec<Vec3>>,
 }
 
