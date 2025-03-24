@@ -2,7 +2,7 @@ macro_rules! mod_use {
     ($($mod:ident),* $(,)?) => {
         $(
         mod $mod;
-        #[allow(unused)]
+        #[allow(unused_imports)]
         pub use $mod::*;
         )*
     };

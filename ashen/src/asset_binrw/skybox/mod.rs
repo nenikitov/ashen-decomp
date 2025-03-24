@@ -10,11 +10,11 @@ const LEN_PALETTE: usize = 256;
 pub struct Skybox {
     #[br(temp)]
     #[bw(calc = texture.width() as u32)]
-    _width: u32,
+    _texture_width: u32,
 
     #[br(temp)]
     #[bw(calc = texture.height() as u32)]
-    _height: u32,
+    _texture_height: u32,
 
     #[br(
         count = LEN_PALETTE,
@@ -26,7 +26,7 @@ pub struct Skybox {
     )]
     palette: Vec<Vec3>,
 
-    #[br(args { width: _width as usize, height: _height as usize })]
+    #[br(args { width: _texture_width as usize, height: _texture_height as usize })]
     texture: Texture,
 }
 

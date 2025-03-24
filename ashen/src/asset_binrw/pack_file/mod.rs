@@ -54,14 +54,14 @@ pub struct PackFileEntry(
 pub struct PackFile {
     #[br(temp)]
     #[bw(calc = entries.len() as u32)]
-    _entries_count: u32,
+    _entries_len: u32,
 
     #[brw(args { len: LEN_COPYRIGHT })]
     #[br(map = PaddedNullString::into)]
-    #[bw(map = |x| PaddedNullString::from(x.to_owned()))]
+    #[bw(map = |x| PaddedNullString::from(x.clone()))]
     copyright: String,
 
-    #[br(temp, count = _entries_count)]
+    #[br(temp, count = _entries_len)]
     #[bw(calc(vec![Default::default(); entries.len()]))]
     _entries: Vec<PackFileEntryHeader>,
 
