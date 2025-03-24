@@ -1,13 +1,9 @@
 pub mod color_map;
-pub mod color_map_binrw;
 pub mod gamma_table;
-pub mod gamma_table_binrw;
 pub mod model;
 pub mod pack_file;
-pub mod pack_file_binrw;
 pub mod pack_info;
 pub mod skybox;
-pub mod skybox_binrw;
 pub mod sound;
 pub mod string_table;
 pub mod texture;

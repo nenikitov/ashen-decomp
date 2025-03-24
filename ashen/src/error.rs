@@ -116,7 +116,7 @@ where
             kind: ErrorKind::Incomplete(missing),
             custom: Some(message.into()),
         });
-    };
+    }
 
     Ok(())
 }

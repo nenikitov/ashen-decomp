@@ -211,7 +211,7 @@ impl PlayerChannel {
             && (!self.note.on
                 || envelope
                     .sustain
-                    .map_or(true, |s| self.pos_volume_envelope < s))
+                    .is_none_or(|s| self.pos_volume_envelope < s))
         {
             self.pos_volume_envelope += 1;
         }

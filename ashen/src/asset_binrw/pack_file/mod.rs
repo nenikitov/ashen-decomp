@@ -1,6 +1,6 @@
 use std::io::SeekFrom;
 
-use crate::utils::binrw::*;
+use super::utils::*;
 
 const LEN_COPYRIGHT: usize = 56;
 
@@ -28,10 +28,10 @@ fn pack_file_entry_write_and_update_header(
 ) -> BinResult<()> {
     let start = writer.stream_position()?;
 
-    writer.seek(SeekFrom::Start(header.offset.pos.get() as u64))?;
+    writer.seek(SeekFrom::Start(header.offset.pos.get()))?;
     (start as u32).write_options(writer, endian, ())?;
 
-    writer.seek(SeekFrom::Start(header.size.pos.get() as u64))?;
+    writer.seek(SeekFrom::Start(header.size.pos.get()))?;
     (this.len() as u32).write_options(writer, endian, ())?;
 
     writer.seek(SeekFrom::Start(start))?;

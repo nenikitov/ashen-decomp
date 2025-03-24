@@ -1,6 +1,6 @@
 use glam::Vec3;
 
-use crate::utils::binrw::*;
+use super::utils::*;
 
 const LEN_ROWS: usize = 256;
 const LEN_COLS: usize = 32;
@@ -33,9 +33,6 @@ mod tests {
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
         let color_map = ColorMap::read(&mut Cursor::new(COLOR_MAP_DATA.as_slice()))?;
-
-        dbg!(color_map);
-
         Ok(())
     }
 }

@@ -1,4 +1,3 @@
-pub mod binrw;
 pub mod compression;
 #[cfg(test)]
 pub mod format;

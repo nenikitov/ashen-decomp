@@ -1,4 +1,4 @@
-use crate::utils::binrw::*;
+use super::utils::*;
 
 const LEN_ROWS: usize = 256;
 const LEN_COLS: usize = 101;
@@ -31,9 +31,6 @@ mod tests {
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
         let gamma_table = GammaTable::read(&mut Cursor::new(GAMMA_TABLE_DATA.as_slice()))?;
-
-        dbg!(gamma_table);
-
         Ok(())
     }
 }

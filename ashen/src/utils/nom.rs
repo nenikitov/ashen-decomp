@@ -58,7 +58,7 @@ pub mod multi {
     /// use crate::utils::nom::{Result, multi, number};
     ///
     /// fn parse_u32s<const COUNT: usize>(input: &[u8]) -> Result<[u32; COUNT]> {
-    ///     // N is infered by the function return type ([u32; COUNT]).
+    ///     // N is inferred by the function return type ([u32; COUNT]).
     ///     multi::count!(|i| number::le_u32(i))(input)
     /// }
     ///
@@ -116,7 +116,7 @@ pub fn __array_count<'i, const N: usize, O>(
 
                     return Err(e);
                 }
-            };
+            }
         }
 
         let elements = elements.transpose();
