@@ -24,8 +24,7 @@ impl BinRead for PaddedNullString {
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<Self> {
-        let value: Vec<u8> =
-            binrw::helpers::count_with(args.len, u8::read_options)(reader, endian, ())?;
+        let value: Vec<u8> = count_with(args.len, u8::read_options)(reader, endian, ())?;
 
         let value = String::from_utf8_lossy(&value)
             .trim_end_matches('\0')
@@ -47,7 +46,7 @@ impl BinWrite for PaddedNullString {
         let bytes = self.0.as_bytes();
 
         if bytes.len() >= args.len {
-            return Err(binrw::Error::Io(std::io::Error::new(
+            return Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "string too large to fit into specified length",
             )));

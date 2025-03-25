@@ -1,7 +1,7 @@
 use super::*;
 
 #[binrw]
-#[br(import{ height: usize, width: usize })]
+#[br(import { height: usize, width: usize })]
 #[derive(Debug)]
 pub struct Texture(
     #[br(
