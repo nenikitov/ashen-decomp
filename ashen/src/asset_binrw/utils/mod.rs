@@ -15,6 +15,7 @@ mod_use!(
     pos_marker,
     texture,
     vec,
+    zlib,
 );
 
 #[rustfmt::skip]

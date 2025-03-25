@@ -1,34 +1,6 @@
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
-use flate2::read::ZlibDecoder;
-
 use super::utils::*;
-
-#[binrw]
-#[brw(magic = b"ZL")]
-struct Zlib {
-    #[br(parse_with = read_u24)]
-    #[bw(write_with = write_u24)]
-    len: u32,
-}
-
-fn decompress<Stream: Read + Seek>(stream: &mut Stream) -> BinResult<Cursor<Vec<u8>>> {
-    let header = Zlib::read_options(stream, endian, ())?;
-    let pos = stream.stream_position();
-
-    let mut decoder = ZlibDecoder::new(stream);
-    let mut data = Vec::with_capacity(header.len as usize);
-    decoder.read_to_end(&mut data)?;
-
-    if data.len() != header.len as usize {
-        return Err(Error::Io(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "zlib decompression resulted into invalid size",
-        )));
-    }
-
-    Ok(Cursor::new(data))
-}
 
 #[binrw]
 pub struct WorldTextureOffset {
