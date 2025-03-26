@@ -45,7 +45,7 @@ fn pack_file_entry_write_and_update_header(
 pub struct PackFileEntry(
     #[br(seek_before = SeekFrom::Start(header.offset.value as u64), count = header.size.value)]
     #[bw(write_with = pack_file_entry_write_and_update_header, args(header))]
-    Vec<u8>,
+    pub Vec<u8>,
 );
 
 #[binrw]
@@ -59,7 +59,7 @@ pub struct PackFile {
     #[brw(args { len: LEN_COPYRIGHT })]
     #[br(map = PaddedNullString::into)]
     #[bw(map = |x| PaddedNullString::from(x.clone()))]
-    copyright: String,
+    pub copyright: String,
 
     #[br(temp, count = _entries_len)]
     #[bw(calc(vec![Default::default(); entries.len()]))]
@@ -67,7 +67,7 @@ pub struct PackFile {
 
     #[br(parse_with = args_iter(_entries))]
     #[bw(write_with = args_iter_write(&_entries))]
-    entries: Vec<PackFileEntry>,
+    pub entries: Vec<PackFileEntry>,
 }
 
 #[cfg(test)]
