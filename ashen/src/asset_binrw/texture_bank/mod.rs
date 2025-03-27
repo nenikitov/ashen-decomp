@@ -3,7 +3,8 @@ use std::io::{Cursor, Read, Seek, SeekFrom};
 use super::utils::*;
 
 #[binrw]
-pub struct WorldTextureOffset {
+#[derive(Debug, Clone)]
+pub struct TextureInfo {
     width: u16,
     height: u16,
     offset: PosMarker<u32>,
@@ -14,11 +15,12 @@ pub struct WorldTextureOffset {
 }
 
 #[binrw]
-#[brw(little)]
-pub struct WorldTextureOffsetBank(#[br(parse_with = until_eof)] Vec<WorldTextureOffset>);
+#[derive(Debug)]
+pub struct TextureInfoBank(#[br(parse_with = until_eof)] Vec<TextureInfo>);
 
 #[binrw]
 #[br(import { height: usize, width: usize })]
+#[derive(Debug)]
 pub struct TextureMip(
     #[br(
         parse_with = args_iter((1..=4).map(|s| -> TextureBinReadArgs { args! { width: width / s, height: height / s }})),
@@ -27,24 +29,51 @@ pub struct TextureMip(
     [Texture; 4],
 );
 
-#[binrw]
-#[br(import { height: usize, width: usize })]
-pub enum WorldTextureMip {
-    NonMipped(#[br(args { height: height, width: width })] Texture),
-    Mipped(#[br(args { height: height, width: width })] TextureMip),
-}
-
 #[binrw::parser(reader, endian)]
-fn world_texture_parse(header: &WorldTextureOffset) -> BinResult<WorldTextureMip> {
+fn world_texture_parse(header: TextureInfo) -> BinResult<TextureMip> {
     reader.seek(SeekFrom::Start(header.offset.value as u64));
+    let a = <Compressed<TextureMip>>::read_options(
+        reader,
+        endian,
+        args! { height: header.height as usize, width: header.width as usize },
+    );
+
+    dbg!(a);
     todo!()
 }
 
 #[binread]
-#[br(import_raw(header: &WorldTextureOffset))]
+#[br(import_raw(info: TextureInfo))]
 pub enum WorldTexture {
-    Static(#[br(parse_with = world_texture_parse, args(header))] WorldTextureMip),
+    Static(#[br(parse_with = world_texture_parse, args(info))] TextureMip),
     //Animated(Vec<WorldTextureMip>),
 }
 
-pub struct WorldTextureBank(Vec<WorldTexture>);
+#[binread]
+#[br(import_raw(info_bank: TextureInfoBank))]
+#[bw(import_raw(info_bank: &TextureInfoBank))]
+pub struct WorldTextureBank(
+    #[br(parse_with = args_iter(info_bank.0))]
+    #[bw(write_with = args_iter_write(&_entries))]
+    Vec<WorldTexture>,
+);
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::LazyCell, io::Cursor};
+
+    use super::*;
+    use crate::utils::test::*;
+
+    const TEXTURE_INFO_DATA: LazyCell<Vec<u8>> = deflated_file!("93.dat");
+    const TEXTURE_DATA: LazyCell<Vec<u8>> = deflated_file!("95.dat");
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn parse_rom_asset() -> eyre::Result<()> {
+        let info_bank = TextureInfoBank::read_le(&mut Cursor::new(TEXTURE_INFO_DATA.as_slice()))?;
+        let texture_bank =
+            WorldTextureBank::read_le_args(&mut Cursor::new(TEXTURE_DATA.as_slice()), info_bank)?;
+        Ok(())
+    }
+}

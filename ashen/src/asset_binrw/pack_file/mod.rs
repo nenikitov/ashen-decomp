@@ -5,7 +5,6 @@ use super::utils::*;
 const LEN_COPYRIGHT: usize = 56;
 
 #[binrw]
-#[brw(little)]
 #[derive(Debug, Clone, Default)]
 pub struct PackFileEntryHeader {
     #[br(temp, assert(_asset_kind == 0))]
@@ -49,7 +48,7 @@ pub struct PackFileEntry(
 );
 
 #[binrw]
-#[brw(little, magic = b"PMAN")]
+#[brw(magic = b"PMAN")]
 #[derive(Debug)]
 pub struct PackFile {
     #[br(temp)]
@@ -84,7 +83,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let rom = PackFile::read(&mut Cursor::new(ROM_DATA.as_slice()))?;
+        let rom = PackFile::read_le(&mut Cursor::new(ROM_DATA.as_slice()))?;
         let (_, pack_file) = crate::asset::pack_file::PackFile::new(&ROM_DATA)?;
 
         rom.entries
@@ -95,7 +94,7 @@ mod tests {
             });
 
         let mut output = Cursor::new(vec![]);
-        rom.write(&mut output);
+        rom.write_le(&mut output);
 
         std::fs::write(
             workspace_file_path!("rom/packfile.new.dat"),

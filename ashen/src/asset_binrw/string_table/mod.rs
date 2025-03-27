@@ -1,7 +1,6 @@
 use super::utils::*;
 
 #[binrw]
-#[brw(little)]
 #[derive(Debug)]
 pub struct StringTable {
     #[br(temp)]
@@ -28,7 +27,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let string_table = StringTable::read(&mut Cursor::new(STRING_TABLE_DATA.as_slice()))?;
+        let string_table = StringTable::read_le(&mut Cursor::new(STRING_TABLE_DATA.as_slice()))?;
         Ok(())
     }
 }

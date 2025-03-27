@@ -5,7 +5,6 @@ use super::utils::*;
 const LEN_PALETTE: usize = 256;
 
 #[binrw]
-#[brw(little)]
 #[derive(Debug)]
 pub struct Skybox {
     #[br(temp)]
@@ -42,7 +41,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let skybox = Skybox::read(&mut Cursor::new(SKYBOX_DATA.as_slice()))?;
+        let skybox = Skybox::read_le(&mut Cursor::new(SKYBOX_DATA.as_slice()))?;
         Ok(())
     }
 }

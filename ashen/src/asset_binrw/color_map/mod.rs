@@ -6,7 +6,6 @@ const LEN_ROWS: usize = 256;
 const LEN_COLS: usize = 32;
 
 #[binrw]
-#[brw(little)]
 #[derive(Debug)]
 pub struct ColorMap {
     #[br(
@@ -32,7 +31,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let color_map = ColorMap::read(&mut Cursor::new(COLOR_MAP_DATA.as_slice()))?;
+        let color_map = ColorMap::read_le(&mut Cursor::new(COLOR_MAP_DATA.as_slice()))?;
         Ok(())
     }
 }

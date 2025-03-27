@@ -4,7 +4,6 @@ const LEN_ROWS: usize = 256;
 const LEN_COLS: usize = 101;
 
 #[binrw]
-#[brw(little)]
 #[derive(Debug)]
 pub struct GammaTable {
     #[br(
@@ -30,7 +29,7 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let gamma_table = GammaTable::read(&mut Cursor::new(GAMMA_TABLE_DATA.as_slice()))?;
+        let gamma_table = GammaTable::read_le(&mut Cursor::new(GAMMA_TABLE_DATA.as_slice()))?;
         Ok(())
     }
 }
