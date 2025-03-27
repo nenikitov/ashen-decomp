@@ -19,6 +19,12 @@ struct ZlibHeader {
 #[derive(Deref, From)]
 pub struct Compressed<T>(T);
 
+impl<T> Compressed<T> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
 impl<T> Debug for Compressed<T>
 where
     T: Debug,
@@ -30,7 +36,7 @@ where
 
 impl<T, Arg> BinRead for Compressed<T>
 where
-    T: for<'a> BinRead<Args<'a> = Arg>
+    T: for<'a> BinRead<Args<'a> = Arg>,
 {
     type Args<'a> = Arg;
 
