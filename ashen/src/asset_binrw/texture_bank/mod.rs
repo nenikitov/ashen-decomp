@@ -1,7 +1,8 @@
 use std::{
-    io::{Cursor, Read, Seek, SeekFrom},
-    rc::Rc,
+    io::{Read, Seek, SeekFrom},
 };
+
+use ouroboros::self_referencing;
 
 use super::utils::*;
 
@@ -36,54 +37,63 @@ pub struct WorldTexture(
     [Texture; 4],
 );
 
-pub enum WorldTextureKind {
-    Static(Rc<WorldTexture>),
-    Animated(Vec<Rc<WorldTexture>>),
+pub struct WorldTextureAnimated<'a> {
+    texture: &'a WorldTexture,
+    next_texture: Option<&'a WorldTexture>,
 }
 
-#[binrw::parser(reader, endian)]
-fn world_texture_parser<'a>(
-    info: &'a WorldTextureInfo,
-    ...
-) -> BinResult<(&'a WorldTextureInfo, Rc<WorldTexture>)> {
-    reader.seek(SeekFrom::Start(info.offset.value as u64))?;
-    let texture = <Compressed<WorldTexture>>::read_options(
-        reader,
-        endian,
-        args! { height: info.height as usize, width: info.width as usize },
-    )?;
-    Ok((info, Rc::new(texture.into_inner())))
+pub struct WorldTextureBank {
+    bank: Vec<WorldTexture>,
 }
 
-#[binread]
-#[br(import_raw(info_bank: &WorldTextureInfoBank))]
-pub struct WorldTextureBank(
-    #[br(
-        parse_with = args_iter_with(&info_bank.0, world_texture_parser),
-        map = |bank: Vec<(&WorldTextureInfo, Rc<WorldTexture>)>| {
-            bank
-                .iter()
-                .enumerate()
-                .map(|(i, (info, texture))| {
-                    match info.animation_frames {
-                        0 => WorldTextureKind::Static(texture.clone()),
-                        _ => {
-                            let frames = (0..info.animation_frames)
-                                .scan(i, |i, _| {
-                                    let (info, texture) = &bank[*i];
-                                    *i = info.next_animation_texture_id.value as usize;
-                                    Some(texture.clone())
-                                })
-                                .collect();
-                            WorldTextureKind::Animated(frames)
-                        },
-                    }
-                })
-                .collect()
-        }
-    )]
-    Vec<WorldTextureKind>,
-);
+impl BinRead for WorldTextureBank {
+    type Args<'a> = &'a WorldTextureInfoBank;
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        info_bank: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let bank = info_bank
+            .0
+            .iter()
+            .map(|i| {
+                reader.seek(SeekFrom::Start(i.offset.value as u64))?;
+                <Compressed<WorldTexture>>::read_options(
+                    reader,
+                    endian,
+                    args! { height: i.height as usize, width: i.width as usize },
+                )
+                .map(Compressed::into_inner)
+            })
+            .collect::<BinResult<_>>()?;
+
+        Ok(Self { bank })
+    }
+}
+
+// map = |bank: Vec<(&WorldTextureInfo, WorldTexture<'a>)>| {
+//     todo!()
+// bank
+//     .iter()
+//     .enumerate()
+//     .map(|(i, (info, texture))| {
+//         match info.animation_frames {
+//             0 => WorldTextureKind::Static(texture.clone()),
+//             _ => {
+//                 let frames = (0..info.animation_frames)
+//                     .scan(i, |i, _| {
+//                         let (info, texture) = &bank[*i];
+//                         *i = info.next_animation_texture_id.value as usize;
+//                         Some(texture.clone())
+//                     })
+//                     .collect();
+//                 WorldTextureKind::Animated(frames)
+//             },
+//         }
+//     })
+//     .collect()
+// }
 
 #[cfg(test)]
 mod tests {
