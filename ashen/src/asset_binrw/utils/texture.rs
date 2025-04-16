@@ -2,7 +2,7 @@ use super::*;
 
 #[binrw]
 #[br(import { height: usize, width: usize })]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Texture(
     #[br(
         args { count: height, inner: binrw::args! { count: width, inner: () }},

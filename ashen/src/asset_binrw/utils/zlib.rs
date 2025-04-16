@@ -73,11 +73,16 @@ where
     }
 }
 
+pub enum CompressedArgs<'a, Arg> {
+    None(Arg),
+    OutputSize(Arg, &'a mut usize)
+}
+
 impl<T, Arg> BinWrite for Compressed<T>
 where
     T: for<'a> BinWrite<Args<'a> = Arg>,
 {
-    type Args<'a> = Arg;
+    type Args<'a> = CompressedArgs<'a, Arg>;
 
     fn write_options<W: std::io::Write + Seek>(
         &self,
@@ -85,9 +90,18 @@ where
         endian: Endian,
         args: Self::Args<'_>,
     ) -> BinResult<()> {
+        let args = match args {
+            CompressedArgs::None(a) => (a, None),
+            CompressedArgs::OutputSize(a, s) => (a, Some(s)),
+        };
+
         let mut data = Cursor::new(vec![]);
-        self.0.write_options(&mut data, endian, args)?;
+        self.0.write_options(&mut data, endian, args.0)?;
+
         let size_decompressed = data.stream_position()?;
+        if let Some(a) = args.1 {
+            *a = size_decompressed as usize;
+        }
 
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
         encoder.write_all(&data.into_inner())?;

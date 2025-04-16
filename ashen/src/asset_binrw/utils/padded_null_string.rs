@@ -26,6 +26,7 @@ impl BinRead for PaddedNullString {
     ) -> BinResult<Self> {
         let value: Vec<u8> = count_with(args.len, u8::read_options)(reader, endian, ())?;
 
+        // TODO(nenikitov): Better error handling for invalid UTF-8
         let value = String::from_utf8_lossy(&value)
             .trim_end_matches('\0')
             .to_string();
