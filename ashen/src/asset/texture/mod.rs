@@ -76,7 +76,7 @@ impl Parser for Vec<TextureAnimationKind> {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, path::PathBuf};
+    use std::cell::LazyCell;
 
     use super::*;
     use crate::{
@@ -84,19 +84,20 @@ mod tests {
         utils::{format::*, test::*},
     };
 
-    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("4F.dat");
-    const TEXTURE_INFO_DATA: LazyCell<Vec<u8>> = deflated_file!("93.dat");
-    const TEXTURE_DATA: LazyCell<Vec<u8>> = deflated_file!("95.dat");
+    const COLOR_MAP: LazyCell<Vec<u8>> = LazyCell::new(|| deflated_file!("4F.dat"));
+    const TEXTURE_INFO: LazyCell<Vec<u8>> = LazyCell::new(|| deflated_file!("93.dat"));
+    const TEXTURE: LazyCell<Vec<u8>> = LazyCell::new(|| deflated_file!("95.dat"));
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
-    fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
+    fn parse_texture_assets() -> eyre::Result<()> {
+        let (_, color_map) = ColorMap::parser(())(&COLOR_MAP)?;
         let color_map = &color_map.shades[15];
-        let (_, offsets) = Vec::<TextureOffset>::parser(())(&TEXTURE_INFO_DATA)?;
-        let (_, textures) = Vec::<TextureAnimationKind>::parser(&offsets)(&TEXTURE_DATA)?;
 
-        let output_dir = PathBuf::from(parsed_file_path!("textures/"));
+        let (_, offsets) = Vec::<TextureOffset>::parser(())(&TEXTURE_INFO)?;
+        let (_, textures) = Vec::<TextureAnimationKind>::parser(&offsets)(&TEXTURE)?;
+
+        let output_dir = PARSED_PATH.join("texture");
 
         textures
             .iter()
@@ -107,35 +108,37 @@ mod tests {
                 }
                 TextureAnimationKind::Static(TextureMipKind::Mipped(t)) => {
                     t.mips.iter().enumerate().try_for_each(|(m, mip)| {
-                        let file = &output_dir.join(format!("{i:0>3X}-mip-{m}.png"));
-                        output_file(file, mip.colors.with_palette(color_map).to_png())
+                        let file = output_dir.join(format!("{i:03X}-mip-{m}.png"));
+                        output_file(&file, mip.colors.with_palette(color_map).to_png())
                     })
                 }
                 TextureAnimationKind::Animated(t) => {
-                    let frames = t.iter().map(|t| match t {
+                    let frames = t.iter().map(|frame| match frame {
                         TextureMipKind::NonMipped(_) => {
                             unreachable!("World textures are always mipped")
                         }
-                        TextureMipKind::Mipped(t) => t,
+                        TextureMipKind::Mipped(mipped) => mipped,
                     });
 
-                    let mut data = vec![];
-                    for (f, frame) in frames.enumerate() {
-                        for (m, mip) in frame.mips.iter().enumerate() {
-                            if data.len() <= m {
-                                data.push(vec![]);
+                    let mut data_by_mip = vec![];
+                    for (frame_index, mipped) in frames.enumerate() {
+                        for (mip_level, mip) in mipped.mips.iter().enumerate() {
+                            if data_by_mip.len() <= mip_level {
+                                data_by_mip.push(vec![]);
                             }
-
-                            data[m].push(mip.colors.with_palette(color_map))
+                            data_by_mip[mip_level].push(mip.colors.with_palette(color_map));
                         }
                     }
 
-                    data.iter().enumerate().try_for_each(|(m, mip)| {
-                        let file = &output_dir.join(format!("{i:0>3X}-mip-{m}.gif"));
-                        output_file(file, mip.to_gif())
-                    })
+                    data_by_mip
+                        .iter()
+                        .enumerate()
+                        .try_for_each(|(m, mip_frames)| {
+                            let file = output_dir.join(format!("{i:03X}-mip-{m}.gif"));
+                            output_file(&file, mip_frames.to_gif())
+                        })
                 }
-            });
+            })?;
 
         Ok(())
     }

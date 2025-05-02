@@ -1,31 +1,23 @@
-use std::{env, fs, io, path::Path};
+use std::{
+    cell::LazyCell,
+    env, fs, io,
+    path::{Path, PathBuf},
+};
 
-pub const PARSED_PATH: &'static str = "output/parsed/";
-pub const DEFLATED_PATH: &'static str = "output/deflated/";
+pub const WORKSPACE_PATH: LazyCell<PathBuf> =
+    LazyCell::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".."));
 
-/// Gets a path relative to the workspace directory.
-macro_rules! workspace_file_path {
-    ($file:expr_2021) => {
-        const_format::concatcp!(env!("CARGO_MANIFEST_DIR"), "/../", $file)
-    };
-}
+pub const DEFLATED_PATH: LazyCell<PathBuf> =
+    LazyCell::new(|| WORKSPACE_PATH.join("output").join("deflated"));
 
-macro_rules! parsed_file_path {
-    ($file:expr_2021) => {
-        workspace_file_path!(const_format::concatcp!(PARSED_PATH, $file))
-    };
-}
+pub const PARSED_PATH: LazyCell<PathBuf> =
+    LazyCell::new(|| WORKSPACE_PATH.join("output").join("parsed"));
 
 /// Gets the bytes from a file on the "output/deflated" folder.
 macro_rules! deflated_file {
     ($file:expr_2021) => {
-        std::cell::LazyCell::new(|| {
-            std::fs::read(workspace_file_path!(const_format::concatcp!(
-                DEFLATED_PATH,
-                $file
-            )))
+        std::fs::read(DEFLATED_PATH.join($file))
             .expect("deflated test ran.\nRun `cargo test -- --ignored parse_rom_packfile` before.")
-        })
     };
 }
 
@@ -59,5 +51,3 @@ where
 }
 
 pub(crate) use deflated_file;
-pub(crate) use parsed_file_path;
-pub(crate) use workspace_file_path;

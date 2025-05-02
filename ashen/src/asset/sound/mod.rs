@@ -59,19 +59,19 @@ impl Parser for Vec<Sound> {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, path::PathBuf};
+    use std::cell::LazyCell;
 
     use super::*;
     use crate::utils::{format::*, test::*};
 
-    const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
+    const SOUND: LazyCell<Vec<u8>> = LazyCell::new(|| deflated_file!("97.dat"));
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, sounds) = Vec::<Sound>::parser(())(&SOUND_DATA)?;
+        let (_, sounds) = Vec::<Sound>::parser(())(&SOUND)?;
 
-        let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
+        let output_dir = PARSED_PATH.join("sound/song");
 
         sounds
             .iter()
@@ -94,7 +94,7 @@ mod tests {
                 Ok(())
             })?;
 
-        let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
+        let output_dir = PARSED_PATH.join("sound/effect");
 
         sounds
             .iter()

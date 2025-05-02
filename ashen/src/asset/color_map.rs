@@ -87,7 +87,7 @@ impl Parser for ColorMap {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::LazyCell;
+    use std::{cell::LazyCell, collections::HashMap};
 
     use super::*;
     use crate::utils::{format::*, test::*};
@@ -146,17 +146,48 @@ mod tests {
         Ok(())
     }
 
-    const COLOR_MAP_DATA: LazyCell<Vec<u8>> = deflated_file!("01.dat");
+    const COLOR_MAPS: LazyCell<HashMap<&str, Vec<u8>>> = LazyCell::new(|| {
+        HashMap::from([
+            ("creature", deflated_file!("01.dat")),
+            ("creature-ghost", deflated_file!("02.dat")),
+            ("ghost-creature-ghost", deflated_file!("03.dat")),
+            ("pickup", deflated_file!("04.dat")),
+            ("pickup-ghost", deflated_file!("05.dat")),
+            ("jacob", deflated_file!("06.dat")),
+            ("level-ghost", deflated_file!("07.dat")),
+            ("player-hands", deflated_file!("08.dat")),
+            ("player-hands-ghost", deflated_file!("09.dat")),
+            ("level1a", deflated_file!("4F.dat")),
+            ("level1b", deflated_file!("53.dat")),
+            ("level2a", deflated_file!("57.dat")),
+            ("level2b", deflated_file!("5B.dat")),
+            ("level3a", deflated_file!("5F.dat")),
+            ("level3b", deflated_file!("63.dat")),
+            ("level4a", deflated_file!("67.dat")),
+            ("level4b", deflated_file!("6B.dat")),
+            ("level5a", deflated_file!("6F.dat")),
+            ("level5b", deflated_file!("73.dat")),
+            ("level6", deflated_file!("77.dat")),
+            ("level7", deflated_file!("7B.dat")),
+            ("level8", deflated_file!("7F.dat")),
+            ("leveldm1", deflated_file!("82.dat")),
+            ("leveldm2", deflated_file!("85.dat")),
+            ("leveldm3", deflated_file!("88.dat")),
+            ("leveldm4", deflated_file!("8B.dat")),
+        ])
+    });
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, color_map) = ColorMap::parser(())(&COLOR_MAP_DATA)?;
+        for (name, data) in COLOR_MAPS.iter() {
+            let (_, color_map) = ColorMap::parser(())(&data)?;
 
-        output_file(
-            parsed_file_path!("color-map/monsters.png"),
-            color_map.shades.as_slice().to_png(),
-        )?;
+            output_file(
+                PARSED_PATH.join(format!("color-map/{name}.png")),
+                color_map.shades.as_slice().to_png(),
+            )?;
+        }
 
         Ok(())
     }
