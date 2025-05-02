@@ -116,13 +116,19 @@ mod tests {
                 ("creature", deflated_file!("10-deflated.dat")),
             ),
             ("tentacle", ("creature", deflated_file!("11-deflated.dat"))),
-            ("wraith", ("ghost-creature", deflated_file!("12-deflated.dat"))),
+            (
+                "wraith",
+                ("ghost-creature", deflated_file!("12-deflated.dat")),
+            ),
             (
                 "prime-entity",
                 ("pickup", deflated_file!("13-deflated.dat")),
             ),
             // TODO(nenikitov): This model doesn't look good with any palette
-            ("player-model", ("creature", deflated_file!("14-deflated.dat"))),
+            (
+                "player-model",
+                ("creature", deflated_file!("14-deflated.dat")),
+            ),
             ("vanessa", ("pickup", deflated_file!("15-deflated.dat"))),
             ("rocket", ("pickup", deflated_file!("16-deflated.dat"))),
             ("grenade", ("pickup", deflated_file!("17-deflated.dat"))),
@@ -249,7 +255,10 @@ mod tests {
                 ("pickup", deflated_file!("37-deflated.dat")),
             ),
             // TODO(nenikitov): This model doesn't look good with any palette
-            ("pickup-key-1", ("pickup", deflated_file!("38-deflated.dat"))),
+            (
+                "pickup-key-1",
+                ("pickup", deflated_file!("38-deflated.dat")),
+            ),
             (
                 "pickup-flakjacket-25",
                 ("pickup", deflated_file!("39-deflated.dat")),
@@ -268,12 +277,11 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let palettes: HashMap<&str, [Color; 256]> = HashMap::from_iter(
-            COLOR_MAPS.iter().map(|(name, data)| {
+        let palettes: HashMap<&str, [Color; 256]> =
+            HashMap::from_iter(COLOR_MAPS.iter().map(|(name, data)| {
                 let (_, color_map) = ColorMap::parser(())(data).expect("Color map is valid");
                 (*name, color_map.shades[15])
-            })
-        );
+            }));
 
         for (name, (palette, data)) in MODELS.iter() {
             let palette = palettes.get(palette).expect("Color map is present");
