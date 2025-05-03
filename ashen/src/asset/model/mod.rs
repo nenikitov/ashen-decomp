@@ -86,7 +86,7 @@ mod tests {
         utils::test::*,
     };
 
-    const COLOR_MAPS: LazyCell<HashMap<&'static str, Vec<u8>>> = LazyCell::new(|| {
+    const COLOR_MAPS: LazyCell<HashMap<&str, Vec<u8>>> = LazyCell::new(|| {
         HashMap::from([
             ("creature", deflated_file!("01.dat")),
             ("ghost-creature", deflated_file!("03.dat")),
@@ -94,7 +94,7 @@ mod tests {
         ])
     });
 
-    const MODELS: LazyCell<HashMap<&'static str, (&'static str, Vec<u8>)>> = LazyCell::new(|| {
+    const MODELS: LazyCell<HashMap<&str, (&str, Vec<u8>)>> = LazyCell::new(|| {
         HashMap::from([
             ("aquagore", ("creature", deflated_file!("0A-deflated.dat"))),
             ("broodmaw", ("creature", deflated_file!("0B-deflated.dat"))),
@@ -277,11 +277,11 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let palettes: HashMap<&str, [Color; 256]> =
-            HashMap::from_iter(COLOR_MAPS.iter().map(|(name, data)| {
-                let (_, color_map) = ColorMap::parser(())(data).expect("Color map is valid");
-                (*name, color_map.shades[15])
-            }));
+        let palettes = <HashMap<_, _>>::from_iter(COLOR_MAPS.iter().map(|(name, data)| {
+            let (_, color_map) = ColorMap::parser(())(data).expect("Color map is valid");
+            (*name, color_map.shades[15])
+        }));
+
 
         for (name, (palette, data)) in MODELS.iter() {
             let palette = palettes.get(palette).expect("Color map is present");
