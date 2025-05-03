@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
-    fn parse_string_tables() -> eyre::Result<()> {
+    fn parse_rom_asset() -> eyre::Result<()> {
         for (name, data) in STRING_TABLES.iter() {
             let (_, string_table) = StringTable::parser(())(data)?;
 

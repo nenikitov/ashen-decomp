@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
-    fn parse_skybox_assets() -> eyre::Result<()> {
+    fn parse_rom_asset() -> eyre::Result<()> {
         for (name, data) in SKYBOXES.iter() {
             let (_, skybox) = Skybox::parser(())(data)?;
 
