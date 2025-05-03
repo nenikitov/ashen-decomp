@@ -43,17 +43,28 @@ mod tests {
         utils::{format::*, test::*},
     };
 
-    const SKYBOX_DATA: LazyCell<Vec<u8>> = deflated_file!("3C.dat");
+    const SKYBOXES: LazyCell<Vec<(&str, Vec<u8>)>> = LazyCell::new(|| {
+        vec![
+            ("level1", deflated_file!("3C.dat")),
+            ("level2", deflated_file!("3D.dat")),
+            ("level3", deflated_file!("3E.dat")),
+            ("level4", deflated_file!("3F.dat")),
+            ("level5", deflated_file!("40.dat")),
+            ("level6", deflated_file!("41.dat")),
+        ]
+    });
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, skybox) = Skybox::parser(())(&SKYBOX_DATA)?;
+        for (name, data) in SKYBOXES.iter() {
+            let (_, skybox) = Skybox::parser(())(data)?;
 
-        output_file(
-            parsed_file_path!("skyboxes/level-1.png"),
-            skybox.texture.with_palette(&skybox.palette).to_png(),
-        )?;
+            output_file(
+                PARSED_PATH.join(format!("skybox/{name}.png")),
+                skybox.texture.with_palette(&skybox.palette).to_png(),
+            )?;
+        }
 
         Ok(())
     }

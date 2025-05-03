@@ -54,12 +54,12 @@ mod tests {
         utils::{format::*, test::*},
     };
 
-    const GAMMA_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("00.dat");
+    const GAMMA_TABLE: LazyCell<Vec<u8>> = LazyCell::new(|| deflated_file!("00.dat"));
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, gamma_table) = GammaTable::parser(())(&GAMMA_TABLE_DATA)?;
+        let (_, gamma_table) = GammaTable::parser(())(&GAMMA_TABLE)?;
 
         let gamma_table = gamma_table
             .lookups
@@ -76,7 +76,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        output_file(parsed_file_path!("gamma-table.png"), gamma_table.to_png())?;
+        output_file(PARSED_PATH.join("gamma-table.png"), gamma_table.to_png())?;
 
         Ok(())
     }
