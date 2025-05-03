@@ -30,20 +30,20 @@ impl Parser for StringTable {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, collections::HashMap};
+    use std::cell::LazyCell;
 
     use super::*;
     use crate::utils::test::*;
 
-    const STRING_TABLES: LazyCell<HashMap<&str, Vec<u8>>> = LazyCell::new(|| {
-        HashMap::from([
+    const STRING_TABLES: LazyCell<Vec<(&str, Vec<u8>)>> = LazyCell::new(|| {
+        vec![
             ("english-uk", deflated_file!("98-deflated.dat")),
             ("english-us", deflated_file!("99-deflated.dat")),
             ("french", deflated_file!("9A-deflated.dat")),
             ("italian", deflated_file!("9B-deflated.dat")),
             ("german", deflated_file!("9C-deflated.dat")),
             ("spanish", deflated_file!("9D-deflated.dat")),
-        ])
+        ]
     });
 
     #[test]

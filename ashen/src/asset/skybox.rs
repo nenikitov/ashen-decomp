@@ -35,7 +35,7 @@ impl Parser for Skybox {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, collections::HashMap};
+    use std::cell::LazyCell;
 
     use super::*;
     use crate::{
@@ -43,15 +43,15 @@ mod tests {
         utils::{format::*, test::*},
     };
 
-    const SKYBOXES: LazyCell<HashMap<&str, Vec<u8>>> = LazyCell::new(|| {
-        HashMap::from([
+    const SKYBOXES: LazyCell<Vec<(&str, Vec<u8>)>> = LazyCell::new(|| {
+        vec![
             ("level1", deflated_file!("3C.dat")),
             ("level2", deflated_file!("3D.dat")),
             ("level3", deflated_file!("3E.dat")),
             ("level4", deflated_file!("3F.dat")),
             ("level5", deflated_file!("40.dat")),
             ("level6", deflated_file!("41.dat")),
-        ])
+        ]
     });
 
     #[test]

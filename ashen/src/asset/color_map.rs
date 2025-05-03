@@ -87,7 +87,7 @@ impl Parser for ColorMap {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, collections::HashMap};
+    use std::cell::LazyCell;
 
     use super::*;
     use crate::utils::{format::*, test::*};
@@ -146,8 +146,8 @@ mod tests {
         Ok(())
     }
 
-    const COLOR_MAPS: LazyCell<HashMap<&str, Vec<u8>>> = LazyCell::new(|| {
-        HashMap::from([
+    const COLOR_MAPS: LazyCell<Vec<(&str, Vec<u8>)>> = LazyCell::new(|| {
+        vec![
             ("creature", deflated_file!("01.dat")),
             ("creature-ghost", deflated_file!("02.dat")),
             ("ghost-creature-ghost", deflated_file!("03.dat")),
@@ -174,7 +174,7 @@ mod tests {
             ("leveldm2", deflated_file!("85.dat")),
             ("leveldm3", deflated_file!("88.dat")),
             ("leveldm4", deflated_file!("8B.dat")),
-        ])
+        ]
     });
 
     #[test]
