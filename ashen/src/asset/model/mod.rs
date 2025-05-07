@@ -40,6 +40,7 @@ impl Parser for Model {
                 height: header.texture_height as usize,
             })(&input[header.offset_texture as usize..])?;
 
+            dbg!(header.offset_sequences);
             let (_, sequences) = multi::count!(
                 ModelSequence::parser(input),
                 header.sequence_count as usize
