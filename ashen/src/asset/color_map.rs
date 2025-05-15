@@ -189,12 +189,13 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        for (name, data) in COLOR_MAPS.iter() {
+        COLOR_MAPS.iter().try_for_each(|(name, data)| {
             let (_, color_map) = ColorMap::parser(())(data)?;
+
             output_file(PARSED_PATH.join(format!("color-map/{name}.png")))
                 .and_then(|w| color_map.to_png(w))?;
-        }
 
-        Ok(())
+            Ok(())
+        })
     }
 }
