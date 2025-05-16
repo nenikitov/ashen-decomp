@@ -3,7 +3,7 @@ mod dat;
 use dat::{offset::TextureOffset, texture::MippedTexture};
 pub use dat::{size::TextureSize, texture::Texture};
 
-use super::{Parser, color_map::Color};
+use super::Parser;
 use crate::utils::{compression::decompress, nom::*};
 
 pub struct AnimatedTexture {
@@ -76,7 +76,11 @@ impl Parser for Vec<WorldTexture> {
 
 impl Texture {
     #[cfg(feature = "conv")]
-    pub fn to_png<W>(&self, mut writer: W, palette: &[Color; 256]) -> std::io::Result<()>
+    pub fn to_png<W>(
+        &self,
+        mut writer: W,
+        palette: &[super::color_map::Color; 256],
+    ) -> std::io::Result<()>
     where
         W: std::io::Write,
     {
@@ -87,7 +91,11 @@ impl Texture {
 
 impl AnimatedTexture {
     #[cfg(feature = "conv")]
-    pub fn to_gif<W>(&self, mut writer: W, palette: &[Color; 256]) -> std::io::Result<()>
+    pub fn to_gif<W>(
+        &self,
+        mut writer: W,
+        palette: &[super::color_map::Color; 256],
+    ) -> std::io::Result<()>
     where
         W: std::io::Write,
     {

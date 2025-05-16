@@ -1,4 +1,3 @@
-#[cfg(any(test, feature = "conv"))]
 use std::ops::Deref;
 
 #[cfg(any(test, feature = "conv"))]
