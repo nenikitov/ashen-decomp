@@ -29,6 +29,7 @@ impl Parser for StringTable {
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::cell::LazyCell;
 
@@ -49,15 +50,13 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        for (name, data) in STRING_TABLES.iter() {
+        STRING_TABLES.iter().try_for_each(|(name, data)| {
             let (_, string_table) = StringTable::parser(())(data)?;
 
-            output_file(
-                PARSED_PATH.join(format!("string/{name}.txt")),
-                string_table.table.join("\n---\n"),
-            )?;
-        }
+            output_file(PARSED_PATH.join(format!("string/{name}.txt")))
+                .and_then(|mut w| write!(w, "{}", string_table.table.join("\n---\n")))?;
 
-        Ok(())
+            Ok(())
+        })
     }
 }

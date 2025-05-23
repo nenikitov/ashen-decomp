@@ -186,15 +186,14 @@ mod tests {
             .enumerate()
             .try_for_each(|(i, entry)| -> io::Result<()> {
                 let compressed = &entry.bytes;
-                let decompressed = &decompress(&entry.bytes);
+                let decompressed = &decompress(compressed);
 
-                output_file(DEFLATED_PATH.join(format!("{i:0>2X}.dat")), &entry.bytes)?;
+                output_file(DEFLATED_PATH.join(format!("{i:0>2X}.dat")))
+                    .and_then(|mut w| w.write_all(compressed))?;
 
                 if compressed != decompressed {
-                    output_file(
-                        DEFLATED_PATH.join(format!("{i:0>2X}-deflated.dat")),
-                        &decompress(&entry.bytes),
-                    )?;
+                    output_file(DEFLATED_PATH.join(format!("{i:0>2X}-deflated.dat")))
+                        .and_then(|mut w| w.write_all(decompressed))?;
                 }
 
                 Ok(())

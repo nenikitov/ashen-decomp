@@ -1,11 +1,10 @@
+use std::ops::Deref;
+
 use itertools::Itertools;
 
 use super::size::TextureSize;
 use crate::{
-    asset::{
-        Parser,
-        color_map::{Color, PaletteTexture},
-    },
+    asset::{Parser, color_map::Color},
     utils::nom::*,
 };
 
@@ -66,6 +65,24 @@ impl Parser for MippedTexture {
                 },
             ))
         }
+    }
+}
+
+pub trait PaletteTexture {
+    // TODO(Unavailable): `&[Color; 256]`
+    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>>;
+}
+
+// impl for any 2D array like data structure.
+impl<Outer: ?Sized, Inner> PaletteTexture for Outer
+where
+    Outer: Deref<Target = [Inner]>,
+    Inner: AsRef<[u8]>,
+{
+    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>> {
+        self.iter()
+            .map(|c| c.as_ref().iter().map(|c| palette[*c as usize]).collect())
+            .collect()
     }
 }
 

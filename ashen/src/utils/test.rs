@@ -21,6 +21,8 @@ macro_rules! deflated_file {
     };
 }
 
+pub(crate) use deflated_file;
+
 pub fn should_skip_write() -> bool {
     match env::var("SKIP_TEST_WRITE")
         .map(|value| value.to_lowercase())
@@ -32,22 +34,20 @@ pub fn should_skip_write() -> bool {
 }
 
 /// Writes to a file creating the directory automatically.
-pub fn output_file<P, C>(path: P, contents: C) -> io::Result<()>
+pub fn output_file<P>(path: P) -> io::Result<Box<dyn io::Write>>
 where
     P: AsRef<Path>,
-    C: AsRef<[u8]>,
 {
-    fn inner(path: &Path, contents: &[u8]) -> io::Result<()> {
+    fn inner(path: &Path) -> io::Result<Box<dyn io::Write>> {
         if !should_skip_write() {
             let parent = path.parent().ok_or(io::ErrorKind::InvalidFilename)?;
             fs::create_dir_all(parent)?;
-            fs::write(path, contents)
+            let file = fs::File::create(path)?;
+            Ok(Box::new(file))
         } else {
-            Ok(())
+            Ok(Box::new(io::sink()))
         }
     }
 
-    inner(path.as_ref(), contents.as_ref())
+    inner(path.as_ref())
 }
-
-pub(crate) use deflated_file;

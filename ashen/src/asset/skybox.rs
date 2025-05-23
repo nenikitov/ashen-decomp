@@ -33,15 +33,25 @@ impl Parser for Skybox {
     }
 }
 
+impl Skybox {
+    #[cfg(feature = "conv")]
+    pub fn to_png<W>(&self, mut writer: W) -> std::io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        use crate::{asset::texture::PaletteTexture, utils::format::PngFile};
+
+        writer.write_all(&self.texture.with_palette(&self.palette).to_png())
+    }
+}
+
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::cell::LazyCell;
 
     use super::*;
-    use crate::{
-        asset::color_map::PaletteTexture,
-        utils::{format::*, test::*},
-    };
+    use crate::utils::test::*;
 
     const SKYBOXES: LazyCell<Vec<(&str, Vec<u8>)>> = LazyCell::new(|| {
         vec![
@@ -54,18 +64,17 @@ mod tests {
         ]
     });
 
+    #[cfg(feature = "conv")]
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        for (name, data) in SKYBOXES.iter() {
+        SKYBOXES.iter().try_for_each(|(name, data)| {
             let (_, skybox) = Skybox::parser(())(data)?;
 
-            output_file(
-                PARSED_PATH.join(format!("skybox/{name}.png")),
-                skybox.texture.with_palette(&skybox.palette).to_png(),
-            )?;
-        }
+            output_file(PARSED_PATH.join(format!("skybox/{name}.png")))
+                .and_then(|w| skybox.to_png(w))?;
 
-        Ok(())
+            Ok(())
+        })
     }
 }

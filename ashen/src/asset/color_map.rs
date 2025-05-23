@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use super::Parser;
 use crate::{error, utils::nom::*};
 
@@ -85,12 +83,23 @@ impl Parser for ColorMap {
     }
 }
 
+impl ColorMap {
+    #[cfg(feature = "conv")]
+    pub fn to_png<W>(&self, mut write: W) -> std::io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        use crate::utils::format::PngFile;
+        write.write_all(&self.shades.as_slice().to_png())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::cell::LazyCell;
 
     use super::*;
-    use crate::utils::{format::*, test::*};
+    use crate::utils::test::*;
 
     #[test]
     fn shade_works() -> eyre::Result<()> {
@@ -177,35 +186,17 @@ mod tests {
         ]
     });
 
+    #[cfg(feature = "conv")]
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        for (name, data) in COLOR_MAPS.iter() {
+        COLOR_MAPS.iter().try_for_each(|(name, data)| {
             let (_, color_map) = ColorMap::parser(())(data)?;
 
-            output_file(
-                PARSED_PATH.join(format!("color-map/{name}.png")),
-                color_map.shades.as_slice().to_png(),
-            )?;
-        }
+            output_file(PARSED_PATH.join(format!("color-map/{name}.png")))
+                .and_then(|w| color_map.to_png(w))?;
 
-        Ok(())
-    }
-}
-
-pub trait PaletteTexture {
-    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>>;
-}
-
-// impl for any 2D array like data structure.
-impl<Outer: ?Sized, Inner> PaletteTexture for Outer
-where
-    Outer: Deref<Target = [Inner]>,
-    Inner: AsRef<[u8]>,
-{
-    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>> {
-        self.iter()
-            .map(|c| c.as_ref().iter().map(|c| palette[*c as usize]).collect())
-            .collect()
+            Ok(())
+        })
     }
 }

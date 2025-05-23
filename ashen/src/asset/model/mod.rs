@@ -67,24 +67,30 @@ impl Parser for Model {
     }
 }
 
+impl Model {
+    // TODO(Unavailable): Could provide conversions to gif using `shadybug`.
+    #[cfg(feature = "conv")]
+    pub fn to_blender_script<W>(
+        &self,
+        mut writer: W,
+        palette: &[crate::asset::color_map::Color; 256],
+    ) -> std::io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        use crate::utils::format::ModelPythonFile;
+
+        write!(writer, "{}", &self.to_py(&*palette))
+    }
+}
+
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
-    use std::{
-        cell::LazyCell,
-        collections::HashMap,
-        fmt::{Display, Formatter},
-    };
+    use std::{cell::LazyCell, collections::HashMap};
 
-    use itertools::Itertools;
-
-    use super::{
-        dat::{frame::ModelVertex, triangle::ModelPoint},
-        *,
-    };
-    use crate::{
-        asset::color_map::{Color, ColorMap, PaletteTexture},
-        utils::test::*,
-    };
+    use super::*;
+    use crate::{asset::color_map::ColorMap, utils::test::*};
 
     const COLOR_MAPS: LazyCell<HashMap<&str, Vec<u8>>> = LazyCell::new(|| {
         HashMap::from([
@@ -279,186 +285,14 @@ mod tests {
             (*name, color_map.shades[15])
         }));
 
-        for (name, palette, data) in MODELS.iter() {
+        MODELS.iter().try_for_each(|(name, palette, data)| {
             let palette = palettes.get(palette).expect("Color map is present");
             let (_, model) = Model::parser(())(data)?;
 
-            output_file(
-                PARSED_PATH.join(format!("model/{name}.py")),
-                model.to_py(palette),
-            )?;
-        }
+            output_file(PARSED_PATH.join(format!("model/{name}.py")))
+                .and_then(|w| model.to_blender_script(w, palette))?;
 
-        Ok(())
-    }
-
-    // TODO(nenikitov): Move this to `utils::format` module
-    pub trait ModelPythonFile {
-        fn to_py(&self, palette: &[Color]) -> String;
-    }
-
-    impl ModelPythonFile for Model {
-        fn to_py(&self, palette: &[Color]) -> String {
-            // TODO(nenikitov): Move a common part of the script into a separate `.py` file
-            format!(
-                r#"import bpy
-
-# Data
-texture_width = {}
-texture_height = {}
-texture = [
-{}
-]
-frames = [
-{}
-]
-triangles = [
-{}
-]
-sequences = [
-{}
-]
-
-# Clean up
-for obj in bpy.data.objects:
-    bpy.data.objects.remove(obj, do_unlink=True)
-
-# Mesh
-mesh = bpy.data.meshes.new("Mesh")
-object = bpy.data.objects.new("Model", mesh)
-mesh.from_pydata(
-    [
-        (v["x"], v["y"], v["z"])
-        for v in frames[0]
-    ],
-    [],
-    [
-        (t["points"][0]["vertex_index"], t["points"][1]["vertex_index"], t["points"][2]["vertex_index"])
-        for t in triangles
-    ]
-)
-# UV
-uv = mesh.uv_layers.new(name="UV")
-for loop in mesh.loops:
-    i = loop.index
-    triangle_point = triangles[i // 3]["points"][i % 3]
-    uv.data[i].uv = (triangle_point["u"], triangle_point["v"])
-# Texture
-image = bpy.data.images.new("Texture", texture_width, texture_height)
-image.pixels = texture
-image.update()
-# Material
-material = bpy.data.materials.new(name="Material")
-material.use_nodes = True
-material_bsdf = material.node_tree.nodes["Principled BSDF"]
-material_bsdf.inputs["Roughness"].default_value = 1.0
-material_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-material_texture.image = image
-material_texture.interpolation = "Closest"
-material.node_tree.links.new(material_texture.outputs["Color"], material_bsdf.inputs["Base Color"])
-mesh.materials.append(material)
-# Shape keys
-shape_keys = []
-for i, f in enumerate(frames):
-    shape_keys.append(object.shape_key_add(name=f"Key {{i}}"))
-    for v_i, v in enumerate(f):
-        shape_keys[i].data[v_i].co = (v["x"], v["y"], v["z"])
-# Actions
-actions = []
-mesh.shape_keys.animation_data_create()
-for i, s in enumerate(sequences):
-    actions.append(bpy.data.actions.new(f"Action {{i}}"))
-    actions[i].use_fake_user = True
-    actions[i].frame_end = len(s["frames"])
-    actions[i].use_frame_range = True
-    mesh.shape_keys.animation_data.action = actions[i]
-    for f_i, frame in enumerate(s["frames"]):
-        for s_i, shape_key in enumerate(shape_keys):
-            shape_key.value = 1.0 if s_i == frame else 0.0
-            shape_key.keyframe_insert(data_path="value", frame=f_i + 1)
-
-# Finalize
-bpy.context.collection.objects.link(object)
-bpy.context.view_layer.objects.active = object
-object.select_set(True)
-            "#,
-                self.texture.width(),
-                self.texture.height(),
-                self.texture
-                    .with_palette(&palette)
-                    .into_iter()
-                    // In blender, y axis of textures is reversed
-                    .rev()
-                    .map(|r| format!("    {}", r.into_iter().map(|c| c.to_string()).join(", ")))
-                    .join(",\n"),
-                self.frames
-                    .iter()
-                    .map(|f| format!(
-                        "    [{}]",
-                        f.vertices.iter().map(|v| v.to_string()).join(", ")
-                    ))
-                    .join(",\n"),
-                self.triangles
-                    .iter()
-                    .map(|v| format!("    {v}"))
-                    .join(",\n"),
-                self.sequences
-                    .iter()
-                    .map(|s| format!("    {s}"))
-                    .join(",\n")
-            )
-        }
-    }
-
-    impl Display for Color {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                r#"{}, {}, {}, 1.0"#,
-                self.r as f32 / 255.0,
-                self.g as f32 / 255.0,
-                self.b as f32 / 255.0
-            )
-        }
-    }
-
-    impl Display for ModelVertex {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                r#"{{ "x": {}, "y": {}, "z": {}, "lightmap": {} }}"#,
-                self.x, self.y, self.z, self.normal_index
-            )
-        }
-    }
-
-    impl Display for ModelTriangle {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                r#"{{ "points": [{}, {}, {}] }}"#,
-                self.points[0], self.points[1], self.points[2],
-            )
-        }
-    }
-
-    impl Display for ModelPoint {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                r#"{{ "vertex_index": {}, "u": {}, "v": {} }}"#,
-                self.vertex_index, self.u, self.v
-            )
-        }
-    }
-
-    impl Display for ModelSequence {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                r#"{{ "frames": [{}] }}"#,
-                self.frames.iter().map(u32::to_string).join(", ")
-            )
-        }
+            Ok(())
+        })
     }
 }
