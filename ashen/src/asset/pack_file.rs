@@ -98,7 +98,7 @@ impl PackFile {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, io, path::PathBuf};
+    use std::{cell::LazyCell, io};
 
     use super::*;
     use crate::utils::{compression::decompress, test::*};
@@ -184,7 +184,7 @@ mod tests {
     }
 
     const ROM_DATA: LazyCell<Vec<u8>> = std::cell::LazyCell::new(|| {
-        std::fs::read(workspace_file_path!("rom/packfile.dat")).expect("ROM is present")
+        std::fs::read(WORKSPACE_PATH.join("rom/packfile.dat")).expect("ROM is present")
     });
 
     #[test]
@@ -192,23 +192,20 @@ mod tests {
     fn parse_rom_packfile() -> eyre::Result<()> {
         let (_, pack_file) = PackFile::new(&ROM_DATA)?;
 
-        let output_dir = PathBuf::from(workspace_file_path!(DEFLATED_PATH));
-
         pack_file
             .entries
             .iter()
             .enumerate()
             .try_for_each(|(i, entry)| -> io::Result<()> {
                 let compressed = &entry.bytes;
-                let decompressed = &decompress(&entry.bytes);
+                let decompressed = &decompress(compressed);
 
-                output_file(output_dir.join(format!("{i:0>2X}.dat")), &entry.bytes)?;
+                output_file(DEFLATED_PATH.join(format!("{i:0>2X}.dat")))
+                    .and_then(|mut w| w.write_all(compressed))?;
 
                 if compressed != decompressed {
-                    output_file(
-                        output_dir.join(format!("{i:0>2X}-deflated.dat")),
-                        &decompress(&entry.bytes),
-                    )?;
+                    output_file(DEFLATED_PATH.join(format!("{i:0>2X}-deflated.dat")))
+                        .and_then(|mut w| w.write_all(decompressed))?;
                 }
 
                 Ok(())

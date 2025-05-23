@@ -29,24 +29,34 @@ impl Parser for StringTable {
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::cell::LazyCell;
 
     use super::*;
     use crate::utils::test::*;
 
-    const STRING_TABLE_DATA: LazyCell<Vec<u8>> = deflated_file!("98-deflated.dat");
+    const STRING_TABLES: LazyCell<Vec<(&str, Vec<u8>)>> = LazyCell::new(|| {
+        vec![
+            ("english-uk", deflated_file!("98-deflated.dat")),
+            ("english-us", deflated_file!("99-deflated.dat")),
+            ("french", deflated_file!("9A-deflated.dat")),
+            ("italian", deflated_file!("9B-deflated.dat")),
+            ("german", deflated_file!("9C-deflated.dat")),
+            ("spanish", deflated_file!("9D-deflated.dat")),
+        ]
+    });
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, string_table) = StringTable::parser(())(&STRING_TABLE_DATA)?;
+        STRING_TABLES.iter().try_for_each(|(name, data)| {
+            let (_, string_table) = StringTable::parser(())(data)?;
 
-        output_file(
-            parsed_file_path!("strings/english-uk.txt"),
-            string_table.table.join("\n---\n"),
-        )?;
+            output_file(PARSED_PATH.join(format!("string/{name}.txt")))
+                .and_then(|mut w| write!(w, "{}", string_table.table.join("\n---\n")))?;
 
-        Ok(())
+            Ok(())
+        })
     }
 }

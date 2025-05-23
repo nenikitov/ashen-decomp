@@ -23,6 +23,16 @@ impl Sound {
             Sound::Effect(effect) => effect.mix(),
         }
     }
+
+    #[cfg(feature = "conv")]
+    pub fn to_wave<W>(&self, mut writer: W) -> std::io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        use crate::utils::format::WaveFile;
+
+        writer.write_all(&self.mix().to_wave())
+    }
 }
 
 impl Parser for Vec<Sound> {
@@ -58,20 +68,21 @@ impl Parser for Vec<Sound> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
-    use std::{cell::LazyCell, path::PathBuf};
+    use std::cell::LazyCell;
 
     use super::*;
-    use crate::utils::{format::*, test::*};
+    use crate::utils::test::*;
 
-    const SOUND_DATA: LazyCell<Vec<u8>> = deflated_file!("97.dat");
+    const SOUND: LazyCell<Vec<u8>> = LazyCell::new(|| deflated_file!("97.dat"));
 
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let (_, sounds) = Vec::<Sound>::parser(())(&SOUND_DATA)?;
+        let (_, sounds) = Vec::<Sound>::parser(())(&SOUND)?;
 
-        let output_dir = PathBuf::from(parsed_file_path!("sounds/songs/"));
+        let output_dir = PARSED_PATH.join("sound/song");
 
         sounds
             .iter()
@@ -84,27 +95,26 @@ mod tests {
             })
             .enumerate()
             .try_for_each(|(i, (sound, song))| -> std::io::Result<()> {
-                let file = output_dir.join(format!("{i:0>2X}.wav"));
                 println!("# SONG {i}");
-                output_file(file, sound.mix().to_wave())?;
 
-                let file = output_dir.join(format!("{i:0>2X}.txt"));
-                output_file(file, format!("{song:#?}"))?;
+                output_file(output_dir.join(format!("{i:0>2X}.wav")))
+                    .and_then(|w| sound.to_wave(w))?;
 
-                Ok(())
+                output_file(output_dir.join(format!("{i:0>2X}.txt")))
+                    .and_then(|mut w| write!(w, "{song:#?}"))
             })?;
 
-        let output_dir = PathBuf::from(parsed_file_path!("sounds/effects/"));
+        let output_dir = PARSED_PATH.join("sound/effect");
 
         sounds
             .iter()
             .filter(|s| matches!(s, Sound::Effect(_)))
             .enumerate()
             .try_for_each(|(i, effect)| {
-                let file = output_dir.join(format!("{i:0>2X}.wav"));
-                output_file(file, effect.mix().to_wave())
-            })?;
+                output_file(output_dir.join(format!("{i:0>2X}.wav")))
+                    .and_then(|w| effect.to_wave(w))?;
 
-        Ok(())
+                Ok(())
+            })
     }
 }

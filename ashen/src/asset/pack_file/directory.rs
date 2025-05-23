@@ -244,7 +244,7 @@ mod tests {
     use crate::utils::test::*;
 
     const ROM_DATA: LazyCell<Vec<u8>> = std::cell::LazyCell::new(|| {
-        std::fs::read(workspace_file_path!("rom/packfile.dat")).expect("ROM is present")
+        std::fs::read(WORKSPACE_PATH.join("rom/packfile.dat")).expect("ROM is present")
     });
 
     #[test]

@@ -1,33 +1,27 @@
-use std::{env, fs, io, path::Path};
+use std::{
+    cell::LazyCell,
+    env, fs, io,
+    path::{Path, PathBuf},
+};
 
-pub const PARSED_PATH: &'static str = "output/parsed/";
-pub const DEFLATED_PATH: &'static str = "output/deflated/";
+pub const WORKSPACE_PATH: LazyCell<PathBuf> =
+    LazyCell::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".."));
 
-/// Gets a path relative to the workspace directory.
-macro_rules! workspace_file_path {
-    ($file:expr_2021) => {
-        const_format::concatcp!(env!("CARGO_MANIFEST_DIR"), "/../", $file)
-    };
-}
+pub const DEFLATED_PATH: LazyCell<PathBuf> =
+    LazyCell::new(|| WORKSPACE_PATH.join("output").join("deflated"));
 
-macro_rules! parsed_file_path {
-    ($file:expr_2021) => {
-        workspace_file_path!(const_format::concatcp!(PARSED_PATH, $file))
-    };
-}
+pub const PARSED_PATH: LazyCell<PathBuf> =
+    LazyCell::new(|| WORKSPACE_PATH.join("output").join("parsed"));
 
 /// Gets the bytes from a file on the "output/deflated" folder.
 macro_rules! deflated_file {
     ($file:expr_2021) => {
-        std::cell::LazyCell::new(|| {
-            std::fs::read(workspace_file_path!(const_format::concatcp!(
-                DEFLATED_PATH,
-                $file
-            )))
+        std::fs::read(DEFLATED_PATH.join($file))
             .expect("deflated test ran.\nRun `cargo test -- --ignored parse_rom_packfile` before.")
-        })
     };
 }
+
+pub(crate) use deflated_file;
 
 pub fn should_skip_write() -> bool {
     match env::var("SKIP_TEST_WRITE")
@@ -40,24 +34,20 @@ pub fn should_skip_write() -> bool {
 }
 
 /// Writes to a file creating the directory automatically.
-pub fn output_file<P, C>(path: P, contents: C) -> io::Result<()>
+pub fn output_file<P>(path: P) -> io::Result<Box<dyn io::Write>>
 where
     P: AsRef<Path>,
-    C: AsRef<[u8]>,
 {
-    fn inner(path: &Path, contents: &[u8]) -> io::Result<()> {
+    fn inner(path: &Path) -> io::Result<Box<dyn io::Write>> {
         if !should_skip_write() {
             let parent = path.parent().ok_or(io::ErrorKind::InvalidFilename)?;
             fs::create_dir_all(parent)?;
-            fs::write(path, contents)
+            let file = fs::File::create(path)?;
+            Ok(Box::new(file))
         } else {
-            Ok(())
+            Ok(Box::new(io::sink()))
         }
     }
 
-    inner(path.as_ref(), contents.as_ref())
+    inner(path.as_ref())
 }
-
-pub(crate) use deflated_file;
-pub(crate) use parsed_file_path;
-pub(crate) use workspace_file_path;
