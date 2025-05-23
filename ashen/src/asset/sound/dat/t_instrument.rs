@@ -5,7 +5,7 @@ use bitflags::bitflags;
 use super::{convert_volume, finetune::FineTune};
 use crate::{
     asset::{Parser, sound::sample::AudioBuffer},
-    utils::{iterator::CollectArray, nom::*},
+    utils::{iterator::IterMore, nom::*},
 };
 
 bitflags! {
