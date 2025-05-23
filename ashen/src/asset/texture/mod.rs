@@ -1,7 +1,10 @@
 mod dat;
 
 use dat::{offset::TextureOffset, texture::MippedTexture};
-pub use dat::{size::TextureSize, texture::Texture};
+pub use dat::{
+    size::TextureSize,
+    texture::{PaletteTexture, Texture},
+};
 
 use super::Parser;
 use crate::utils::{compression::decompress, nom::*};
@@ -84,7 +87,10 @@ impl Texture {
     where
         W: std::io::Write,
     {
-        use crate::utils::format::{PaletteTexture, PngFile};
+        use dat::texture::PaletteTexture;
+
+        use crate::utils::format::PngFile;
+
         writer.write_all(&self.colors.with_palette(&*palette).to_png())
     }
 }
@@ -99,7 +105,10 @@ impl AnimatedTexture {
     where
         W: std::io::Write,
     {
-        use crate::utils::format::{GifFile, PaletteTexture};
+        use dat::texture::PaletteTexture;
+
+        use crate::utils::format::GifFile;
+
         let bytes = self
             .frames
             .iter()
@@ -111,6 +120,7 @@ impl AnimatedTexture {
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::cell::LazyCell;
 

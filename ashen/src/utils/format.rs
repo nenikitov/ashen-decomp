@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-#[cfg(any(test, feature = "conv"))]
 use image::{
     Frame, ImageEncoder, RgbaImage,
     codecs::{
@@ -14,15 +13,14 @@ use crate::asset::{
     color_map::Color,
     model::Model,
     sound::sample::{AudioBuffer, AudioSamplePoint},
+    texture::PaletteTexture,
 };
 
-#[cfg(any(test, feature = "conv"))]
 pub trait PngFile {
     fn to_png(&self) -> Vec<u8>;
 }
 
 // impl for any 2D array like data structure.
-#[cfg(any(test, feature = "conv"))]
 impl<Outer: ?Sized, Inner> PngFile for Outer
 where
     Outer: Deref<Target = [Inner]>,
@@ -56,12 +54,10 @@ where
     }
 }
 
-#[cfg(any(test, feature = "conv"))]
 pub trait GifFile {
     fn to_gif(&self) -> Vec<u8>;
 }
 
-#[cfg(any(test, feature = "conv"))]
 impl<Outer: ?Sized, Inner1, Inner2> GifFile for Outer
 where
     Outer: Deref<Target = [Inner1]>,
@@ -102,24 +98,6 @@ where
         drop(encoder);
 
         data
-    }
-}
-
-pub trait PaletteTexture {
-    // TODO(Unavailable): `&[Color; 256]`
-    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>>;
-}
-
-// impl for any 2D array like data structure.
-impl<Outer: ?Sized, Inner> PaletteTexture for Outer
-where
-    Outer: Deref<Target = [Inner]>,
-    Inner: AsRef<[u8]>,
-{
-    fn with_palette(&self, palette: &[Color]) -> Vec<Vec<Color>> {
-        self.iter()
-            .map(|c| c.as_ref().iter().map(|c| palette[*c as usize]).collect())
-            .collect()
     }
 }
 

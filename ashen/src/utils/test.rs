@@ -21,6 +21,8 @@ macro_rules! deflated_file {
     };
 }
 
+pub(crate) use deflated_file;
+
 pub fn should_skip_write() -> bool {
     match env::var("SKIP_TEST_WRITE")
         .map(|value| value.to_lowercase())
@@ -49,5 +51,3 @@ where
 
     inner(path.as_ref())
 }
-
-pub(crate) use deflated_file;

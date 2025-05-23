@@ -8,7 +8,7 @@ use crate::{
         asset_header::SoundAssetHeader, chunk_header::SoundChunkHeader, t_effect::TEffect,
         t_song::TSong,
     },
-    utils::{compression::decompress, format::WaveFile, nom::*},
+    utils::{compression::decompress, nom::*},
 };
 
 pub enum Sound {
@@ -24,10 +24,13 @@ impl Sound {
         }
     }
 
+    #[cfg(feature = "conv")]
     pub fn to_wave<W>(&self, mut writer: W) -> std::io::Result<()>
     where
         W: std::io::Write,
     {
+        use crate::utils::format::WaveFile;
+
         writer.write_all(&self.mix().to_wave())
     }
 }
@@ -65,6 +68,7 @@ impl Parser for Vec<Sound> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::cell::LazyCell;
 

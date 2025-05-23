@@ -21,7 +21,6 @@ features = ["png", "gif"]
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
 eyre = "0.6.8"
-image = "0.24.8"
 
 [features]
 default = ["conv"]

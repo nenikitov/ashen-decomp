@@ -39,12 +39,14 @@ impl Skybox {
     where
         W: std::io::Write,
     {
-        use crate::utils::format::{PaletteTexture, PngFile};
+        use crate::{asset::texture::PaletteTexture, utils::format::PngFile};
+
         writer.write_all(&self.texture.with_palette(&self.palette).to_png())
     }
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::cell::LazyCell;
 
@@ -62,6 +64,7 @@ mod tests {
         ]
     });
 
+    #[cfg(feature = "conv")]
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {

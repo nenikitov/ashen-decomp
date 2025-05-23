@@ -186,6 +186,7 @@ mod tests {
         ]
     });
 
+    #[cfg(feature = "conv")]
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {

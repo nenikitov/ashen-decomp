@@ -29,6 +29,7 @@ impl Parser for StringTable {
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::cell::LazyCell;
 

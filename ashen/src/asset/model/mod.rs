@@ -9,10 +9,9 @@ use dat::{
 
 use super::{
     Parser,
-    color_map::Color,
     texture::{Texture, TextureSize},
 };
-use crate::utils::{format::ModelPythonFile, nom::*};
+use crate::utils::nom::*;
 
 pub struct Model {
     pub texture: Texture,
@@ -70,15 +69,23 @@ impl Parser for Model {
 
 impl Model {
     // TODO(Unavailable): Could provide conversions to gif using `shadybug`.
-    pub fn to_blender_script<W>(&self, mut writer: W, palette: &[Color; 256]) -> std::io::Result<()>
+    #[cfg(feature = "conv")]
+    pub fn to_blender_script<W>(
+        &self,
+        mut writer: W,
+        palette: &[crate::asset::color_map::Color; 256],
+    ) -> std::io::Result<()>
     where
         W: std::io::Write,
     {
+        use crate::utils::format::ModelPythonFile;
+
         write!(writer, "{}", &self.to_py(&*palette))
     }
 }
 
 #[cfg(test)]
+#[cfg(feature = "conv")]
 mod tests {
     use std::{cell::LazyCell, collections::HashMap};
 
