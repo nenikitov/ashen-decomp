@@ -1,11 +1,17 @@
 use super::*;
 
+#[derive(Clone, Debug, NamedArgs)]
+pub struct TextureReadArgs {
+    pub width: usize,
+    pub height: usize,
+}
+
 #[binrw]
-#[br(import { height: usize, width: usize })]
+#[br(import_raw(args: TextureReadArgs))]
 #[derive(Clone, Debug)]
 pub struct Texture(
     #[br(
-        args { count: height, inner: binrw::args! { count: width, inner: () }},
+        args { count: args.height, inner: binrw::args! { count: args.width, inner: () }},
     )]
     Vec<Vec<u8>>,
 );

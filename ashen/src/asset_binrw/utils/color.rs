@@ -1,7 +1,7 @@
 use std::io::{Read, Seek, Write};
 
 use derive_more::{Deref, From, Into};
-use glam::Vec3;
+use ::glam::Vec3;
 
 use super::*;
 use crate::utils::math::IntoFromNormalizedF32;

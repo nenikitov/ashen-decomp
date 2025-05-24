@@ -32,7 +32,7 @@ pub struct WorldTexture {
         parse_with = args_iter(
             (0..=3)
                 .map(|s| 2usize.pow(s))
-                .map(|s| -> TextureBinReadArgs { args! { width: width / s, height: height / s } })
+                .map(|s| -> TextureReadArgs { args! { width: width / s, height: height / s } })
         ),
         map = |x: Vec<Texture>| x.try_into().unwrap()
     )]
