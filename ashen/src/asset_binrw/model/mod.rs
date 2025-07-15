@@ -76,7 +76,7 @@ pub struct ModelVertex {
             y: y.into(),
             z: z.into(),
         };
-        -((pos * scale) / (u8::MAX as f32) - scale_origin) / UNITS_PER_METER
+        -1.0 * (pos * scale + scale_origin) / UNITS_PER_METER
     })]
     pos: Vec3,
     normal_index: u8,
@@ -94,9 +94,9 @@ pub struct ModelFrame {
     #[br(
         temp,
         map = |[x, y, z]: [i32; 3]| Vec3 {
-            x: I16F16::from_bits(x).lossy_into(),
-            y: I16F16::from_bits(y).lossy_into(),
-            z: I16F16::from_bits(z).lossy_into(),
+            x: I16F16::from_bits(x).to_num(),
+            y:I16F16::from_bits(y).to_num(),
+            z: I16F16::from_bits(z).to_num(),
         }
     )]
     _scale: Vec3,
@@ -104,9 +104,9 @@ pub struct ModelFrame {
     #[br(
         temp,
         map = |[x, y, z]: [i32; 3]| Vec3 {
-            x: I16F16::from_bits(x).lossy_into(),
-            y: I16F16::from_bits(y).lossy_into(),
-            z: I16F16::from_bits(z).lossy_into(),
+            x: I16F16::from_bits(x).to_num(),
+            y: I16F16::from_bits(y).to_num(),
+            z: I16F16::from_bits(z).to_num(),
         }
     )]
     _scale_origin: Vec3,
@@ -213,10 +213,10 @@ pub struct Model {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::LazyCell, io::Cursor};
+    use std::{cell::LazyCell, io::Cursor, iter};
 
     use super::*;
-    use crate::utils::test::*;
+    use crate::{asset::Parser, utils::test::*};
 
     const MODEL_DATA: LazyCell<Vec<u8>> = deflated_file!("0E-deflated.dat");
 
@@ -224,8 +224,20 @@ mod tests {
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
         let model = Model::read_le(&mut Cursor::new(MODEL_DATA.as_slice()))?;
+        let (_, model_old) = crate::asset::model::Model::parser(())(&MODEL_DATA)?;
 
-        dbg!(model.frames);
+        for (n, o) in iter::zip(model.frames, model_old.frames) {
+            assert_eq!(n.0.bounding_sphere_radius, o.bounding_sphere_radius);
+            assert_eq!(n.0.triangle_normal_indices, o.triangle_normal_indexes);
+
+            for (n, o) in iter::zip(n.0.vertices, o.vertices) {
+                dbg!("HERE");
+                assert_eq!(n.normal_index, o.normal_index);
+                assert_eq!(n.pos.x, o.x);
+                assert_eq!(n.pos.y, o.y);
+                assert_eq!(n.pos.z, o.z);
+            }
+        }
 
         Ok(())
     }

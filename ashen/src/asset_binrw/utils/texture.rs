@@ -10,9 +10,13 @@ pub struct TextureReadArgs {
 #[br(import_raw(args: TextureReadArgs))]
 #[derive(Clone, Debug)]
 pub struct Texture(
-    #[br(
-        args { count: args.height, inner: binrw::args! { count: args.width, inner: () }},
-    )]
+    #[br(args {
+        count: args.height,
+        inner: binrw::args! {
+            count: args.width,
+            inner: ()
+        }
+    })]
     Vec<Vec<u8>>,
 );
 
