@@ -1,11 +1,11 @@
 use std::ops::Deref;
 
 use image::{
+    Frame, ImageEncoder, RgbaImage,
     codecs::{
         gif::{GifEncoder, Repeat},
         png::PngEncoder,
     },
-    Frame, ImageEncoder, RgbaImage,
 };
 
 use crate::asset::{

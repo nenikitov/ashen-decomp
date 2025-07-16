@@ -1,5 +1,5 @@
 use crate::{
-    asset::{pack_info::PackInfo, Parser},
+    asset::{Parser, pack_info::PackInfo},
     utils::nom::*,
 };
 

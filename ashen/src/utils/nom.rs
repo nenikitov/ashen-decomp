@@ -31,7 +31,7 @@ pub mod number {
         };
     }
 
-    use fixed::types::{I16F16, I24F8, I8F24};
+    use fixed::types::{I8F24, I16F16, I24F8};
 
     parser_for_fixed!(I8F24, 32);
     parser_for_fixed!(I16F16, 32);

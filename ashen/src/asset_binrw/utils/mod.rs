@@ -11,6 +11,7 @@ macro_rules! mod_use {
 mod_use!(
     color,
     entire_file,
+    marker,
     normalized_f32,
     padded_null_string,
     pos_marker,

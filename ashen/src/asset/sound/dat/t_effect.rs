@@ -5,7 +5,7 @@ use super::{
     uncompress,
 };
 use crate::{
-    asset::{sound::sample::AudioBuffer, Parser},
+    asset::{Parser, sound::sample::AudioBuffer},
     utils::nom::*,
 };
 

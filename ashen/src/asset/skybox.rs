@@ -1,6 +1,6 @@
 use super::{
-    texture::{Texture, TextureSize},
     Parser,
+    texture::{Texture, TextureSize},
 };
 use crate::{asset::color_map::Color, utils::nom::*};
 

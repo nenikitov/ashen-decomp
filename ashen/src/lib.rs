@@ -20,7 +20,6 @@
     debug_closure_helpers,
     generic_const_exprs,
     io_error_more,
-    let_chains,
     // Discussion about possible future alternatives:
     // https://github.com/rust-lang/rust/pull/101179
     maybe_uninit_uninit_array_transpose,

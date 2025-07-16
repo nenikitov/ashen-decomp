@@ -13,9 +13,7 @@ pub struct PosMarker<P> {
 
 impl<P> PosMarker<P> {
     pub fn store_offset<'p, T>(&'p self) -> impl FnOnce(T) -> AtPosMarker<'p, P, T> {
-        move |obj| {
-            AtPosMarker { pos: self, obj }
-        }
+        move |obj| AtPosMarker { pos: self, obj }
     }
 }
 
