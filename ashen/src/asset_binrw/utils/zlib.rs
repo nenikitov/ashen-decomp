@@ -4,7 +4,7 @@ use std::{
 };
 
 use derive_more::{Deref, From};
-use flate2::{Compression, bufread::ZlibDecoder, write::ZlibEncoder};
+use flate2::{bufread::ZlibDecoder, write::ZlibEncoder, Compression};
 
 use super::*;
 
@@ -75,7 +75,7 @@ where
 
 pub enum CompressedArgs<'a, Arg> {
     None(Arg),
-    OutputSize(Arg, &'a mut usize)
+    OutputSize(Arg, &'a mut usize),
 }
 
 impl<T, Arg> BinWrite for Compressed<T>

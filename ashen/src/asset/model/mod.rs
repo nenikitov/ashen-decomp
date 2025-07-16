@@ -8,8 +8,8 @@ use dat::{
 };
 
 use super::{
-    Parser,
     texture::{Texture, TextureSize},
+    Parser,
 };
 use crate::utils::nom::*;
 

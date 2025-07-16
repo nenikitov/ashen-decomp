@@ -52,7 +52,7 @@ pub struct ModelSequenceHeader {
     offset: PosMarker<u32>,
 }
 
-#[binread]
+#[binrw]
 #[br(import_raw(header: ModelSequenceHeader))]
 #[derive(Debug)]
 pub struct ModelSequence(
@@ -138,30 +138,51 @@ pub struct ModelFrame {
 #[derive(Debug)]
 pub struct ModelFramePadded(#[br(args { vertices, triangles }, pad_size_to = stride)] ModelFrame);
 
-#[binread]
+#[binrw]
 #[derive(Debug)]
 pub struct Model {
     #[br(temp)]
+    #[bw(calc = triangles.len() as u32)]
     _triangles_len: u32,
+
     #[br(temp)]
+    #[bw(calc = frames.get(0).map(|f| f.0.vertices.len()).unwrap_or_default() as u32)]
     _vertices_len: u32,
+
     #[br(temp)]
+    #[bw(calc = texture.width() as u32)]
     _texture_width: u32,
+
     #[br(temp)]
+    #[bw(calc = texture.height() as u32)]
     _texture_height: u32,
+
     #[br(temp)]
+    #[bw(calc = frames.len() as u32)]
     _frames_len: u32,
+
     #[br(temp)]
+    #[bw(ignore)]
     _frames_stride: u32,
+
     #[br(temp)]
+    #[bw(calc = sequences.len() as u32)]
     _sequences_len: u32,
+
     #[br(temp)]
+    #[bw(calc = Default::default())]
     _texture_offset: PosMarker<u32>,
+
     #[br(temp)]
+    #[bw(calc = Default::default())]
     _triangles_offset: PosMarker<u32>,
+
     #[br(temp)]
+    #[bw(calc = Default::default())]
     _frames_offset: PosMarker<u32>,
+
     #[br(temp)]
+    #[bw(calc = Default::default())]
     _sequences_offset: PosMarker<u32>,
 
     locator_nodes: [u8; 0x10],
@@ -171,9 +192,11 @@ pub struct Model {
         seek_before = SeekFrom::Start(_sequences_offset.value as u64),
         temp,
     )]
+    #[bw(ignore)]
     _sequences: Vec<ModelSequenceHeader>,
 
     #[br(parse_with = args_iter(_sequences))]
+    #[bw(map = _sequences_offset.store_offset())]
     sequences: Vec<ModelSequence>,
 
     #[br(
@@ -183,6 +206,7 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_texture_offset.value as u64)
     )]
+    #[bw(ignore)]
     texture: Texture,
 
     #[br(
@@ -195,6 +219,7 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_triangles_offset.value as u64)
     )]
+    #[bw(ignore)]
     triangles: Vec<ModelTriangle>,
 
     #[br(
@@ -208,6 +233,7 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_frames_offset.value as u64)
     )]
+    #[bw(ignore)]
     frames: Vec<ModelFramePadded>,
 }
 
