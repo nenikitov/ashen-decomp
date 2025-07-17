@@ -44,6 +44,39 @@ where
     }
 }
 
+pub struct MarkerMetadata<'m, M, T> {
+    marker: &'m Marker<M>,
+    value: T,
+    metadata: M
+}
+
+impl<'m, M, T> BinWrite for MarkerMetadata<'m, M, T>
+where
+    T: BinWrite,
+    for <'a> M: BinWrite<Args<'a> = ()>,
+{
+    type Args<'a> = T::Args<'a>;
+
+    fn write_options<W: std::io::Write + std::io::Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        // Write value
+        self.value.write_options(writer, endian, args)?;
+        let pos_after = writer.stream_position()?;
+
+        // Write metadata at marker
+        writer.seek(SeekFrom::Start(self.marker.pos.get()))?;
+        self.metadata.write_options(writer, endian, ())?;
+
+        // Return back to after value
+        writer.seek(SeekFrom::Start(pos_after))?;
+        Ok(())
+    }
+}
+
 pub struct MarkerOffset<'m, M, T> {
     marker: &'m Marker<M>,
     value: T
@@ -133,6 +166,10 @@ pub trait StoreAtMarker where Self: Sized {
     fn store_size<'m, M>(self, marker: &'m Marker<M>) -> MarkerSize<'m, M, Self> {
         MarkerSize { marker, value: self }
     }
+
+    fn store_metadata<'m, M>(self, marker: &'m Marker<M>, metadata: M) -> MarkerMetadata<'m, M, Self> {
+        MarkerMetadata { marker, value: self, metadata }
+    }
 }
 
 impl<T> StoreAtMarker for T where T: BinWrite {}
@@ -187,6 +224,32 @@ mod tests {
 
         assert_eq!(output.into_inner(), [111, 186, 0, 222, 104, 235]);
         assert_eq!(data.marker.pos.get(), 2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn store_at_marker_stores_metadata() -> eyre::Result<()> {
+        #[binwrite]
+        struct Data {
+            before: [u8; 2],
+            marker: Marker<u8>,
+            after: [u8; 3],
+            #[bw(map = |d| d.store_metadata(marker, 60))]
+            marked_data: [u8; 4]
+        }
+
+        let data = Data {
+            before: [111, 186],
+            marker: Default::default(),
+            after: [222, 104, 235],
+            marked_data: [61, 78, 150, 240],
+        };
+
+        let mut output = Cursor::new(vec![]);
+        data.write_le(&mut output)?;
+
+        assert_eq!(output.into_inner(), [111, 186, 60, 222, 104, 235, 61, 78, 150, 240]);
 
         Ok(())
     }

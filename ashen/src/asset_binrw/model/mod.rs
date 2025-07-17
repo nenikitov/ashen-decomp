@@ -1,7 +1,7 @@
 use std::io::SeekFrom;
 
 use fixed::{
-    traits::LossyInto,
+    traits::{LossyInto, ToFixed},
     types::{I16F16, I24F8},
 };
 use glam::{Vec2, Vec3};
@@ -10,7 +10,7 @@ use super::utils::*;
 
 const UNITS_PER_METER: f32 = 32.0;
 
-#[binrw::parser(reader, endian)]
+#[parser(reader, endian)]
 fn parse_uv(args: TextureReadArgs, ...) -> BinResult<Vec2> {
     let u = u16::read_options(reader, endian, ())?;
     let v = u16::read_options(reader, endian, ())?;
@@ -21,32 +21,48 @@ fn parse_uv(args: TextureReadArgs, ...) -> BinResult<Vec2> {
     ))
 }
 
-#[binread]
+#[writer(writer, endian)]
+fn write_uv(uv: &Vec2, args: &TextureReadArgs, ...) -> BinResult<()> {
+    let u = uv.x * args.width as f32;
+    let v = 1f32 - uv.y * args.height as f32;
+
+    (u as u16).write_options(writer, endian, ())?;
+    (v as u16).write_options(writer, endian, ())?;
+
+    Ok(())
+}
+
+#[binrw]
 #[br(import_raw(args: TextureReadArgs))]
-#[derive(Debug)]
+#[bw(import_raw(args: &TextureReadArgs))]
+#[derive(Debug, Clone)]
 pub struct ModelPoint {
     #[br(map = |x: u16| x.into())]
+    #[bw(map = |&x| x as u16)]
     index: usize,
+
     #[br(
         parse_with = parse_uv,
+        args_raw(args)
+    )]
+    #[bw(
+        write_with = write_uv,
         args_raw(args)
     )]
     uv: Vec2,
 }
 
-#[binread]
+#[binrw]
 #[br(import_raw(args: TextureReadArgs))]
+#[bw(import_raw(args: &TextureReadArgs))]
 #[derive(Debug)]
 pub struct ModelTriangle(
-    #[br(
-        parse_with = args_iter(vec![args; 3]),
-        map = |x: Vec<ModelPoint>| x.try_into().unwrap()
-    )]
+    #[brw(args_raw = args)]
     [ModelPoint; 3],
 );
 
-#[binread]
-#[derive(Clone, Debug)]
+#[binrw]
+#[derive(Debug, Clone, Default)]
 pub struct ModelSequenceHeader {
     frames: Marker<u32>,
     offset: Marker<u32>,
@@ -54,19 +70,23 @@ pub struct ModelSequenceHeader {
 
 #[binrw]
 #[br(import_raw(header: ModelSequenceHeader))]
+#[bw(import_raw(header: &ModelSequenceHeader))]
 #[derive(Debug)]
 pub struct ModelSequence(
     #[br(
         seek_before = SeekFrom::Start(header.offset.value as u64),
         count = header.frames.value as usize
     )]
+    #[bw(
+        map = |e| e.store_offset(&header.offset).store_metadata(&header.frames, e.len() as u32)
+    )]
     pub Vec<u32>,
 );
 
 #[binread]
 #[br(import {
-    scale: Vec3,
-    scale_origin: Vec3,
+    scale: &Marker<Vec3I16F16>,
+    scale_origin: &Marker<Vec3I16F16>,
 })]
 #[derive(Debug)]
 pub struct ModelVertex {
@@ -76,11 +96,29 @@ pub struct ModelVertex {
             y: y.into(),
             z: z.into(),
         };
-        -1.0 * (pos * scale + scale_origin) / UNITS_PER_METER
+        -1f32 * (pos * scale.value.0 + scale_origin.value.0) / UNITS_PER_METER
     })]
     pos: Vec3,
     normal_index: u8,
 }
+
+#[binrw]
+#[derive(Debug)]
+pub struct Vec3I16F16(
+    #[br(map = |[x, y, z]: [i32; 3]| Vec3 {
+        x: I16F16::from_bits(x).to_num(),
+        y: I16F16::from_bits(y).to_num(),
+        z: I16F16::from_bits(z).to_num(),
+    })]
+    #[bw(map = |vec| {
+        [
+            vec.x.to_fixed::<I16F16>().to_bits(),
+            vec.y.to_fixed::<I16F16>().to_bits(),
+            vec.z.to_fixed::<I16F16>().to_bits(),
+        ]
+    })]
+    Vec3
+);
 
 #[binread]
 #[br(
@@ -91,25 +129,9 @@ pub struct ModelVertex {
 )]
 #[derive(Debug)]
 pub struct ModelFrame {
-    #[br(
-        temp,
-        map = |[x, y, z]: [i32; 3]| Vec3 {
-            x: I16F16::from_bits(x).to_num(),
-            y:I16F16::from_bits(y).to_num(),
-            z: I16F16::from_bits(z).to_num(),
-        }
-    )]
-    _scale: Vec3,
+    _scale: Marker<Vec3I16F16>,
 
-    #[br(
-        temp,
-        map = |[x, y, z]: [i32; 3]| Vec3 {
-            x: I16F16::from_bits(x).to_num(),
-            y: I16F16::from_bits(y).to_num(),
-            z: I16F16::from_bits(z).to_num(),
-        }
-    )]
-    _scale_origin: Vec3,
+    _scale_origin: Marker<Vec3I16F16>,
 
     #[br(map = |x: i32| I24F8::from_bits(x).lossy_into())]
     bounding_sphere_radius: f32,
@@ -117,8 +139,8 @@ pub struct ModelFrame {
     #[br(args {
         count: vertices as usize,
         inner: args! {
-            scale: _scale,
-            scale_origin: _scale_origin,
+            scale: &_scale,
+            scale_origin: &_scale_origin,
         }
     })]
     vertices: Vec<ModelVertex>,
@@ -162,7 +184,7 @@ pub struct Model {
     _frames_len: u32,
 
     #[br(temp)]
-    #[bw(ignore)]
+    #[bw(ignore)] // TODO
     _frames_stride: u32,
 
     #[br(temp)]
@@ -174,29 +196,29 @@ pub struct Model {
     _texture_offset: Marker<u32>,
 
     #[br(temp)]
-    #[bw(calc = Default::default())]
+    #[bw(calc = Default::default())] // TODO
     _triangles_offset: Marker<u32>,
 
     #[br(temp)]
-    #[bw(calc = Default::default())]
+    #[bw(calc = Default::default())] // TODO
     _frames_offset: Marker<u32>,
 
     #[br(temp)]
-    #[bw(calc = Default::default())]
+    #[bw(calc = Default::default())] // TODO
     _sequences_offset: Marker<u32>,
 
     locator_nodes: [u8; 0x10],
 
     #[br(
-        args { count: _sequences_len as usize },
         seek_before = SeekFrom::Start(_sequences_offset.value as u64),
+        count = _sequences_len as usize,
         temp,
     )]
-    #[bw(ignore)]
+    #[bw(calc(vec![Default::default(); sequences.len()]))]
     _sequences: Vec<ModelSequenceHeader>,
 
     #[br(parse_with = args_iter(_sequences))]
-    #[bw(map = |s| s.store_offset(&_sequences_offset))]
+    #[bw(ignore)] // TODO
     sequences: Vec<ModelSequence>,
 
     #[br(
@@ -206,7 +228,7 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_texture_offset.value as u64)
     )]
-    #[bw(ignore)]
+    #[bw(map = |t| t.store_offset(&_texture_offset))]
     texture: Texture,
 
     #[br(
@@ -219,7 +241,7 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_triangles_offset.value as u64)
     )]
-    #[bw(ignore)]
+    #[bw(ignore)] // TODO
     triangles: Vec<ModelTriangle>,
 
     #[br(
@@ -233,7 +255,7 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_frames_offset.value as u64)
     )]
-    #[bw(ignore)]
+    #[bw(ignore)] // TODO
     frames: Vec<ModelFramePadded>,
 }
 
