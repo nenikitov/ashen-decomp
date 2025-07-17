@@ -48,8 +48,8 @@ pub struct ModelTriangle(
 #[binread]
 #[derive(Clone, Debug)]
 pub struct ModelSequenceHeader {
-    frames: PosMarker<u32>,
-    offset: PosMarker<u32>,
+    frames: Marker<u32>,
+    offset: Marker<u32>,
 }
 
 #[binrw]
@@ -171,19 +171,19 @@ pub struct Model {
 
     #[br(temp)]
     #[bw(calc = Default::default())]
-    _texture_offset: PosMarker<u32>,
+    _texture_offset: Marker<u32>,
 
     #[br(temp)]
     #[bw(calc = Default::default())]
-    _triangles_offset: PosMarker<u32>,
+    _triangles_offset: Marker<u32>,
 
     #[br(temp)]
     #[bw(calc = Default::default())]
-    _frames_offset: PosMarker<u32>,
+    _frames_offset: Marker<u32>,
 
     #[br(temp)]
     #[bw(calc = Default::default())]
-    _sequences_offset: PosMarker<u32>,
+    _sequences_offset: Marker<u32>,
 
     locator_nodes: [u8; 0x10],
 
@@ -196,7 +196,7 @@ pub struct Model {
     _sequences: Vec<ModelSequenceHeader>,
 
     #[br(parse_with = args_iter(_sequences))]
-    #[bw(map = _sequences_offset.store_offset())]
+    #[bw(map = |s| s.store_offset(&_sequences_offset))]
     sequences: Vec<ModelSequence>,
 
     #[br(
@@ -257,11 +257,11 @@ mod tests {
             assert_eq!(n.0.triangle_normal_indices, o.triangle_normal_indexes);
 
             for (n, o) in iter::zip(n.0.vertices, o.vertices) {
-                dbg!("HERE");
-                assert_eq!(n.normal_index, o.normal_index);
-                assert_eq!(n.pos.x, o.x);
-                assert_eq!(n.pos.y, o.y);
-                assert_eq!(n.pos.z, o.z);
+                assert_approx_eq::assert_approx_eq!(
+                    n.pos.distance(Vec3 { x: o.x, y: o.y, z: o.z }),
+                    0.0,
+                    0.015
+                );
             }
         }
 

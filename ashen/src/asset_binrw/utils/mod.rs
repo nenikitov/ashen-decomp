@@ -14,7 +14,6 @@ mod_use!(
     marker,
     normalized_f32,
     padded_null_string,
-    pos_marker,
     texture,
     vec,
     zlib,

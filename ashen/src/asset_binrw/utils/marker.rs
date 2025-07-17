@@ -125,17 +125,17 @@ where
     }
 }
 
-pub trait MarkerMetadata {
-    fn store_offset<'m, M>(&self, marker: &'m Marker<M>) -> MarkerOffset<'m, M, &Self> {
+pub trait StoreAtMarker where Self: Sized {
+    fn store_offset<'m, M>(self, marker: &'m Marker<M>) -> MarkerOffset<'m, M, Self> {
         MarkerOffset { marker, value: self }
     }
 
-    fn store_size<'m, M>(&self, marker: &'m Marker<M>) -> MarkerSize<'m, M, &Self> {
+    fn store_size<'m, M>(self, marker: &'m Marker<M>) -> MarkerSize<'m, M, Self> {
         MarkerSize { marker, value: self }
     }
 }
 
-impl<T> MarkerMetadata for T where T: BinWrite {}
+impl<T> StoreAtMarker for T where T: BinWrite {}
 
 #[cfg(test)]
 mod tests {
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn metadata_stores_offset() -> eyre::Result<()> {
+    fn store_at_marker_stores_offset() -> eyre::Result<()> {
         #[binwrite]
         struct Data {
             before: [u8; 2],
@@ -218,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn metadata_stores_size() -> eyre::Result<()> {
+    fn store_at_marker_stores_size() -> eyre::Result<()> {
         #[binwrite]
         struct Data {
             before: [u8; 2],

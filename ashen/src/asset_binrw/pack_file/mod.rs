@@ -11,30 +11,13 @@ pub struct PackFileEntryHeader {
     #[bw(calc(0))]
     _asset_kind: u32,
 
-    offset: PosMarker<u32>,
+    offset: Marker<u32>,
 
-    size: PosMarker<u32>,
+    size: Marker<u32>,
 
     #[br(temp, assert(_reserved == 0))]
     #[bw(calc(0))]
     _reserved: u32,
-}
-
-#[binrw::writer(writer, endian)]
-fn pack_file_entry_write_and_update_header(
-    this: &Vec<u8>,
-    header: &PackFileEntryHeader,
-) -> BinResult<()> {
-    let start = writer.stream_position()?;
-
-    writer.seek(SeekFrom::Start(header.offset.pos.get()))?;
-    (start as u32).write_options(writer, endian, ())?;
-
-    writer.seek(SeekFrom::Start(header.size.pos.get()))?;
-    (this.len() as u32).write_options(writer, endian, ())?;
-
-    writer.seek(SeekFrom::Start(start))?;
-    this.write_options(writer, endian, ())
 }
 
 #[binrw]
@@ -43,7 +26,7 @@ fn pack_file_entry_write_and_update_header(
 #[derive(Debug)]
 pub struct PackFileEntry(
     #[br(seek_before = SeekFrom::Start(header.offset.value as u64), count = header.size.value)]
-    #[bw(write_with = pack_file_entry_write_and_update_header, args(header))]
+    #[bw(map = |d| d.store_size(&header.size).store_offset(&header.offset))]
     pub Vec<u8>,
 );
 
