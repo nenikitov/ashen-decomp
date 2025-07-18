@@ -22,7 +22,7 @@ fn parse_uv(args: TextureReadArgs, ...) -> BinResult<Vec2> {
 }
 
 #[writer(writer, endian)]
-fn write_uv(uv: &Vec2, args: &TextureReadArgs, ...) -> BinResult<()> {
+fn write_uv(uv: &Vec2, args: TextureReadArgs, ...) -> BinResult<()> {
     let u = uv.x * args.width as f32;
     let v = 1f32 - uv.y * args.height as f32;
 
@@ -33,8 +33,7 @@ fn write_uv(uv: &Vec2, args: &TextureReadArgs, ...) -> BinResult<()> {
 }
 
 #[binrw]
-#[br(import_raw(args: TextureReadArgs))]
-#[bw(import_raw(args: &TextureReadArgs))]
+#[brw(import_raw(args: TextureReadArgs))]
 #[derive(Debug, Clone)]
 pub struct ModelPoint {
     #[br(map = |x: u16| x.into())]
@@ -54,7 +53,7 @@ pub struct ModelPoint {
 
 #[binrw]
 #[br(import_raw(args: TextureReadArgs))]
-#[bw(import_raw(args: &TextureReadArgs))]
+#[bw(import_raw(args: TextureReadArgs))]
 #[derive(Debug)]
 pub struct ModelTriangle(#[brw(args_raw = args)] [ModelPoint; 3]);
 
@@ -151,11 +150,13 @@ pub struct ModelFrame {
     import {
         vertices: usize,
         triangles: usize,
-        stride: usize,
+        stride: Marker<u32>,
     },
 )]
 #[derive(Debug)]
-pub struct ModelFramePadded(#[br(args { vertices, triangles }, pad_size_to = stride)] ModelFrame);
+pub struct ModelFramePadded(
+    #[br(args { vertices, triangles }, pad_size_to = stride.value as usize)] ModelFrame,
+);
 
 #[binrw]
 #[derive(Debug)]
@@ -182,7 +183,7 @@ pub struct Model {
 
     #[br(temp)]
     #[bw(ignore)] // TODO
-    _frames_stride: u32,
+    _frames_stride: Marker<u32>,
 
     #[br(temp)]
     #[bw(calc = sequences.len() as u32)]
@@ -193,7 +194,7 @@ pub struct Model {
     _texture_offset: Marker<u32>,
 
     #[br(temp)]
-    #[bw(calc = Default::default())] // TODO
+    #[bw(calc = Default::default())]
     _triangles_offset: Marker<u32>,
 
     #[br(temp)]
@@ -241,7 +242,13 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_triangles_offset.value as u64)
     )]
-    #[bw(ignore)] // TODO
+    #[bw(
+        args {
+            width: _texture_width as usize,
+            height: _texture_height as usize
+        },
+        map = |d| d.store_offset(&_triangles_offset)
+    )]
     triangles: Vec<ModelTriangle>,
 
     #[br(
@@ -250,7 +257,7 @@ pub struct Model {
             inner: args! {
                 vertices: _vertices_len as usize,
                 triangles: _triangles_len as usize,
-                stride: _frames_stride as usize,
+                stride: _frames_stride,
             }
         },
         seek_before = SeekFrom::Start(_frames_offset.value as u64)
