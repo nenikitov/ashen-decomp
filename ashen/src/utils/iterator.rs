@@ -7,9 +7,11 @@ pub trait CollectArray: Sized + Iterator {
         // When it will be supported.
         assert!(N > 0 && size_of::<Self::Item>() > 0);
 
-        let mut array = std::mem::MaybeUninit::<[Self::Item; N]>::uninit().transpose();
+        let mut array = std::mem::MaybeUninit::uninit().transpose();
 
-        Itertools::zip_eq(array.iter_mut(), self).for_each(|(dest, item)| _ = dest.write(item));
+        for (dest, item) in Itertools::zip_eq(array.iter_mut(), self) {
+            dest.write(item);
+        }
 
         // SAFETY: Every single element in the array is initialized
         // because we wrote a valid iterator element into it.

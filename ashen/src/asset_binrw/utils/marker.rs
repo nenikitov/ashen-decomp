@@ -211,7 +211,7 @@ mod tests {
         let data = Data::read_le(&mut Cursor::new([
             // Some data before
             111, 186, // Marker
-            71, // Some data after
+            71,  // Some data after
             222, 104, 235,
         ]))?;
 
