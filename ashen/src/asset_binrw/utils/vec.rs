@@ -1,4 +1,4 @@
-use std::io::{Read, Seek, Write};
+use std::{io::{Read, Seek, Write}, marker::PhantomData};
 
 use super::*;
 
@@ -64,7 +64,7 @@ where
 
 pub fn args_iter_write<'a, T, Writer, Arg, It>(
     it: It,
-) -> impl Copy + FnOnce(&Vec<T>, &mut Writer, Endian, ()) -> BinResult<()>
+) -> impl Copy + Fn(&Vec<T>, &mut Writer, Endian, ()) -> BinResult<()>
 where
     T: BinWrite<Args<'a> = Arg>,
     Writer: Write + Seek,
@@ -75,3 +75,34 @@ where
             .try_for_each(|(e, arg)| e.write_options(writer, endian, arg))
     }
 }
+
+pub struct IterredArgs<'a, T, Arg>(T, PhantomData<&'a Arg>);
+
+impl<'a, S, T, Arg> BinWrite for IterredArgs<'a, S, Arg>
+where
+    T: BinWrite<Args<'a> = &'a Arg>,
+    S: IntoIterator<Item = T> + Copy,
+{
+    type Args<'b> = &'a Vec<Arg>;
+
+    fn write_options<W: Write + Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        itertools::zip_eq(self.0.into_iter(), args)
+            .try_for_each(|(e, arg)| e.write_options(writer, endian, arg))
+    }
+}
+
+pub trait IterArgs
+where
+    Self: Sized,
+{
+    fn iter_args<'a, Arg>(self) -> IterredArgs<'a, Self, Arg> {
+        IterredArgs(self, PhantomData)
+    }
+}
+
+impl<T> IterArgs for T where T: BinWrite {}

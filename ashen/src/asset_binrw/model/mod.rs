@@ -201,7 +201,7 @@ pub struct Model {
     _frames_offset: Marker<u32>,
 
     #[br(temp)]
-    #[bw(calc = Default::default())] // TODO
+    #[bw(calc = Default::default())]
     _sequences_offset: Marker<u32>,
 
     locator_nodes: [u8; 0x10],
@@ -215,7 +215,10 @@ pub struct Model {
     _sequences: Vec<ModelSequenceHeader>,
 
     #[br(parse_with = args_iter(_sequences))]
-    #[bw(ignore)] // TODO
+    #[bw(
+        args_raw = &_sequences,
+        map = |d| d.iter_args().store_offset(&_sequences_offset)
+    )]
     sequences: Vec<ModelSequence>,
 
     #[br(
