@@ -4,7 +4,7 @@ use std::{
 };
 
 use derive_more::{Deref, From};
-use flate2::{bufread::ZlibDecoder, write::ZlibEncoder, Compression};
+use flate2::{Compression, bufread::ZlibDecoder, write::ZlibEncoder};
 
 use super::*;
 

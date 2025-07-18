@@ -56,10 +56,7 @@ pub struct ModelPoint {
 #[br(import_raw(args: TextureReadArgs))]
 #[bw(import_raw(args: &TextureReadArgs))]
 #[derive(Debug)]
-pub struct ModelTriangle(
-    #[brw(args_raw = args)]
-    [ModelPoint; 3],
-);
+pub struct ModelTriangle(#[brw(args_raw = args)] [ModelPoint; 3]);
 
 #[binrw]
 #[derive(Debug, Clone, Default)]
@@ -117,7 +114,7 @@ pub struct Vec3I16F16(
             vec.z.to_fixed::<I16F16>().to_bits(),
         ]
     })]
-    Vec3
+    Vec3,
 );
 
 #[binread]
@@ -280,7 +277,11 @@ mod tests {
 
             for (n, o) in iter::zip(n.0.vertices, o.vertices) {
                 assert_approx_eq::assert_approx_eq!(
-                    n.pos.distance(Vec3 { x: o.x, y: o.y, z: o.z }),
+                    n.pos.distance(Vec3 {
+                        x: o.x,
+                        y: o.y,
+                        z: o.z
+                    }),
                     0.0,
                     0.015
                 );

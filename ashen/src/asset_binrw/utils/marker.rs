@@ -22,7 +22,7 @@ where
         let pos = reader.stream_position()?;
         M::read_options(reader, endian, args).map(|value| Self {
             pos: Cell::new(pos),
-            value
+            value,
         })
     }
 }
@@ -47,13 +47,13 @@ where
 pub struct MarkerMetadata<'m, M, T> {
     marker: &'m Marker<M>,
     value: T,
-    metadata: M
+    metadata: M,
 }
 
 impl<'m, M, T> BinWrite for MarkerMetadata<'m, M, T>
 where
     T: BinWrite,
-    for <'a> M: BinWrite<Args<'a> = ()>,
+    for<'a> M: BinWrite<Args<'a> = ()>,
 {
     type Args<'a> = T::Args<'a>;
 
@@ -79,14 +79,14 @@ where
 
 pub struct MarkerOffset<'m, M, T> {
     marker: &'m Marker<M>,
-    value: T
+    value: T,
 }
 
 impl<'m, M, T> BinWrite for MarkerOffset<'m, M, T>
 where
     T: BinWrite,
-    for <'a> M: BinWrite<Args<'a> = ()> + TryFrom<u64>,
-    <M as TryFrom<u64>>::Error: Display
+    for<'a> M: BinWrite<Args<'a> = ()> + TryFrom<u64>,
+    <M as TryFrom<u64>>::Error: Display,
 {
     type Args<'a> = T::Args<'a>;
 
@@ -107,9 +107,11 @@ where
         M::try_from(pos_before)
             .map_err(|e| Error::Custom {
                 pos: pos_marker,
-                err: Box::new(format!("Offset {pos_before:x} can't be stored in a marker: {e}"))
-            })?.write_options(writer, endian, ());
-
+                err: Box::new(format!(
+                    "Offset {pos_before:x} can't be stored in a marker: {e}"
+                )),
+            })?
+            .write_options(writer, endian, ());
 
         // Return back to after value
         writer.seek(SeekFrom::Start(pos_after))?;
@@ -119,14 +121,14 @@ where
 
 pub struct MarkerSize<'m, M, T> {
     marker: &'m Marker<M>,
-    value: T
+    value: T,
 }
 
 impl<'m, M, T> BinWrite for MarkerSize<'m, M, T>
 where
     T: BinWrite,
-    for <'a> M: BinWrite<Args<'a> = ()> + TryFrom<u64>,
-    <M as TryFrom<u64>>::Error: Display
+    for<'a> M: BinWrite<Args<'a> = ()> + TryFrom<u64>,
+    <M as TryFrom<u64>>::Error: Display,
 {
     type Args<'a> = T::Args<'a>;
 
@@ -148,9 +150,9 @@ where
         M::try_from(size)
             .map_err(|e| Error::Custom {
                 pos: pos_marker,
-                err: Box::new(format!("Size {size:x} can't be stored in a marker: {e}"))
-            })?.write_options(writer, endian, ());
-
+                err: Box::new(format!("Size {size:x} can't be stored in a marker: {e}")),
+            })?
+            .write_options(writer, endian, ());
 
         // Return back to after value
         writer.seek(SeekFrom::Start(pos_after))?;
@@ -158,17 +160,34 @@ where
     }
 }
 
-pub trait StoreAtMarker where Self: Sized {
+pub trait StoreAtMarker
+where
+    Self: Sized,
+{
     fn store_offset<'m, M>(self, marker: &'m Marker<M>) -> MarkerOffset<'m, M, Self> {
-        MarkerOffset { marker, value: self }
+        MarkerOffset {
+            marker,
+            value: self,
+        }
     }
 
     fn store_size<'m, M>(self, marker: &'m Marker<M>) -> MarkerSize<'m, M, Self> {
-        MarkerSize { marker, value: self }
+        MarkerSize {
+            marker,
+            value: self,
+        }
     }
 
-    fn store_metadata<'m, M>(self, marker: &'m Marker<M>, metadata: M) -> MarkerMetadata<'m, M, Self> {
-        MarkerMetadata { marker, value: self, metadata }
+    fn store_metadata<'m, M>(
+        self,
+        marker: &'m Marker<M>,
+        metadata: M,
+    ) -> MarkerMetadata<'m, M, Self> {
+        MarkerMetadata {
+            marker,
+            value: self,
+            metadata,
+        }
     }
 }
 
@@ -191,11 +210,9 @@ mod tests {
 
         let data = Data::read_le(&mut Cursor::new([
             // Some data before
-            111, 186,
-            // Marker
-            71,
-            // Some data after
-            222, 104, 235
+            111, 186, // Marker
+            71, // Some data after
+            222, 104, 235,
         ]))?;
 
         assert_eq!(data.marker.pos.get(), 2);
@@ -236,7 +253,7 @@ mod tests {
             marker: Marker<u8>,
             after: [u8; 3],
             #[bw(map = |d| d.store_metadata(marker, 60))]
-            marked_data: [u8; 4]
+            marked_data: [u8; 4],
         }
 
         let data = Data {
@@ -249,7 +266,10 @@ mod tests {
         let mut output = Cursor::new(vec![]);
         data.write_le(&mut output)?;
 
-        assert_eq!(output.into_inner(), [111, 186, 60, 222, 104, 235, 61, 78, 150, 240]);
+        assert_eq!(
+            output.into_inner(),
+            [111, 186, 60, 222, 104, 235, 61, 78, 150, 240]
+        );
 
         Ok(())
     }
@@ -262,7 +282,7 @@ mod tests {
             marker: Marker<u8>,
             after: [u8; 3],
             #[bw(map = |d| d.store_offset(marker))]
-            marked_data: [u8; 4]
+            marked_data: [u8; 4],
         }
 
         let data = Data {
@@ -275,7 +295,10 @@ mod tests {
         let mut output = Cursor::new(vec![]);
         data.write_le(&mut output)?;
 
-        assert_eq!(output.into_inner(), [111, 186, 6, 222, 104, 235, 61, 78, 150, 240]);
+        assert_eq!(
+            output.into_inner(),
+            [111, 186, 6, 222, 104, 235, 61, 78, 150, 240]
+        );
 
         Ok(())
     }
@@ -288,7 +311,7 @@ mod tests {
             marker: Marker<u8>,
             after: [u8; 3],
             #[bw(map = |d| d.store_size(marker))]
-            marked_data: [u8; 4]
+            marked_data: [u8; 4],
         }
 
         let data = Data {
@@ -301,7 +324,10 @@ mod tests {
         let mut output = Cursor::new(vec![]);
         data.write_le(&mut output)?;
 
-        assert_eq!(output.into_inner(), [111, 186, 4, 222, 104, 235, 61, 78, 150, 240]);
+        assert_eq!(
+            output.into_inner(),
+            [111, 186, 4, 222, 104, 235, 61, 78, 150, 240]
+        );
 
         Ok(())
     }
