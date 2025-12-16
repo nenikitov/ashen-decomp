@@ -1,4 +1,7 @@
-use std::{io::{Read, Seek, Write}, marker::PhantomData};
+use std::{
+    io::{Read, Seek, Write},
+    marker::PhantomData,
+};
 
 use super::*;
 
@@ -44,7 +47,7 @@ where
 {
     move |vec, writer, endian, ()| {
         vec.iter()
-            .try_for_each(|e| map(e).write_options(writer, endian, ()))
+            .try_for_each(|x| map(x).write_options(writer, endian, ()))
     }
 }
 
@@ -58,7 +61,7 @@ where
 {
     move |vec, writer, endian, ()| {
         vec.iter()
-            .try_for_each(|e| map_vec_write(map)(e, writer, endian, ()))
+            .try_for_each(|x| map_vec_write(map)(x, writer, endian, ()))
     }
 }
 

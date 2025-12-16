@@ -21,7 +21,7 @@ pub struct Skybox {
     )]
     #[bw(
         assert(palette.len() == LEN_PALETTE),
-        write_with = map_vec_write(|&x| (ColorU16::from(x), 0u16))
+        write_with = map_vec_write(|&x| ColorU16::from(x))
     )]
     palette: Vec<Vec3>,
 
@@ -42,6 +42,19 @@ mod tests {
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
         let skybox = Skybox::read_le(&mut Cursor::new(SKYBOX_DATA.as_slice()))?;
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn write_rom_asset() -> eyre::Result<()> {
+        let skybox = Skybox::read_le(&mut Cursor::new(SKYBOX_DATA.as_slice()))?;
+        let output = {
+            let mut output = Cursor::new(vec![]);
+            skybox.write_le(&mut output)?;
+            output.into_inner()
+        };
+        assert_eq!(*SKYBOX_DATA, output);
         Ok(())
     }
 }

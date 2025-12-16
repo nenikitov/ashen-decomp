@@ -34,4 +34,17 @@ mod tests {
         let color_map = ColorMap::read_le(&mut Cursor::new(COLOR_MAP_DATA.as_slice()))?;
         Ok(())
     }
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn write_rom_asset() -> eyre::Result<()> {
+        let color_map = ColorMap::read_le(&mut Cursor::new(COLOR_MAP_DATA.as_slice()))?;
+        let output = {
+            let mut output = Cursor::new(vec![]);
+            color_map.write_le(&mut output)?;
+            output.into_inner()
+        };
+        assert_eq!(*COLOR_MAP_DATA, output);
+        Ok(())
+    }
 }

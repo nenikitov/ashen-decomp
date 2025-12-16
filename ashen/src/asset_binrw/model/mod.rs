@@ -74,7 +74,7 @@ pub struct ModelSequence(
         count = header.frames.value as usize
     )]
     #[bw(
-        map = |e| e.store_offset(&header.offset).store_metadata(&header.frames, e.len() as u32)
+        map = |x| x.store_offset(&header.offset).store_metadata(&header.frames, x.len() as u32)
     )]
     pub Vec<u32>,
 );

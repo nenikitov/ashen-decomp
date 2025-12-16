@@ -140,11 +140,14 @@ mod tests {
         let texture_bank =
             WorldTextureBank::read_le_args(&mut Cursor::new(TEXTURE_DATA.as_slice()), &info_bank)?;
 
-        let mut output = Cursor::new(vec![]);
-        let mut new_info_bank = WorldTextureInfoBank::default();
-        texture_bank.write_le_args(&mut output, &mut new_info_bank);
+        let (output, info_bank_new) = {
+            let mut output = Cursor::new(vec![]);
+            let mut info_bank_new = WorldTextureInfoBank::default();
+            texture_bank.write_le_args(&mut output, &mut info_bank_new);
+            (output.into_inner(), info_bank_new)
+        };
 
-        iter::zip(info_bank.0.iter(), new_info_bank.0.iter())
+        iter::zip(info_bank.0.iter(), info_bank_new.0.iter())
             .map(|(o, n)| {
                 assert_eq!(o.width, n.width);
                 assert_eq!(o.height, n.height);
@@ -154,8 +157,34 @@ mod tests {
             })
             .count();
 
-        output.set_position(0);
-        let new_texture_bank = WorldTextureBank::read_le_args(&mut output, &new_info_bank)?;
+        // Re-read with generated info bank to see if it's valid
+        let texture_bank_new =
+            WorldTextureBank::read_le_args(&mut Cursor::new(&output), &info_bank_new)?;
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn write_rom_asset() -> eyre::Result<()> {
+        let info_bank =
+            WorldTextureInfoBank::read_le(&mut Cursor::new(TEXTURE_INFO_DATA.as_slice()))?;
+        let texture_bank =
+            WorldTextureBank::read_le_args(&mut Cursor::new(TEXTURE_DATA.as_slice()), &info_bank)?;
+
+        let (output_texture_bank, info_bank_new) = {
+            let mut output = Cursor::new(vec![]);
+            let mut info_bank_new = WorldTextureInfoBank::default();
+            texture_bank.write_le_args(&mut output, &mut info_bank_new);
+            (output.into_inner(), info_bank_new)
+        };
+        let output_info_bank = {
+            let mut output = Cursor::new(vec![]);
+            info_bank_new.write_le(&mut output)?;
+            output.into_inner()
+        };
+
+        // TODO: Assert that original file is equal to the new one if offsets don't need to be preserved
 
         Ok(())
     }

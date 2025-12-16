@@ -66,23 +66,31 @@ mod tests {
     #[test]
     #[ignore = "uses Ashen ROM files"]
     fn parse_rom_asset() -> eyre::Result<()> {
-        let rom = PackFile::read_le(&mut Cursor::new(ROM_DATA.as_slice()))?;
-        let (_, pack_file) = crate::asset::pack_file::PackFile::new(&ROM_DATA)?;
+        let pack_file = PackFile::read_le(&mut Cursor::new(ROM_DATA.as_slice()))?;
+        let (_, pack_file_old) = crate::asset::pack_file::PackFile::new(&ROM_DATA)?;
 
-        rom.entries
+        pack_file
+            .entries
             .iter()
-            .zip(pack_file.entries.iter())
+            .zip(pack_file_old.entries.iter())
             .for_each(|(n, o)| {
                 assert_eq!(&n.0, &o.bytes);
             });
 
-        let mut output = Cursor::new(vec![]);
-        rom.write_le(&mut output);
+        Ok(())
+    }
 
-        std::fs::write(
-            workspace_file_path!("rom/packfile.new.dat"),
-            output.into_inner(),
-        )?;
+    fn write_rom_asset() -> eyre::Result<()> {
+        let pack_file = PackFile::read_le(&mut Cursor::new(ROM_DATA.as_slice()))?;
+        let output = {
+            let mut output = Cursor::new(vec![]);
+            pack_file.write_le(&mut output)?;
+            output.into_inner()
+        };
+
+        // TODO: Assert that original file is equal to the new one if offsets don't need to be preserved
+
+        std::fs::write(workspace_file_path!("rom/packfile.new.dat"), output)?;
 
         Ok(())
     }

@@ -32,4 +32,17 @@ mod tests {
         let gamma_table = GammaTable::read_le(&mut Cursor::new(GAMMA_TABLE_DATA.as_slice()))?;
         Ok(())
     }
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn write_rom_asset() -> eyre::Result<()> {
+        let gamma_table = GammaTable::read_le(&mut Cursor::new(GAMMA_TABLE_DATA.as_slice()))?;
+        let output = {
+            let mut output = Cursor::new(vec![]);
+            gamma_table.write_le(&mut output)?;
+            output.into_inner()
+        };
+        assert_eq!(*GAMMA_TABLE_DATA, output);
+        Ok(())
+    }
 }
