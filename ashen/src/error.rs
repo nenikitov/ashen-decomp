@@ -1,4 +1,4 @@
-use std::num::NonZeroUsize;
+use std::num::NonZero;
 
 use nom::error::ErrorKind as NomErrorKind;
 
@@ -65,7 +65,7 @@ pub enum ErrorKind {
     ///
     /// `Incomplete` will only be returned if the `Asset`'s size is fixed,
     /// otherwise `ErrorKind::Nom::Eof` would be returned instead.
-    Incomplete(NonZeroUsize),
+    Incomplete(NonZero<usize>),
     /// Generic nom error.
     Nom(NomErrorKind),
 }
@@ -110,7 +110,7 @@ where
     let bytes = bytes.as_ref();
 
     if bytes.len() < length {
-        let missing = NonZeroUsize::new(length - bytes.len()).unwrap();
+        let missing = NonZero::<usize>::new(length - bytes.len()).unwrap();
         return Err(ParseError {
             bytes: bytes.to_vec().into_boxed_slice(),
             kind: ErrorKind::Incomplete(missing),

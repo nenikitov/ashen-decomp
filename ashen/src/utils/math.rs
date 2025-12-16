@@ -1,4 +1,4 @@
-use num::{Bounded, NumCast, Zero};
+use num::{Bounded, NumCast, traits::ConstZero};
 
 pub trait IntoFromNormalizedF32 {
     fn into_normalized_f32_between(self, min: Self, max: Self, clamp: bool) -> f32;
@@ -9,11 +9,11 @@ pub trait IntoFromNormalizedF32 {
 
 impl<T> IntoFromNormalizedF32 for T
 where
-    T: Bounded + NumCast + Zero + PartialOrd + Ord + Copy,
+    T: Bounded + NumCast + ConstZero + PartialOrd + Ord + Copy,
 {
     fn into_normalized_f32_between(self, min: Self, max: Self, clamp: bool) -> f32 {
-        debug_assert!(min <= T::zero());
-        debug_assert!(max > T::zero());
+        debug_assert!(min <= T::ZERO);
+        debug_assert!(max > T::ZERO);
 
         let value = if clamp { self.clamp(min, max) } else { self };
         if value >= T::zero() {
@@ -28,8 +28,8 @@ where
     }
 
     fn from_normalized_f32_between(value: f32, min: Self, max: Self, clamp: bool) -> Self {
-        debug_assert!(min <= T::zero());
-        debug_assert!(max > T::zero());
+        debug_assert!(min <= T::ZERO);
+        debug_assert!(max > T::ZERO);
 
         let value = if clamp { value.clamp(-1.0, 1.0) } else { value };
         if value >= 0.0 {

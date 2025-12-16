@@ -1,4 +1,4 @@
-use num::{Bounded, NumCast, Zero};
+use num::{Bounded, NumCast, traits::ConstZero};
 
 use super::*;
 use crate::utils::math::IntoFromNormalizedF32;
@@ -9,7 +9,7 @@ pub struct NormalizedF32<T>(T)
 where
     T: Bounded
         + NumCast
-        + Zero
+        + ConstZero
         + PartialOrd
         + Ord
         + Copy
@@ -20,7 +20,7 @@ impl<T> From<f32> for NormalizedF32<T>
 where
     T: Bounded
         + NumCast
-        + Zero
+        + ConstZero
         + PartialOrd
         + Ord
         + Copy
@@ -36,7 +36,7 @@ impl<T> From<NormalizedF32<T>> for f32
 where
     T: Bounded
         + NumCast
-        + Zero
+        + ConstZero
         + PartialOrd
         + Ord
         + Copy
