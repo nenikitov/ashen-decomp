@@ -254,7 +254,7 @@ pub struct Model {
     _triangles_offset: Marker<u32>,
 
     #[br(temp)]
-    #[bw(calc = Default::default())] // TODO
+    #[bw(calc = Default::default())]
     _frames_offset: Marker<u32>,
 
     #[br(temp)]
@@ -303,7 +303,7 @@ pub struct Model {
             width: _texture_width as usize,
             height: _texture_height as usize
         },
-        map = |d| d.store_offset(&_triangles_offset)
+        map = |x| x.store_offset(&_triangles_offset)
     )]
     triangles: Vec<ModelTriangle>,
 
@@ -318,6 +318,7 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_frames_offset.value as u64)
     )]
+    #[bw(map = |x| x.store_offset(&_frames_offset))]
     frames: Vec<ModelFramePadded>,
 }
 
