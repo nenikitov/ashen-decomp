@@ -9,6 +9,9 @@ use glam::{Vec2, Vec3};
 use super::utils::*;
 
 const UNITS_PER_METER: f32 = 32.0;
+const FRAME_ALIGNMENT: usize = 4;
+// Yeah, the game does not use the entire range of u8 to store vertex positions for whatever reason
+const VERTEX_NORMALIZATION_RANGE: f32 = 254.0;
 
 #[parser(reader, endian)]
 fn parse_uv(args: TextureReadArgs, ...) -> BinResult<Vec2> {
@@ -79,10 +82,14 @@ pub struct ModelSequence(
     pub Vec<u32>,
 );
 
-#[binread]
+#[binrw]
 #[br(import {
-    scale: &Marker<Vec3I16F16>,
-    scale_origin: &Marker<Vec3I16F16>,
+    scale: &Vec3I16F16,
+    scale_origin: &Vec3I16F16,
+})]
+#[bw(import {
+    scale: &Vec3I16F16,
+    scale_origin: &Vec3I16F16,
 })]
 #[derive(Debug)]
 pub struct ModelVertex {
@@ -92,7 +99,14 @@ pub struct ModelVertex {
             y: y.into(),
             z: z.into(),
         };
-        -1f32 * (pos * scale.value.0 + scale_origin.value.0) / UNITS_PER_METER
+        -(pos * scale.0 + scale_origin.0) / UNITS_PER_METER
+    })]
+    #[bw(map = |v| {
+        let pos = -(v * UNITS_PER_METER + scale_origin.0) / scale.0;
+        (pos * u8::MAX as f32)
+            .ceil()
+            .as_u8vec3()
+            .to_array()
     })]
     pos: Vec3,
     normal_index: u8,
@@ -116,7 +130,17 @@ pub struct Vec3I16F16(
     Vec3,
 );
 
-#[binread]
+#[writer(writer, endian)]
+fn write_vec3(vec: &Vec3) -> BinResult<()> {
+    [
+        vec.x.to_fixed::<I16F16>().to_bits(),
+        vec.y.to_fixed::<I16F16>().to_bits(),
+        vec.z.to_fixed::<I16F16>().to_bits(),
+    ]
+    .write_options(writer, endian, ())
+}
+
+#[binrw]
 #[br(
     import {
         vertices: usize,
@@ -125,9 +149,35 @@ pub struct Vec3I16F16(
 )]
 #[derive(Debug)]
 pub struct ModelFrame {
-    _scale: Marker<Vec3I16F16>,
+    #[br(temp)]
+    #[bw(calc = {
+        let min = vertices.iter().map(|v| v.pos).reduce(|a, b| a.min(b));
+        let max = vertices.iter().map(|v| v.pos).reduce(|a, b| a.max(b));
 
-    _scale_origin: Marker<Vec3I16F16>,
+        Vec3I16F16(
+            if let Some(min) = min && let Some(max) = max {
+                (max - min) * UNITS_PER_METER * u8::MAX as f32 / VERTEX_NORMALIZATION_RANGE
+            } else {
+                Vec3::ONE
+            }
+        )
+    })]
+    _scale: Vec3I16F16,
+
+    #[br(temp)]
+    #[bw(calc = {
+        // Max because the models are inverted, so origins are based on the "max" corner
+        let max = vertices.iter().map(|v| v.pos).reduce(|a, b| a.max(b));
+
+        Vec3I16F16(
+            if let Some(max) = max {
+                -max * UNITS_PER_METER
+            } else {
+                Vec3::ZERO
+            }
+        )
+    })]
+    _scale_origin: Vec3I16F16,
 
     #[br(map = |x: i32| I24F8::from_bits(x).lossy_into())]
     bounding_sphere_radius: f32,
@@ -139,13 +189,17 @@ pub struct ModelFrame {
             scale_origin: &_scale_origin,
         }
     })]
+    #[bw(args {
+        scale: &_scale,
+        scale_origin: &_scale_origin,
+    })]
     vertices: Vec<ModelVertex>,
 
     #[br(args { count: triangles as usize })]
     triangle_normal_indices: Vec<u8>,
 }
 
-#[binread]
+#[binrw]
 #[br(
     import {
         vertices: usize,
@@ -155,7 +209,9 @@ pub struct ModelFrame {
 )]
 #[derive(Debug)]
 pub struct ModelFramePadded(
-    #[br(args { vertices, triangles }, pad_size_to = stride.value as usize)] ModelFrame,
+    #[br(args { vertices, triangles }, pad_size_to = stride.value as usize)]
+    #[bw(align_after = FRAME_ALIGNMENT)]
+    ModelFrame,
 );
 
 #[binrw]
@@ -262,7 +318,6 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_frames_offset.value as u64)
     )]
-    #[bw(ignore)] // TODO
     frames: Vec<ModelFramePadded>,
 }
 
@@ -298,6 +353,19 @@ mod tests {
             }
         }
 
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "uses Ashen ROM files"]
+    fn write_rom_asset() -> eyre::Result<()> {
+        let model = Model::read_le(&mut Cursor::new(MODEL_DATA.as_slice()))?;
+        let output = {
+            let mut output = Cursor::new(vec![]);
+            model.write_le(&mut output)?;
+            output.into_inner()
+        };
+        //assert_eq!(MODEL_DATA[..40], output[..40]);
         Ok(())
     }
 }
