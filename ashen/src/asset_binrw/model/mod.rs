@@ -27,7 +27,7 @@ fn parse_uv(args: TextureReadArgs, ...) -> BinResult<Vec2> {
 #[writer(writer, endian)]
 fn write_uv(uv: &Vec2, args: TextureReadArgs, ...) -> BinResult<()> {
     let u = uv.x * args.width as f32;
-    let v = 1f32 - uv.y * args.height as f32;
+    let v = (1f32 - uv.y) * args.height as f32;
 
     (u as u16).write_options(writer, endian, ())?;
     (v as u16).write_options(writer, endian, ())?;
@@ -102,9 +102,10 @@ pub struct ModelVertex {
         -(pos * scale.0 + scale_origin.0) / UNITS_PER_METER
     })]
     #[bw(map = |v| {
+        // TODO(nenikitov): There are a few off by 1 errors probably because of float rounding
         let pos = -(v * UNITS_PER_METER + scale_origin.0) / scale.0;
         (pos * u8::MAX as f32)
-            .ceil()
+            .round()
             .as_u8vec3()
             .to_array()
     })]
@@ -151,6 +152,10 @@ fn write_vec3(vec: &Vec3) -> BinResult<()> {
 pub struct ModelFrame {
     #[br(temp)]
     #[bw(calc = {
+        // TODO(nenikitov): Some models were exported with a non-optimal Z scale
+        // Like the wraith.
+        // But this code always makes it optimal.
+        // Maybe there is a reason why.
         let min = vertices.iter().map(|v| v.pos).reduce(|a, b| a.min(b));
         let max = vertices.iter().map(|v| v.pos).reduce(|a, b| a.max(b));
 
@@ -180,6 +185,7 @@ pub struct ModelFrame {
     _scale_origin: Vec3I16F16,
 
     #[br(map = |x: i32| I24F8::from_bits(x).lossy_into())]
+    #[bw(map = |x: &f32| I24F8::from_num(*x).to_bits())]
     bounding_sphere_radius: f32,
 
     #[br(args {
@@ -204,13 +210,19 @@ pub struct ModelFrame {
     import {
         vertices: usize,
         triangles: usize,
-        stride: Marker<u32>,
+        stride: u32,
+    },
+)]
+#[bw(
+    import {
+        stride: u32,
     },
 )]
 #[derive(Debug)]
 pub struct ModelFramePadded(
-    #[br(args { vertices, triangles }, pad_size_to = stride.value as usize)]
-    #[bw(align_after = FRAME_ALIGNMENT)]
+    // Actual data
+    #[br(args { vertices, triangles }, pad_size_to = stride as usize)]
+    #[bw(pad_size_to = stride as usize)]
     ModelFrame,
 );
 
@@ -237,9 +249,24 @@ pub struct Model {
     #[bw(calc = frames.len() as u32)]
     _frames_len: u32,
 
+    // TODO(nenikitov): Somehow measure stride instead of computing it
     #[br(temp)]
-    #[bw(ignore)] // TODO
-    _frames_stride: Marker<u32>,
+    #[bw(calc = {
+        let size = (
+            // scale
+            4 * 3
+            // scale_origin
+            + 4 * 3
+            // bounding_sphere_radius
+            + 4
+            // vertices
+            + self.frames.get(0).map(|f| f.0.vertices.len()).unwrap_or_default() * 4
+            // triangle_normal_indices
+            + self.triangles.len() * 1
+        );
+        (size.div_ceil(FRAME_ALIGNMENT) * FRAME_ALIGNMENT) as u32
+    })]
+    _frames_stride: u32,
 
     #[br(temp)]
     #[bw(calc = sequences.len() as u32)]
@@ -264,31 +291,6 @@ pub struct Model {
     locator_nodes: [u8; 0x10],
 
     #[br(
-        seek_before = SeekFrom::Start(_sequences_offset.value as u64),
-        count = _sequences_len as usize,
-        temp,
-    )]
-    #[bw(calc(vec![Default::default(); sequences.len()]))]
-    _sequences: Vec<ModelSequenceHeader>,
-
-    #[br(parse_with = args_iter(_sequences))]
-    #[bw(
-        args_raw = &_sequences,
-        map = |d| d.iter_args().store_offset(&_sequences_offset)
-    )]
-    sequences: Vec<ModelSequence>,
-
-    #[br(
-        args {
-            height: _texture_height as usize,
-            width: _texture_width as usize
-        },
-        seek_before = SeekFrom::Start(_texture_offset.value as u64)
-    )]
-    #[bw(map = |t| t.store_offset(&_texture_offset))]
-    texture: Texture,
-
-    #[br(
         args {
             count: _triangles_len as usize,
             inner: args! {
@@ -309,6 +311,16 @@ pub struct Model {
 
     #[br(
         args {
+            height: _texture_height as usize,
+            width: _texture_width as usize
+        },
+        seek_before = SeekFrom::Start(_texture_offset.value as u64)
+    )]
+    #[bw(map = |t| t.store_offset(&_texture_offset))]
+    texture: Texture,
+
+    #[br(
+        args {
             count: _frames_len as usize,
             inner: args! {
                 vertices: _vertices_len as usize,
@@ -318,8 +330,31 @@ pub struct Model {
         },
         seek_before = SeekFrom::Start(_frames_offset.value as u64)
     )]
-    #[bw(map = |x| x.store_offset(&_frames_offset))]
+    #[bw(
+        args {
+            stride: _frames_stride,
+        },
+        map = |x| x.store_offset(&_frames_offset)
+    )]
     frames: Vec<ModelFramePadded>,
+
+    #[br(
+        temp,
+        seek_before = SeekFrom::Start(_sequences_offset.value as u64),
+        count = _sequences_len as usize,
+    )]
+    #[bw(
+        calc(vec![Default::default(); sequences.len()]),
+        map = |x| x.store_offset(&_sequences_offset)
+    )]
+    _sequences: Vec<ModelSequenceHeader>,
+
+    #[br(parse_with = args_iter(_sequences))]
+    #[bw(
+        args_raw = _sequences.as_ref(),
+        map = |d| d.iter_args()
+    )]
+    sequences: Vec<ModelSequence>,
 }
 
 #[cfg(test)]
@@ -366,7 +401,13 @@ mod tests {
             model.write_le(&mut output)?;
             output.into_inner()
         };
-        //assert_eq!(MODEL_DATA[..40], output[..40]);
+
+        // TODO: Assert that original file is equal to the new one if precise coordinates don't need to be preserved
+        std::fs::write(
+            workspace_file_path!("output/generated/0E-deflated.dat"),
+            output,
+        )?;
+
         Ok(())
     }
 }

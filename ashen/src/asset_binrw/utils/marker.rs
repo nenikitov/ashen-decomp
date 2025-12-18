@@ -82,6 +82,12 @@ pub struct MarkerOffset<'m, M, T> {
     value: T,
 }
 
+impl<'m, M, T> AsRef<T> for MarkerOffset<'m, M, T> {
+    fn as_ref(&self) -> &T {
+        &self.value
+    }
+}
+
 impl<'m, M, T> BinWrite for MarkerOffset<'m, M, T>
 where
     T: BinWrite,
