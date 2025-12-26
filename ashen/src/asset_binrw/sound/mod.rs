@@ -1,3 +1,5 @@
+use std::io::SeekFrom;
+
 use super::utils::*;
 
 #[binrw]
@@ -14,27 +16,54 @@ pub struct EntryHeader {
 
 #[binrw]
 #[derive(Debug)]
-pub struct SoundsEntryHeaders {
+pub struct Songs {
     #[br(temp)]
-    #[bw(calc = entries.len() as u32)]
-    _entries_len: u32,
+    #[bw(calc = songs.len() as u32)]
+    _headers_len: u32,
 
-    #[br(temp, count = _entries_len)]
-    #[bw(calc(vec![Default::default(); entries.len()]))]
-    _entries: Vec<EntryHeader>,
+    #[br(temp, count = _headers_len)]
+    #[bw(calc(vec![Default::default(); songs.len()]))]
+    _headers: Vec<EntryHeader>,
 
-    #[br(parse_with = args_iter(_entries))]
-    #[bw(write_with = args_iter_write(&_entries))]
-    entries: Vec<TSound>,
+    #[br(parse_with = args_iter(_headers))]
+    #[bw(write_with = args_iter_write(&_headers))]
+    songs: Vec<CompressedTSongs>,
+}
+
+#[derive(Debug)]
+pub struct CompressedTSongs(TSong);
+
+impl BinRead for CompressedTSongs {
+    type Args<'a> = EntryHeader;
+
+    fn read_options<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        endian: Endian,
+        header: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        reader.seek(SeekFrom::Start(header.offset.value as u64))?;
+        let sound =
+            <Compressed<TSong>>::read_options(reader, endian, ()).map(Compressed::into_inner)?;
+        Ok(Self(sound))
+    }
+}
+
+impl BinWrite for CompressedTSongs {
+    type Args<'a> = &'a EntryHeader;
+
+    fn write_options<W: std::io::Write + std::io::Seek>(
+        &self,
+        writer: &mut W,
+        endian: Endian,
+        args: Self::Args<'_>,
+    ) -> BinResult<()> {
+        todo!()
+    }
 }
 
 #[binrw]
-#[br(import_raw(header: EntryHeader))]
-#[bw(import_raw(header: &EntryHeader))]
 #[derive(Debug)]
-pub struct TSound {
-
-}
+pub struct TSong {}
 
 #[binrw]
 #[brw(magic = b"TSND")]
@@ -45,9 +74,28 @@ pub struct Sounds {
     _maps_header: EntryHeader,
     _emitters_header: EntryHeader,
 
-    songs: SoundsEntryHeaders,
+    #[br(
+        seek_before = SeekFrom::Start(_songs_header.offset.value as u64),
+        pad_size_to = _songs_header.size.value as u64,
+    )]
+    songs: Songs,
+
+    #[br(
+        seek_before = SeekFrom::Start(_effects_header.offset.value as u64),
+        pad_size_to = _effects_header.size.value as u64,
+    )]
     effects: (),
+
+    #[br(
+        seek_before = SeekFrom::Start(_maps_header.offset.value as u64),
+        pad_size_to = _maps_header.size.value as u64,
+    )]
     maps: (),
+
+    #[br(
+        seek_before = SeekFrom::Start(_emitters_header.offset.value as u64),
+        pad_size_to = _emitters_header.size.value as u64,
+    )]
     emitters: (),
 }
 
