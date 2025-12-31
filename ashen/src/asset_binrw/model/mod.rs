@@ -104,8 +104,8 @@ pub struct ModelVertex {
     #[bw(map = |v| {
         // TODO(nenikitov): There are a few off by 1 errors probably because of float rounding
         let pos = -(v * UNITS_PER_METER + scale_origin.0) / scale.0;
-        (pos * u8::MAX as f32)
-            .round()
+        (pos * VERTEX_NORMALIZATION_RANGE as f32)
+            .ceil()
             .as_u8vec3()
             .to_array()
     })]
