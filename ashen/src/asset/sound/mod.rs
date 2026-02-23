@@ -84,12 +84,20 @@ mod tests {
             })
             .enumerate()
             .try_for_each(|(i, (sound, song))| -> std::io::Result<()> {
-                let file = output_dir.join(format!("{i:0>2X}.wav"));
+                let output_dir = output_dir.join(format!("{i:0>2X}"));
+
+                let file = output_dir.join("song.wav");
                 println!("# SONG {i}");
                 output_file(file, sound.mix().to_wave())?;
 
-                let file = output_dir.join(format!("{i:0>2X}.txt"));
+                let file = output_dir.join("song.txt");
                 output_file(file, format!("{song:#?}"))?;
+
+                let output_dir = output_dir.join("samples");
+                for (s, sample) in song.samples.iter().enumerate() {
+                    let file = output_dir.join(format!("{s:0>2X}.wav"));
+                    output_file(file, sample.buffer.to_wave())?;
+                }
 
                 Ok(())
             })?;
